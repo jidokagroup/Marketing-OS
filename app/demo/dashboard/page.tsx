@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import MetricCard from "@/components/ui/MetricCard";
 import Card from "@/components/ui/Card";
@@ -24,6 +25,15 @@ const replyLimit = 500;
 
 const REFERRAL_CODE = "REFER26";
 const TEXT_SUPPORT = "2404101925";
+const shares = [
+  { label: "Text / SMS", icon: "💬" },
+  { label: "Instagram", icon: "📸" },
+  { label: "Facebook", icon: "📘" },
+  { label: "Messenger", icon: "💬" },
+  { label: "TikTok", icon: "🎵" },
+  { label: "WhatsApp", icon: "🟢" },
+  { label: "LinkedIn", icon: "💼" },
+];
 
 const socialAccounts = [
   { name: "Instagram", icon: "📸", status: "live" as const, desc: "Comments, DMs & Stories", href: "/demo/settings", cta: "Connect Now" },
@@ -31,16 +41,6 @@ const socialAccounts = [
   { name: "YouTube", icon: "▶️", status: "soon" as const, desc: "Comment management" },
   { name: "X / Twitter", icon: "𝕏", status: "soon" as const, desc: "Mentions & replies" },
   { name: "Facebook", icon: "📘", status: "soon" as const, desc: "Comments & Messenger" },
-];
-
-const shares = [
-  { label: "Text / SMS", icon: "💬", href: `sms:?body=Use my code ${REFERRAL_CODE} on Autom8 to get a free month!` },
-  { label: "Instagram", icon: "📸", href: "https://www.instagram.com/" },
-  { label: "Facebook", icon: "📘", href: "https://www.facebook.com/sharer/sharer.php" },
-  { label: "Messenger", icon: "💬", href: "https://www.facebook.com/dialog/send" },
-  { label: "TikTok", icon: "🎵", href: "https://www.tiktok.com/" },
-  { label: "WhatsApp", icon: "🟢", href: `https://wa.me/?text=Use+my+code+${REFERRAL_CODE}+for+a+free+month+on+Autom8!` },
-  { label: "LinkedIn", icon: "💼", href: "https://www.linkedin.com/sharing/share-offsite/" },
 ];
 
 export default function DemoDashboardPage() {
@@ -154,26 +154,6 @@ export default function DemoDashboardPage() {
         </div>
       </Card>
 
-      {/* Text Support */}
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">💬</span>
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Text Support</p>
-              <p className="text-xs text-text-muted">Real humans, real help — text us anytime</p>
-            </div>
-          </div>
-          <a
-            href={`sms:${TEXT_SUPPORT}`}
-            className="shrink-0 flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors rounded-xl px-4 py-2.5 text-sm font-semibold"
-          >
-            <span>📱</span>
-            Text {TEXT_SUPPORT}
-          </a>
-        </div>
-      </Card>
-
       {/* Referral Section */}
       <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-accent-purple/5 p-6 shadow-[0_0_32px_rgba(123,63,242,0.04)]">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
@@ -192,13 +172,45 @@ export default function DemoDashboardPage() {
           </div>
         </div>
         <p className="text-xs text-text-muted mb-3">Share via:</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mb-4">
           {shares.map((s) => (
-            <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 bg-surface border border-border hover:border-primary/30 hover:bg-primary/5 transition-all rounded-xl px-3 py-2 text-xs font-medium text-text-secondary hover:text-text-primary">
+            <span key={s.label}
+              className="flex items-center gap-1.5 bg-surface border border-border rounded-xl px-3 py-2 text-xs font-medium text-text-muted opacity-50 cursor-not-allowed select-none">
               <span>{s.icon}</span> {s.label}
-            </a>
+            </span>
           ))}
+        </div>
+        {/* Lock CTA */}
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span>🔒</span>
+            <p className="text-sm text-text-secondary"><span className="font-semibold text-text-primary">Start a free trial</span> to get your referral code and share links.</p>
+          </div>
+          <Link href="/signup" className="shrink-0 bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity">
+            Start Free Trial →
+          </Link>
+        </div>
+      </div>
+
+      {/* Recommendations — locked */}
+      <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <span className="text-3xl shrink-0">💡</span>
+          <div>
+            <p className="text-base font-bold text-text-primary mb-1">Help Us Build What You Need</p>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              Autom8&apos;s goal is continuous evolution. If you have a suggestion, we want to hear it — and we&apos;ll build it together. We&apos;re web3-inspired: if your recommendation gets approved and built, you can be compensated for your contribution.
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span>🔒</span>
+            <p className="text-sm text-text-secondary"><span className="font-semibold text-text-primary">Start a free trial</span> to send us your recommendations.</p>
+          </div>
+          <Link href="/signup" className="shrink-0 bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-opacity">
+            Start Free Trial →
+          </Link>
         </div>
       </div>
     </div>
