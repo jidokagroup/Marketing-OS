@@ -6,15 +6,15 @@ import { mockMessages } from "@/lib/mock-data";
 type FilterTab = "all" | "auto" | "review" | "escalated";
 
 const TABS: { label: string; value: FilterTab; count?: number }[] = [
-  { label: "All", value: "all" },
-  { label: "Auto Posted", value: "auto" },
-  { label: "Needs Review", value: "review" },
   { label: "Escalated", value: "escalated" },
+  { label: "Needs Review", value: "review" },
+  { label: "Auto Posted", value: "auto" },
+  { label: "All", value: "all" },
 ];
 
 export default function InboxPage() {
   const [messages, setMessages] = useState<Message[]>(mockMessages);
-  const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [activeTab, setActiveTab] = useState<FilterTab>("escalated");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(messages[0]?.id ?? null);
 

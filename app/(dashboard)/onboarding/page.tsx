@@ -118,7 +118,7 @@ function OnboardingContent() {
       {justPaid && (
         <div className="w-full max-w-lg mb-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 flex items-center gap-3">
           <span className="text-emerald-400 text-lg">✓</span>
-          <p className="text-sm text-emerald-300 font-medium">Payment successful — let's get you set up!</p>
+          <p className="text-sm text-emerald-300 font-medium">Payment successful — let&apos;s get you set up!</p>
         </div>
       )}
 
@@ -167,7 +167,7 @@ function OnboardingContent() {
               <span className="text-amber-400 text-base mt-0.5">⚠️</span>
               <div>
                 <p className="text-xs font-semibold text-amber-300 mb-0.5">Professional or Business account required</p>
-                <p className="text-xs text-amber-200/70">Autom8 only works with Instagram <strong>Professional</strong> or <strong>Business</strong> accounts connected to a Facebook Page. Personal accounts are not supported by Meta's API.</p>
+                <p className="text-xs text-amber-200/70">Autom8 only works with Instagram <strong>Professional</strong> or <strong>Business</strong> accounts connected to a Facebook Page. Personal accounts are not supported by Meta&apos;s API.</p>
               </div>
             </div>
 

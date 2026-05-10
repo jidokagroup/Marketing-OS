@@ -21,7 +21,6 @@ const sizeClasses: Record<ModalSize, string> = {
 export default function Modal({ isOpen, onClose, title, children, size = "md" }: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {

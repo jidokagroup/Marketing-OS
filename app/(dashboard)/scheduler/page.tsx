@@ -287,7 +287,7 @@ export default function SchedulerPage() {
             </div>
           }>
             <p className="text-xs text-text-muted mb-4">
-              Engagement windows are calculated by scanning your connected platforms — we analyze your current followers' active hours and similar audience segments to find your peak reach windows.
+              Engagement windows are calculated by scanning your connected platforms — we analyze your current followers&apos; active hours and similar audience segments to find your peak reach windows.
             </p>
             <div className="space-y-2.5">
               {bestTimes.map((slot) => (
@@ -331,7 +331,7 @@ export default function SchedulerPage() {
 
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 text-center">
             <p className="text-sm font-semibold text-text-primary mb-1">Ready to post at the perfect time?</p>
-            <p className="text-xs text-text-secondary mb-4">Switch to the Schedule tab and upload your content — we'll auto-select the best window.</p>
+            <p className="text-xs text-text-secondary mb-4">Switch to the Schedule tab and upload your content — we&apos;ll auto-select the best window.</p>
             <Button variant="primary" size="md" onClick={() => setActiveTab("upload")}>
               Schedule Content →
             </Button>
