@@ -24,9 +24,9 @@ const roles = [
     id: "creator",
     icon: "🎬",
     title: "Content Creator",
-    tagline: "Automate growth, not creativity",
-    desc: "Let AI handle scheduling, captions, hashtags, and DM replies while you focus on making content. Get featured in the Autom8 creator network and unlock collab opportunities.",
-    perks: ["AI-powered content scheduling", "Auto-captions, hooks & hashtags", "Paid brand collaboration opportunities", "Featured in Autom8 creator spotlight"],
+    tagline: "Create content. Earn real money.",
+    desc: "Let AI handle scheduling, captions, and DM replies while you focus on creating. Monetize your audience through paid partnerships, influencer programs, and commission-based collabs built into the Autom8 ecosystem.",
+    perks: ["Paid partnerships & brand deal opportunities", "Earn commissions through influencer programs", "AI-powered content scheduling & captions", "Featured in Autom8 creator spotlight"],
   },
   {
     id: "architect",
@@ -47,7 +47,7 @@ const ecosystemFeatures = [
   {
     icon: "🤝",
     title: "Developer ↔ User Bridge",
-    desc: "We connect AI-native developers with non-technical business owners and creators. Developers earn from their builds. Users get powerful automation without writing a single line of code.",
+    desc: "We connect AI-native developers with non-technical business owners, users, and creators. Developers earn from their builds. Users get powerful automation without writing a single line of code. Creators earn commission for bridging the gap — making this the first influencer marketplace built for AI automations.",
   },
   {
     icon: "🎓",
@@ -62,7 +62,7 @@ const ecosystemFeatures = [
   {
     icon: "💰",
     title: "Earn on the Platform",
-    desc: "Build automations, teach courses, refer users, or create content — every contribution to the Autom8 ecosystem has an earning path attached to it.",
+    desc: "Build automations, teach courses, refer users, or create content — every contribution to the Autom8 ecosystem unlocks a real earning path. We believe every person who adds value should benefit from the value they create.",
   },
   {
     icon: "🌐",
@@ -108,10 +108,10 @@ export default function WaitlistAccessPage() {
           </span>
           <h1 className="text-3xl md:text-5xl font-black text-text-primary mb-4 tracking-tight leading-tight">
             The Future of<br />
-            <span className="text-primary">Intelligent Automation</span>
+            <span className="text-primary">Ecosystems</span>
           </h1>
           <p className="text-text-secondary max-w-2xl leading-relaxed text-sm md:text-base mb-6">
-            Autom8 is building the world&apos;s most accessible AI and agentic automation ecosystem — where developers connect with users, creators automate their growth, and everyone can reclaim their time.
+            Autom8&apos;s on a mission to build the world&apos;s most accessible AI ecosystem — where developers connect with users, creators earn commissions, businesses automate their growth, and everyone can reclaim their time.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button variant="primary" size="md" onClick={() => setActiveSection("join")}>

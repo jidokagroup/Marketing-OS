@@ -15,7 +15,6 @@ const activityIcon: Record<string, string> = {
 };
 
 const REFERRAL_CODE = "REFER26";
-const TEXT_SUPPORT = "2404101925";
 
 const socialShareLinks = (code: string, url: string) => [
   { label: "Text / SMS", icon: "💬", href: `sms:?body=Use my code ${code} on Autom8 to get a free month! ${url}` },
@@ -242,26 +241,6 @@ export default async function DashboardPage() {
         )}
       </Card>
 
-      {/* Text Support */}
-      <Card>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">💬</span>
-            <div>
-              <p className="text-sm font-semibold text-text-primary">Text Support</p>
-              <p className="text-xs text-text-muted">Real humans, real help — text us anytime</p>
-            </div>
-          </div>
-          <a
-            href={`sms:${TEXT_SUPPORT}`}
-            className="shrink-0 flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors rounded-xl px-4 py-2.5 text-sm font-semibold"
-          >
-            <span>📱</span>
-            Text {TEXT_SUPPORT}
-          </a>
-        </div>
-      </Card>
-
       {/* Referral Section */}
       <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-accent-purple/5 p-6 shadow-[0_0_32px_rgba(123,63,242,0.04)]">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
@@ -303,6 +282,28 @@ export default async function DashboardPage() {
             <span className="text-primary font-mono text-[11px]">{referralUrl}</span>
           </p>
         </div>
+      </div>
+
+      {/* Recommendations for Improvement */}
+      <div className="rounded-2xl border border-border bg-surface-elevated p-6">
+        <div className="flex items-start gap-4 mb-5">
+          <span className="text-3xl shrink-0">💡</span>
+          <div>
+            <p className="text-base font-bold text-text-primary mb-1">Help Us Build What You Need</p>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              Autom8&apos;s goal is continuous evolution. If you have a suggestion, we want to hear it — and we&apos;ll build it together. We&apos;re web3-inspired: if your recommendation gets approved and built, you can be compensated for your contribution.
+            </p>
+          </div>
+        </div>
+        <a
+          href="mailto:hello@barebranding.site?subject=Autom8 Recommendation for Improvement"
+          className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors rounded-xl px-5 py-2.5 text-sm font-semibold"
+        >
+          📩 Send a Recommendation
+        </a>
+        <p className="text-[11px] text-text-muted mt-3">
+          Suggestions are reviewed by the team. Contributors whose ideas are selected may be compensated upon further review and approval.
+        </p>
       </div>
     </div>
   );

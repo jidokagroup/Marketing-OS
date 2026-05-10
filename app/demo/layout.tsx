@@ -96,7 +96,7 @@ function DemoSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
         <div className="px-5 py-5 border-b border-border flex items-center justify-between">
           <div>
             <span className="text-lg font-bold text-primary tracking-tight glow-text">autom8</span>
-            <span className="block text-[10px] text-text-muted mt-0.5 tracking-widest uppercase">AI Replies</span>
+            <span className="block text-[10px] text-text-muted mt-0.5 tracking-widest uppercase">Socials</span>
           </div>
           <button onClick={onClose} aria-label="Close" className="md:hidden text-text-muted hover:text-white p-1">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>

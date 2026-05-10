@@ -3,6 +3,8 @@ import { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 
+const TEXT_SUPPORT = "2404101925";
+
 const concernTypes = [
   "Billing / Payment Issue",
   "Instagram Connection Problem",
@@ -28,12 +30,20 @@ export default function HelpTicketPage() {
 
   const set = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setSubmitted(true);
-    setLoading(false);
+    const subject = encodeURIComponent(
+      `Help Ticket [${form.concernType || "General"}] — ${form.pageName}`
+    );
+    const body = encodeURIComponent(
+      `Name: ${form.name}\nEmail: ${form.email}\nPhone: ${form.phone || "N/A"}\nPage / Account: ${form.pageName}\nConcern Type: ${form.concernType}\n\n${form.message}`
+    );
+    window.location.href = `mailto:hello@barebranding.site?subject=${subject}&body=${body}`;
+    setTimeout(() => {
+      setSubmitted(true);
+      setLoading(false);
+    }, 500);
   };
 
   if (submitted) {
@@ -43,13 +53,18 @@ export default function HelpTicketPage() {
           <div className="text-5xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-text-primary mb-2">Ticket Submitted!</h2>
           <p className="text-text-secondary text-sm max-w-md mx-auto mb-2">
-            We&apos;ve received your request and will get back to you within 24 hours.
+            Your email client opened with your ticket pre-filled — just hit send. We&apos;ll get back to you within 24 hours.
           </p>
-          <p className="text-xs text-text-muted mb-6">
-            For urgent issues, text us at{" "}
-            <a href="sms:2404101925" className="text-primary hover:underline">240-410-1925</a>.
-          </p>
-          <Button variant="primary" onClick={() => setSubmitted(false)}>Submit Another Ticket →</Button>
+          <p className="text-xs text-text-muted mb-6">For urgent issues, use the Text Support button below.</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button variant="primary" onClick={() => setSubmitted(false)}>Submit Another Ticket →</Button>
+            <a
+              href={`sms:${TEXT_SUPPORT}`}
+              className="flex items-center justify-center gap-2 border border-border text-text-secondary hover:text-text-primary hover:border-primary/30 transition-colors rounded-xl px-4 py-2.5 text-sm font-semibold"
+            >
+              📱 Text Now
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -61,10 +76,29 @@ export default function HelpTicketPage() {
         <p className="text-xs text-text-muted uppercase tracking-wider mb-1">Support</p>
         <h1 className="text-3xl font-semibold tracking-tight text-text-primary">Submit Help Ticket</h1>
         <p className="text-sm text-text-secondary mt-1">
-          Our team reviews every ticket. For urgent issues, text us at{" "}
-          <a href="sms:2404101925" className="text-primary hover:underline font-medium">240-410-1925</a>.
+          Our team reviews every ticket. Need a faster response?
         </p>
       </div>
+
+      {/* Text Support card */}
+      <Card>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">💬</span>
+            <div>
+              <p className="text-sm font-semibold text-text-primary">Text Support</p>
+              <p className="text-xs text-text-muted">Real humans, real help — text us anytime</p>
+            </div>
+          </div>
+          <a
+            href={`sms:${TEXT_SUPPORT}`}
+            className="shrink-0 flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-colors rounded-xl px-4 py-2.5 text-sm font-semibold"
+          >
+            <span>📱</span>
+            Text Now
+          </a>
+        </div>
+      </Card>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <Card header={<h2 className="text-sm font-semibold text-text-primary">Contact Information</h2>}>

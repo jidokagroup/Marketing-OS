@@ -89,56 +89,6 @@ export default function BlogPage() {
         ))}
       </div>
 
-      {/* How to upload blogs - Admin guide */}
-      <div className="rounded-2xl border border-border bg-surface-elevated p-6 space-y-5">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">📖</span>
-          <h2 className="text-base font-semibold text-text-primary">How to Add Blog Posts</h2>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Method 1 — Manual Upload</p>
-            <ol className="space-y-2 text-xs text-text-secondary">
-              <li><span className="text-text-muted font-mono">1.</span> Create a new file at <code className="bg-surface-elevated px-1.5 py-0.5 rounded text-primary font-mono">app/(dashboard)/blog/[slug]/page.tsx</code></li>
-              <li><span className="text-text-muted font-mono">2.</span> Add your post as a React component with title, content, tags, and CTA blocks</li>
-              <li><span className="text-text-muted font-mono">3.</span> Add the post metadata to the <code className="bg-surface-elevated px-1.5 py-0.5 rounded text-primary font-mono">posts</code> array in <code className="bg-surface-elevated px-1.5 py-0.5 rounded text-primary font-mono">app/(dashboard)/blog/page.tsx</code></li>
-              <li><span className="text-text-muted font-mono">4.</span> Deploy to Vercel — it auto-publishes</li>
-            </ol>
-          </div>
-
-          <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Method 2 — AI Auto-Generation (Recommended)</p>
-            <ol className="space-y-2 text-xs text-text-secondary">
-              <li><span className="text-text-muted font-mono">1.</span> Connect a CMS like <strong className="text-text-primary">Contentful, Sanity, or Notion</strong> as your blog database</li>
-              <li><span className="text-text-muted font-mono">2.</span> Set up an n8n workflow: trigger (weekly cron) → GPT-4 generates SEO post → pushes to CMS API</li>
-              <li><span className="text-text-muted font-mono">3.</span> Update <code className="bg-surface-elevated px-1.5 py-0.5 rounded text-primary font-mono">blog/page.tsx</code> to fetch from CMS instead of the static <code className="bg-surface-elevated px-1.5 py-0.5 rounded text-primary font-mono">posts</code> array</li>
-              <li><span className="text-text-muted font-mono">4.</span> Each post should include: target keyword, H1/H2 structure, 1,000–2,000 words, internal links, and a &quot;Start Free Trial&quot; CTA</li>
-            </ol>
-          </div>
-
-          <div className="rounded-xl border border-warning/20 bg-warning/5 p-4">
-            <p className="text-xs font-bold text-warning uppercase tracking-wider mb-2">SEO Checklist for Every Post</p>
-            <div className="grid sm:grid-cols-2 gap-1.5">
-              {[
-                "Target 1 primary keyword per post",
-                "Include keyword in H1, first paragraph, meta description",
-                "Add 3–5 internal links to other posts or features",
-                "End every post with a CTA: 'Start free trial →'",
-                "Include a FAQ section for featured snippets",
-                "Add alt text to all images",
-                "Aim for 1,200+ words for competitive keywords",
-                "Publish consistently (1–2x/week for fastest growth)",
-              ].map((item) => (
-                <div key={item} className="flex items-start gap-1.5 text-xs text-text-secondary">
-                  <span className="text-warning mt-0.5 shrink-0">✓</span>
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
