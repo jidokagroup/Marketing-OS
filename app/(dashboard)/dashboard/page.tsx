@@ -111,7 +111,7 @@ export default async function DashboardPage() {
     { title: "Review Queue", value: String(reviewCount), change: "", changePositive: false },
   ];
 
-  const referralUrl = `https://autom8.app/signup?ref=${REFERRAL_CODE}`;
+  const referralUrl = `https://autom8ig.io/signup?ref=${REFERRAL_CODE}`;
   const shares = socialShareLinks(REFERRAL_CODE, referralUrl);
 
   return (

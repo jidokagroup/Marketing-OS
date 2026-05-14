@@ -400,7 +400,7 @@ function BillingContent() {
       {/* Custom plan CTA */}
       <p className="text-center text-xs text-text-muted">
         Managing multiple clients or need a custom plan?{" "}
-        <Link href="mailto:hello@autom8.app" className="text-primary hover:underline">
+        <Link href="mailto:hello@autom8ig.io" className="text-primary hover:underline">
           Talk to us →
         </Link>
       </p>

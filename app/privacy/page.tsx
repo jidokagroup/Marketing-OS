@@ -17,7 +17,7 @@ export default function PrivacyPage() {
         <h2 className="text-white font-semibold text-base mt-6">Social Account Data</h2>
         <p>When you connect Instagram or Facebook, we access only the permissions required to read comments and post replies on your behalf.</p>
         <h2 className="text-white font-semibold text-base mt-6">Contact</h2>
-        <p>Questions? Email us at <a href="mailto:hello@autom8.app" className="text-brand-purple hover:underline">hello@autom8.app</a></p>
+        <p>Questions? Email us at <a href="mailto:hello@autom8ig.io" className="text-brand-purple hover:underline">hello@autom8ig.io</a></p>
       </div>
     </div>
   );

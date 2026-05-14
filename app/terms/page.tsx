@@ -16,7 +16,7 @@ export default function TermsPage() {
         <p>Paid plans are billed monthly. You may cancel at any time. Cancellations take effect at the end of the current billing period.</p>
         <h2 className="text-white font-semibold text-base mt-6">4. Changes to Terms</h2>
         <p>We reserve the right to modify these Terms at any time. We will notify you of significant changes via email.</p>
-        <p className="mt-8 text-white/30 text-xs">Full terms coming soon. Contact hello@autom8.app with questions.</p>
+        <p className="mt-8 text-white/30 text-xs">Full terms coming soon. Contact hello@autom8ig.io with questions.</p>
       </div>
     </div>
   );

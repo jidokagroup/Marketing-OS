@@ -49,7 +49,7 @@ export default function TopNav({ onMenuClick, user }: TopNavProps) {
             <div className="absolute right-0 mt-2 w-48 bg-surface border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
               <div className="px-4 py-3 border-b border-white/5">
                 <p className="text-sm font-medium text-white">{user?.name ?? "Demo User"}</p>
-                <p className="text-xs text-white/40 truncate">{user?.email ?? "demo@autom8.app"}</p>
+                <p className="text-xs text-white/40 truncate">{user?.email ?? "demo@autom8ig.io"}</p>
               </div>
               <Link href="/settings" onClick={() => setDropdownOpen(false)} className="block px-4 py-2.5 text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors">
                 Settings
