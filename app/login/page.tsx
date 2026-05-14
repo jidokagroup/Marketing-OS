@@ -62,11 +62,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-4">
+        <div className="text-center">
           <Link href="https://autom8ig.io" className="inline-block">
             <Image src="/logo.png" alt="Autom8" width={160} height={68} className="object-contain mx-auto" priority />
           </Link>
-          <p className="text-white/40 text-sm mt-1">Sign in to your account</p>
+          <p className="text-white/40 text-sm mt-3 mb-3">Sign in to your account</p>
         </div>
 
         <div className="bg-surface border border-white/5 rounded-2xl p-8">
