@@ -34,7 +34,7 @@ const navItems = [
     ),
   },
   {
-    href: "/settings",
+    href: "/brand-setup",
     label: "Brand Brain",
     icon: (
       <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

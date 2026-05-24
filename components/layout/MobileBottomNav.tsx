@@ -38,7 +38,7 @@ const navItems: MobileNavItem[] = [
     ),
   },
   {
-    href: "/settings",
+    href: "/brand-setup",
     label: "Brand",
     icon: (active: boolean) => (
       <svg className={`w-5 h-5 ${active ? "text-primary" : "text-text-muted"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
