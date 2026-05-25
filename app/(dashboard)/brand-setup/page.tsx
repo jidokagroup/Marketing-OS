@@ -292,23 +292,12 @@ export default function BrandSetupPage() {
 
       {/* Connect */}
       <Card className="border-dashed border-primary/20">
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="font-medium mb-1 text-text-primary">Connect Facebook & Instagram</h3>
-              <p className="text-sm text-text-muted">Link your Meta Business account to start automating replies.</p>
-            </div>
-            <ConnectButton />
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Input
-              label="Instagram Business ID"
-              value={formData.igBusinessId}
-              onChange={e => set("igBusinessId", e.target.value)}
-              placeholder="e.g. 17841400000000000"
-            />
-            <p className="text-xs text-white/30 mt-1">Found in your Meta Business Suite or n8n webhook logs as <code className="bg-white/5 px-1 rounded">entry[0].id</code></p>
+            <h3 className="font-medium mb-1 text-text-primary">Connect Facebook & Instagram</h3>
+            <p className="text-sm text-text-muted">Link your Meta Business account to start automating replies.</p>
           </div>
+          <ConnectButton />
         </div>
       </Card>
 
