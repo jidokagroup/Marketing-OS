@@ -187,6 +187,7 @@ export default function SchedulerPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const [scheduleError, setScheduleError] = useState("");
   const [activeTab, setActiveTab] = useState<"upload" | "scheduled" | "insights" | "analytics">("upload");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -209,38 +210,69 @@ export default function SchedulerPage() {
 
   const removeFile = (idx: number) => setUploadedFiles((prev) => prev.filter((_, i) => i !== idx));
 
+  const uploadFile = async (file: File): Promise<{ url: string; media_type: string }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/scheduler/upload", { method: "POST", body: fd });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error || `Upload failed for ${file.name}`);
+    }
+    return res.json();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedType || selectedPlatforms.length === 0) return;
     setScheduling(true);
+    setScheduleError("");
 
-    // Map UI content type → content_queue content_type
     const typeMap: Record<ContentType, string> = { short_video: "reel", carousel: "carousel", post: "image" };
-    // Default each post to an upcoming evening slot; the user can fine-tune in the calendar.
-    try {
-      let i = 0;
-      for (const platform of selectedPlatforms) {
-        const when = new Date();
-        when.setDate(when.getDate() + i + 1);
-        when.setHours(18, 0, 0, 0);
-        await fetch("/api/scheduler/queue", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            platform,
-            caption: contentDesc || null,
-            content_type: typeMap[selectedType],
-            title: uploadedFiles[0]?.name ?? csvFile?.name ?? null,
-            scheduled_time: when.toISOString(),
-          }),
-        });
-        i++;
+    let dayOffset = 0;
+
+    const createRow = async (payload: Record<string, unknown>) => {
+      const when = new Date();
+      when.setDate(when.getDate() + dayOffset + 1);
+      when.setHours(18, 0, 0, 0);
+      dayOffset++;
+      const res = await fetch("/api/scheduler/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, scheduled_time: when.toISOString() }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to schedule content");
       }
-    } catch {
-      /* non-fatal — still show confirmation */
+    };
+
+    try {
+      // 1. Upload any selected media to storage (public URLs for the publisher).
+      const uploaded: { url: string; media_type: string }[] = [];
+      for (const f of uploadedFiles) uploaded.push(await uploadFile(f));
+
+      // 2. Create one scheduled row per platform (carousel groups all images into one).
+      for (const platform of selectedPlatforms) {
+        if (selectedType === "carousel" && uploaded.length > 0) {
+          await createRow({
+            platform, caption: contentDesc || null, content_type: "carousel",
+            media_url: JSON.stringify(uploaded.map((u) => u.url)),
+            title: uploadedFiles[0]?.name ?? null,
+          });
+        } else if (uploaded.length > 0) {
+          for (const u of uploaded) {
+            await createRow({ platform, caption: contentDesc || null, content_type: u.media_type, media_url: u.url });
+          }
+        } else {
+          // No media uploaded (CSV/description only) — schedule a placeholder row.
+          await createRow({ platform, caption: contentDesc || null, content_type: typeMap[selectedType], title: csvFile?.name ?? null });
+        }
+      }
+      setSubmitted(true);
+    } catch (err) {
+      setScheduleError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setScheduling(false);
-      setSubmitted(true);
     }
   };
 
@@ -482,9 +514,14 @@ export default function SchedulerPage() {
           </Card>
 
           {/* Submit */}
-          <div className="flex items-center justify-between pt-2">
+          {scheduleError && (
+            <div className="rounded-lg border border-error/20 bg-error/5 px-4 py-3 text-xs text-error">
+              {scheduleError}
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
             <p className="text-xs text-text-muted">
-              Content → AI formats → Scheduled at peak time → Posted ✓
+              {scheduling ? "Uploading media & scheduling…" : "Content → AI formats → Scheduled at peak time → Posted ✓"}
             </p>
             <Button
               type="submit"

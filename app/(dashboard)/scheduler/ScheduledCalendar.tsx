@@ -232,6 +232,30 @@ export default function ScheduledCalendar() {
   );
 }
 
+// ─── Media preview (image thumb, video/carousel badge) ───────────────────────
+function MediaPreview({ url }: { url: string }) {
+  // Carousel media_url is a JSON array of URLs.
+  let urls: string[] = [url];
+  if (url.startsWith("[")) {
+    try { urls = JSON.parse(url); } catch { /* keep as single */ }
+  }
+  const first = urls[0] ?? "";
+  const isVideo = /\.(mp4|mov)$/i.test(first);
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      {isVideo ? (
+        <div className="w-14 h-14 rounded-lg bg-surface-elevated border border-border flex items-center justify-center text-lg shrink-0">🎬</div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={first} alt="" className="w-14 h-14 rounded-lg object-cover border border-border shrink-0" />
+      )}
+      <span className="text-[11px] text-text-muted">
+        {urls.length > 1 ? `Carousel · ${urls.length} items` : isVideo ? "Video / Reel" : "Image"}
+      </span>
+    </div>
+  );
+}
+
 // ─── Post card (view + inline edit) ───────────────────────────────────────────
 function PostCard({
   post, editing, busy, editCaption, editTime, setEditCaption, setEditTime, onEdit, onCancel, onSave, onDelete,
@@ -282,6 +306,7 @@ function PostCard({
         </div>
       ) : (
         <>
+          {post.media_url && <MediaPreview url={post.media_url} />}
           <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap line-clamp-4">
             {post.caption || <span className="text-text-muted italic">No caption yet</span>}
           </p>
