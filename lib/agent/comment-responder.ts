@@ -313,43 +313,78 @@ async function postReplyToInstagram(commentId: string, message: string, pageToke
   }
 }
 
+/**
+ * Sends an Instagram message via the Page messaging edge (`/{page}/messages`).
+ * IG messaging must go through the Page edge with the Page token — posting to
+ * the IG-business-id edge returns "(#3) capability". Returns a clear result so
+ * callers can log delivery failures instead of swallowing them.
+ *
+ * recipient:
+ *   { comment_id } → "private reply" to a commenter (no prior DM needed)
+ *   { id }         → standard reply within an open 24h messaging window
+ */
+export async function sendInstagramMessage(opts: {
+  pageToken: string
+  pageId: string | null
+  recipient: { id: string } | { comment_id: string }
+  text: string
+}): Promise<{ ok: boolean; error?: string; recipientId?: string }> {
+  const target = opts.pageId || 'me'
+  try {
+    const res = await fetch(`https://graph.facebook.com/v23.0/${target}/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        recipient: opts.recipient,
+        message: { text: opts.text },
+        access_token: opts.pageToken,
+      }),
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await res.json().catch(() => ({}))
+    if (data?.error) return { ok: false, error: data.error.message ?? 'unknown error' }
+    return { ok: true, recipientId: data?.recipient_id }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'network error' }
+  }
+}
+
 async function sendDmFromComment(event: CommentEvent, brand: BrandBrain, _commentReply: string, postCaption: string | null = null): Promise<void> {
-  if (!brand.page_token || !brand.ig_business_id) return
+  if (!brand.page_token) return
 
   // Generate a personalized DM (AI opener/personalization) with a guaranteed CTA link.
   const { text: dmText } = await generateDmText(event.comment_text, brand, postCaption)
   if (!dmText) return
 
-  try {
-    await fetch(`https://graph.facebook.com/v23.0/${brand.ig_business_id}/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipient: { id: event.commenter_id },
-        message: { text: dmText },
-        access_token: brand.page_token,
-      }),
-    })
+  // Private reply to the comment — works even though the person never DMed us first.
+  const send = await sendInstagramMessage({
+    pageToken: brand.page_token,
+    pageId: brand.page_id,
+    recipient: { comment_id: event.comment_id },
+    text: dmText,
+  })
 
-    // Store DM conversation
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const supabase = createServiceClient() as any
-    await supabase.from('dm_conversations').upsert({
-      user_id: brand.user_id,
-      social_account_id: brand.social_account_id,
-      recipient_ig_id: event.commenter_id,
-      recipient_username: event.commenter_username,
-      trigger_source: 'comment_keyword',
-      matched_keyword: brand.dm_trigger_keywords?.[0] ?? null,
-      history: [
-        { role: 'assistant', content: dmText, ts: new Date().toISOString() },
-      ],
-      message_count: 1,
-      last_message_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,recipient_ig_id' })
-  } catch {
-    // non-fatal
+  if (!send.ok) {
+    console.error('[sendDmFromComment] IG send failed:', send.error)
+    return
   }
+
+  // Store DM conversation (recipient_id comes back from the send)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const supabase = createServiceClient() as any
+  await supabase.from('dm_conversations').upsert({
+    user_id: brand.user_id,
+    social_account_id: brand.social_account_id,
+    recipient_ig_id: send.recipientId ?? event.commenter_id,
+    recipient_username: event.commenter_username,
+    trigger_source: 'comment_keyword',
+    matched_keyword: brand.dm_trigger_keywords?.[0] ?? null,
+    history: [
+      { role: 'assistant', content: dmText, ts: new Date().toISOString() },
+    ],
+    message_count: 1,
+    last_message_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,recipient_ig_id' })
 }
 
 async function selectCtaLink(commentText: string, postCaption: string | null, brand: BrandBrain): Promise<{ label: string; url: string }> {

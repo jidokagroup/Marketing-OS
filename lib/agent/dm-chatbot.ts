@@ -7,7 +7,7 @@
 import OpenAI from 'openai'
 import { createServiceClient } from '@/lib/supabase/service'
 import type { BrandBrain } from './brand-brain'
-import { buildBrandContext, generateDmText } from './comment-responder'
+import { buildBrandContext, generateDmText, sendInstagramMessage } from './comment-responder'
 
 const getOpenAI = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 const MAX_MESSAGES_BEFORE_ESCALATION = 8
@@ -92,9 +92,15 @@ export async function handleDm(event: DmEvent, brand: BrandBrain): Promise<DmRes
     replyText = await generateDmReply(history, brand, event.message_text)
   }
 
-  // Send via IG Messaging API
-  if (brand.page_token && brand.ig_business_id) {
-    await sendIgDm(brand.ig_business_id, event.sender_id, replyText, brand.page_token)
+  // Send via the Page messaging edge (the sender DMed us, so the window is open).
+  if (brand.page_token) {
+    const send = await sendInstagramMessage({
+      pageToken: brand.page_token,
+      pageId: brand.page_id,
+      recipient: { id: event.sender_id },
+      text: replyText,
+    })
+    if (!send.ok) console.error('[handleDm] IG send failed:', send.error)
   }
 
   // Persist conversation
@@ -171,16 +177,4 @@ Return ONLY the reply text.`
   }
 
   return reply
-}
-
-async function sendIgDm(igBusinessId: string, recipientId: string, text: string, pageToken: string): Promise<void> {
-  await fetch(`https://graph.facebook.com/v23.0/${igBusinessId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      recipient: { id: recipientId },
-      message: { text },
-      access_token: pageToken,
-    }),
-  })
 }
