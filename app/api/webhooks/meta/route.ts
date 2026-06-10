@@ -6,7 +6,7 @@
  * POST — comment events + DM events, routed per ig_business_id → user
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { getBrandByIgBusinessId } from '@/lib/agent/brand-brain'
 import { handleComment } from '@/lib/agent/comment-responder'
 import { handleDm } from '@/lib/agent/dm-chatbot'
@@ -38,8 +38,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  // Process asynchronously — respond 200 immediately (Meta requires fast ack)
-  processWebhookAsync(body).catch(() => {})
+  // Respond 200 immediately (Meta requires a fast ack), but keep the function
+  // alive to finish processing via `after()` — a plain fire-and-forget promise
+  // gets killed by the serverless runtime once the response is sent.
+  after(async () => {
+    try {
+      await processWebhookAsync(body)
+    } catch (err) {
+      console.error('[webhook] processing error:', err)
+    }
+  })
 
   return NextResponse.json({ status: 'ok' })
 }
