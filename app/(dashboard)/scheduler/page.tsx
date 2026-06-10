@@ -186,6 +186,7 @@ export default function SchedulerPage() {
   const [selectedType, setSelectedType] = useState<ContentType | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(["instagram"]);
   const [contentDesc, setContentDesc] = useState("");
+  const [includeHashtags, setIncludeHashtags] = useState(true);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -248,6 +249,27 @@ export default function SchedulerPage() {
     const typeMap: Record<ContentType, string> = { short_video: "reel", carousel: "carousel", post: "image" };
     let dayOffset = 0;
 
+    // Generate a platform-optimized SEO caption from the brief (falls back to the brief on error).
+    const genCaption = async (platform: Platform): Promise<string | null> => {
+      if (!contentDesc.trim()) return null;
+      try {
+        const res = await fetch("/api/scheduler/generate-caption", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: contentDesc,
+            platform,
+            content_type: typeMap[selectedType],
+            include_hashtags: includeHashtags,
+          }),
+        });
+        const j = await res.json().catch(() => ({}));
+        return (j.caption as string) || contentDesc;
+      } catch {
+        return contentDesc;
+      }
+    };
+
     const createRow = async (payload: Record<string, unknown>) => {
       const when = new Date();
       when.setDate(when.getDate() + dayOffset + 1);
@@ -270,20 +292,22 @@ export default function SchedulerPage() {
       for (const f of uploadedFiles) uploaded.push(await uploadFile(f));
 
       // 2. Create one scheduled row per platform (carousel groups all images into one).
+      //    Each platform gets its own SEO-optimized caption generated from the brief.
       for (const platform of selectedPlatforms) {
+        const caption = await genCaption(platform);
         if (selectedType === "carousel" && uploaded.length > 0) {
           await createRow({
-            platform, caption: contentDesc || null, content_type: "carousel",
+            platform, caption, content_type: "carousel",
             media_url: JSON.stringify(uploaded.map((u) => u.url)),
             title: uploadedFiles[0]?.name ?? null,
           });
         } else if (uploaded.length > 0) {
           for (const u of uploaded) {
-            await createRow({ platform, caption: contentDesc || null, content_type: u.media_type, media_url: u.url });
+            await createRow({ platform, caption, content_type: u.media_type, media_url: u.url });
           }
         } else {
           // No media uploaded (CSV/description only) — schedule a placeholder row.
-          await createRow({ platform, caption: contentDesc || null, content_type: typeMap[selectedType], title: csvFile?.name ?? null });
+          await createRow({ platform, caption, content_type: typeMap[selectedType], title: csvFile?.name ?? null });
         }
       }
       setSubmitted(true);
@@ -519,15 +543,34 @@ export default function SchedulerPage() {
               rows={4}
               className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm text-text-primary placeholder-text-muted outline-none focus:border-primary/40 transition-colors resize-none"
             />
+
+            {/* Hashtag toggle */}
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-3">
+              <div className="min-w-0 pr-3">
+                <p className="text-sm font-medium text-text-primary">Include hashtags</p>
+                <p className="text-xs text-text-muted mt-0.5">Adds SEO hashtags tuned to each platform&apos;s best practices.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeHashtags}
+                onClick={() => setIncludeHashtags((v) => !v)}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${includeHashtags ? "bg-primary" : "bg-white/10"}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${includeHashtags ? "translate-x-6" : "translate-x-1"}`} />
+              </button>
+            </div>
+
             <div className="mt-3 rounded-lg border border-border bg-surface-elevated px-4 py-3">
-              <p className="text-[11px] text-text-muted font-medium uppercase tracking-wider mb-1.5">AI will generate:</p>
+              <p className="text-[11px] text-text-muted font-medium uppercase tracking-wider mb-1.5">AI will generate per platform:</p>
               <div className="flex flex-wrap gap-2">
-                {["SEO Caption", "Title / Hook", "30+ Hashtags", "Alt text", "Best posting time"].map((item) => (
+                {["SEO Caption", "Title / Hook", ...(includeHashtags ? ["Platform-tuned hashtags"] : []), "Best posting time"].map((item) => (
                   <span key={item} className="text-[11px] bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded-full">
                     {item}
                   </span>
                 ))}
               </div>
+              <p className="text-[11px] text-text-muted mt-2">You can review &amp; edit every caption on the Calendar before it posts.</p>
             </div>
           </Card>
 
@@ -539,7 +582,7 @@ export default function SchedulerPage() {
           )}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
             <p className="text-xs text-text-muted">
-              {scheduling ? "Uploading media & scheduling…" : "Content → AI formats → Scheduled at peak time → Posted ✓"}
+              {scheduling ? "Uploading media, writing SEO captions & scheduling…" : "Content → AI writes SEO captions → Scheduled at peak time → Posted ✓"}
             </p>
             <Button
               type="submit"
