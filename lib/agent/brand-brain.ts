@@ -13,6 +13,7 @@ export interface CtaLink {
 export interface BrandBrain {
   user_id: string
   business_name: string
+  description: string | null
   tone: string
   language: string
   allowed_ctas: string | null
@@ -42,6 +43,28 @@ export interface BrandBrain {
   social_account_id: string | null
   // plan
   plan_limit: number
+}
+
+/** Brand Brain fields the agents rely on for high-quality, on-brand output. */
+const KEY_BRAND_FIELDS = [
+  'business_name', 'description', 'tone', 'language', 'services_products',
+  'pricings', 'allowed_ctas', 'brand_voice_examples', 'faq_1',
+  'booking_link', 'web_link', 'cta_links',
+] as const
+
+/** Returns the list of key fields that ARE populated (for debug logging). */
+export function brandFieldsLoaded(brand: BrandBrain): string[] {
+  return KEY_BRAND_FIELDS.filter((f) => {
+    const v = (brand as unknown as Record<string, unknown>)[f]
+    if (Array.isArray(v)) return v.length > 0
+    return v !== null && v !== undefined && String(v).trim() !== ''
+  })
+}
+
+/** Returns the list of key fields that are MISSING/empty (surfaced in the debug endpoint). */
+export function missingBrandFields(brand: BrandBrain): string[] {
+  const loaded = new Set(brandFieldsLoaded(brand))
+  return KEY_BRAND_FIELDS.filter((f) => !loaded.has(f))
 }
 
 export async function getBrandByIgBusinessId(igBusinessId: string): Promise<BrandBrain | null> {
@@ -107,7 +130,7 @@ async function buildBrainForUser(
   ])
 
   const brand = brandResult.data as (Record<string, unknown> & {
-    business_name: string; tone: string | string[]; language: string; website_url?: string;
+    business_name: string; description?: string; tone: string | string[]; language: string; website_url?: string;
     phone?: string; location?: string; hours?: string; services_products?: string; pricings?: string;
     emoji_allowed?: boolean; brand_voice_examples?: string; booking_link?: string;
     faq_1?: string; faq_2?: string; faq_3?: string; allowed_ctas?: string; cta_keywords?: string[];
@@ -121,6 +144,7 @@ async function buildBrainForUser(
   return {
     user_id: userId,
     business_name: brand.business_name ?? '',
+    description: brand.description ?? null,
     tone: toneStr,
     language: brand.language ?? 'English',
     allowed_ctas: brand.allowed_ctas ?? null,

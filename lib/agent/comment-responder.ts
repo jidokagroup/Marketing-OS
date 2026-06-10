@@ -14,7 +14,7 @@
 
 import OpenAI from 'openai'
 import { createServiceClient } from '@/lib/supabase/service'
-import type { BrandBrain } from './brand-brain'
+import { brandFieldsLoaded, type BrandBrain } from './brand-brain'
 import { checkAndIncrementUsage } from './usage'
 
 const getOpenAI = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -50,8 +50,15 @@ interface ReplyResult {
 }
 
 export async function handleComment(event: CommentEvent, brand: BrandBrain): Promise<ReplyResult> {
-  // DEBUG: Log brand config
-  console.log('[handleComment] comment:', event.comment_text, 'dm_enabled:', brand.dm_enabled, 'keywords:', brand.dm_trigger_keywords, 'template:', brand.dm_template?.slice(0, 30))
+  console.log('[handleComment]', JSON.stringify({
+    comment: event.comment_text,
+    brand_loaded: brandFieldsLoaded(brand),
+    dm_enabled: brand.dm_enabled,
+    dm_trigger_mode: brand.dm_trigger_mode,
+    dm_trigger_keywords: brand.dm_trigger_keywords,
+    has_template: !!brand.dm_template,
+    cta_links: brand.cta_links?.length ?? 0,
+  }))
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = createServiceClient() as any
@@ -143,6 +150,44 @@ export async function handleComment(event: CommentEvent, brand: BrandBrain): Pro
   return { status: 'queued_review', reply_text: replyText, dm_queued: shouldDm }
 }
 
+/**
+ * Dry-run the full response pipeline WITHOUT posting to Instagram.
+ * Powers POST /api/social/debug/generate-response so responses can be tested
+ * independently of the Meta webhook.
+ */
+export async function previewResponse(opts: {
+  commentText: string
+  brand: BrandBrain
+  postCaption?: string | null
+  simulateDmTrigger?: boolean
+}): Promise<{
+  route: 'auto_reply' | 'human_review'
+  dm_will_be_sent: boolean
+  public_reply: string
+  dm_text: string | null
+  cta_link: string | null
+  cta_label: string | null
+}> {
+  const { commentText, brand, postCaption = null } = opts
+  const route = classifyComment(commentText, brand)
+  const keywordTrigger = brand.dm_enabled && checkDmTrigger(commentText, brand)
+  const dm_will_be_sent = opts.simulateDmTrigger ?? keywordTrigger
+
+  const public_reply = await generateReply(commentText, brand, route === 'human_review', postCaption, dm_will_be_sent)
+
+  let dm_text: string | null = null
+  let cta_link: string | null = null
+  let cta_label: string | null = null
+  if (dm_will_be_sent) {
+    const dm = await generateDmText(commentText, brand, postCaption)
+    dm_text = dm.text
+    cta_link = dm.link
+    cta_label = dm.linkLabel
+  }
+
+  return { route, dm_will_be_sent, public_reply, dm_text, cta_link, cta_label }
+}
+
 function classifyComment(text: string, brand: BrandBrain): 'auto_reply' | 'human_review' {
   const escalationTriggers = [
     'refund', 'cancel', 'billing', 'charge', 'lawsuit', 'legal', 'fraud',
@@ -165,19 +210,41 @@ function checkDmTrigger(text: string, brand: BrandBrain): boolean {
   return brand.dm_trigger_keywords.some(kw => lower.includes(kw.toLowerCase()))
 }
 
-// Buying intent keywords trigger template-based DMs (v2)
-const BUYING_INTENT = [
-  'sign up', 'signup', 'how do i', 'how to', 'get started', 'start', 'join',
-  'price', 'pricing', 'how much', 'cost', 'plan', 'plans', 'subscribe',
-  'trial', 'free trial', 'demo', 'try', 'interested', 'want this', 'need this',
-  'where', 'link', 'info', 'learn more', 'more info', 'details',
-]
-
-function detectBuyingIntent(text: string): boolean {
-  const lower = text.toLowerCase()
-  return BUYING_INTENT.some(kw => lower.includes(kw))
+/**
+ * Builds the shared "brand context" block injected into every AI prompt.
+ * Only includes fields that are actually set, so the model is never fed
+ * "not provided" noise and can't hallucinate around empty values.
+ */
+export function buildBrandContext(brand: BrandBrain, postCaption: string | null = null): string {
+  const lines: string[] = []
+  const add = (label: string, val: string | null | undefined) => {
+    if (val && String(val).trim()) lines.push(`- ${label}: ${String(val).trim()}`)
+  }
+  add('Business', brand.business_name)
+  add('What they do', brand.description)
+  add('Services / products', brand.services_products)
+  add('Pricing', brand.pricings)
+  add('Hours', brand.hours)
+  add('Location', brand.location)
+  add('Phone', brand.phone)
+  add('Website', brand.web_link)
+  add('Booking link', brand.booking_link)
+  if (brand.cta_links?.length) {
+    add('Links', brand.cta_links.map(l => `${l.label} → ${l.url}`).join(' | '))
+  }
+  add('Approved CTAs', brand.allowed_ctas)
+  add('FAQ', [brand.faq_1, brand.faq_2, brand.faq_3].filter(Boolean).join(' • ') || null)
+  add('Brand voice examples', brand.brand_voice_examples)
+  if (postCaption) add('The post they commented on', postCaption.slice(0, 400))
+  return lines.join('\n')
 }
 
+/**
+ * Generates the PUBLIC comment reply using the full Brand Brain.
+ * - If a DM is being sent, the public reply is a short, varied nudge to the DMs.
+ * - Otherwise it answers the comment directly using brand info.
+ * Never invents prices/offers; respects tone, language, and emoji settings.
+ */
 async function generateReply(
   commentText: string,
   brand: BrandBrain,
@@ -185,11 +252,49 @@ async function generateReply(
   postCaption: string | null,
   dmWillBeSent: boolean
 ): Promise<string> {
-  // TEMPLATE-ONLY replies (no AI). If DM will be sent, confirm it. Otherwise use generic thank you.
-  if (!isHumanReview && dmWillBeSent) {
-    return 'Just sent you the details — check your DMs! 🙌'
-  }
-  return 'Thanks for reaching out! Check your DMs for more info. 😊'
+  // Human-review drafts are never auto-posted, but we still draft a strong suggestion.
+  const emojiRule = brand.emoji_allowed
+    ? 'A tasteful emoji or two is fine.'
+    : 'Do NOT use any emojis.'
+
+  const intent = isHumanReview
+    ? `This comment was flagged for human review (sensitive topic). Draft a calm, empathetic reply a human can approve. Never admit fault or make promises; invite them to continue privately.`
+    : dmWillBeSent
+      ? `A DM with full details is being sent to this person right now. Write a SHORT public reply (max 140 characters) that feels personal to their comment and the post, and tells them to check their DMs. Vary your wording naturally — do not sound templated.`
+      : `Answer their comment directly and helpfully using ONLY the brand info below. If a relevant link or CTA exists, include it naturally. Keep it under 220 characters.`
+
+  const systemPrompt = `You are the Instagram community manager for ${brand.business_name}.
+Write in this brand's voice. Tone: ${brand.tone}. Language: ${brand.language}.
+${emojiRule}
+
+Hard rules:
+- NEVER invent prices, offers, guarantees, services, or facts not in the brand info.
+- If you don't know something, point them to a link or offer to help — don't make it up.
+- Sound like a real human, not a bot. Avoid generic filler like "Thanks for reaching out! Let us know if you have questions."
+- No hashtags. One short paragraph only.
+
+${intent}
+
+Brand info:
+${buildBrandContext(brand, postCaption)}
+
+Return ONLY the reply text.`
+
+  const response = await getOpenAI().chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Comment from @user: "${commentText}"` },
+    ],
+    max_tokens: 160,
+    temperature: 0.8,
+  })
+
+  return (
+    response.choices[0]?.message?.content?.trim() ||
+    // Fallback only if the AI call itself fails/returns empty
+    (dmWillBeSent ? 'Just sent you a DM with the details! 🙌' : "Thanks so much! I'll follow up with more info.")
+  )
 }
 
 async function postReplyToInstagram(commentId: string, message: string, pageToken: string): Promise<boolean> {
@@ -211,20 +316,8 @@ async function postReplyToInstagram(commentId: string, message: string, pageToke
 async function sendDmFromComment(event: CommentEvent, brand: BrandBrain, _commentReply: string, postCaption: string | null = null): Promise<void> {
   if (!brand.page_token || !brand.ig_business_id) return
 
-  // Build DM without AI — guaranteed to include the link
-  const link = brand.cta_links?.[0]?.url || brand.booking_link || brand.web_link || 'https://www.autom8ig.io'
-  const name = brand.business_name || 'us'
-
-  // Use custom DM template if provided, otherwise default
-  let dmText = brand.dm_template || `Hey! Thanks for reaching out to {business_name} 🙌\n\nHere's your link to get started with a free 14-day trial 👉 {link}\n\nNo credit card required. Reply here if you have any questions!`
-
-  // Replace template variables
-  dmText = dmText
-    .replace('{link}', link)
-    .replace('{business_name}', name)
-    .replace('{name}', name)
-
-  const _unused = postCaption // kept for future context-aware link selection
+  // Generate a personalized DM (AI opener/personalization) with a guaranteed CTA link.
+  const { text: dmText } = await generateDmText(event.comment_text, brand, postCaption)
   if (!dmText) return
 
   try {
@@ -288,33 +381,81 @@ async function selectCtaLink(commentText: string, postCaption: string | null, br
   return links[(pick - 1)] ?? links[0]
 }
 
-async function generateDmText(commentText: string, brand: BrandBrain, postCaption: string | null): Promise<string> {
-  const chosenLink = await selectCtaLink(commentText, postCaption, brand)
-  const actionLink = chosenLink.url
+/** Guarantee the CTA url appears in the message; append it if the model dropped it. */
+function ensureLink(text: string, url: string, emoji: boolean): string {
+  if (text.includes(url)) return text
+  return `${text.trim()}\n\n${emoji ? '👉 ' : ''}${url}`
+}
 
-  // Generate just the personalized opener (1 sentence) — link is hardcoded below
-  const openerRes = await getOpenAI().chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: `Write ONE short warm sentence (under 15 words) acknowledging what this person commented on ${brand.business_name}'s Instagram post. Reference their comment and the post topic. Tone: ${brand.tone}. No hashtags. Return only the sentence, no punctuation at the end.`,
-      },
-      {
-        role: 'user',
-        content: `Post caption: "${postCaption ?? 'about our service'}"
-Comment: "${commentText}"`,
-      },
-    ],
-    max_tokens: 40,
-    temperature: 0.7,
-  })
+/**
+ * Generates the first DM sent off the back of a comment.
+ * Uses the brand's dm_template when provided (personalized to the comment),
+ * otherwise an AI opener. The selected CTA link is always force-injected.
+ */
+export async function generateDmText(
+  commentText: string,
+  brand: BrandBrain,
+  postCaption: string | null
+): Promise<{ text: string; link: string; linkLabel: string }> {
+  const chosen = await selectCtaLink(commentText, postCaption, brand)
+  const url = chosen.url
+  const name = brand.business_name || 'us'
+  const emojiRule = brand.emoji_allowed ? 'Light emoji use is welcome.' : 'No emojis.'
 
-  const opener = openerRes.choices[0]?.message?.content?.trim() ?? 'Thanks for your interest'
+  let text: string
 
-  // Hardcode the link — never rely on AI to include it
-  const trialLine = `Here's the link 👉 ${actionLink}`
-  const closingLine = `Any questions? Just reply here — we've got you! ${brand.emoji_allowed ? '🚀' : ''}`
+  if (brand.dm_template && brand.dm_template.trim()) {
+    // Personalize the user's own template to this specific comment, keeping the {link} slot.
+    const res = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You write Instagram DMs for ${brand.business_name}. Tone: ${brand.tone}. Language: ${brand.language}. ${emojiRule}
+Adapt the TEMPLATE below so it speaks directly to what the person commented — keep it concise and natural.
+Keep the {link} placeholder exactly where a link should go. Keep {business_name} if present. No hashtags.
+Return ONLY the message.`,
+        },
+        {
+          role: 'user',
+          content: `Their comment: "${commentText}"
+Post caption: "${postCaption ?? 'N/A'}"
 
-  return `${opener}!\n\n${trialLine}\n\n${closingLine}`.trim()
+TEMPLATE:
+${brand.dm_template}`,
+        },
+      ],
+      max_tokens: 180,
+      temperature: 0.6,
+    })
+    text = (res.choices[0]?.message?.content?.trim() || brand.dm_template)
+      .replaceAll('{link}', url)
+      .replaceAll('{business_name}', name)
+      .replaceAll('{name}', name)
+  } else {
+    // No template: AI opener referencing their comment, then the hardcoded link.
+    const res = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `Write a short, warm Instagram DM (under 45 words) for ${brand.business_name} replying to someone who commented. Tone: ${brand.tone}. Language: ${brand.language}. ${emojiRule}
+Reference their comment, then invite them to the link. Do NOT invent prices or claims. No hashtags. Return ONLY the message.`,
+        },
+        {
+          role: 'user',
+          content: `Their comment: "${commentText}"
+Post caption: "${postCaption ?? 'N/A'}"
+${brand.pricings ? `Pricing (use only if relevant): ${brand.pricings}` : ''}
+Link to share: ${url}`,
+        },
+      ],
+      max_tokens: 140,
+      temperature: 0.7,
+    })
+    text = res.choices[0]?.message?.content?.trim() ||
+      `Hey! Thanks for your comment on ${name}'s post — here's the link to get started:`
+  }
+
+  return { text: ensureLink(text, url, brand.emoji_allowed), link: url, linkLabel: chosen.label }
 }

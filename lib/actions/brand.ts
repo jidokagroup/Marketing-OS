@@ -33,6 +33,25 @@ export interface UpsertBrandInput {
   escalation_rules?: string | null
   emoji_allowed?: boolean
   formality_level?: number
+  // Extended Brand Brain fields used by the comment responder & DM chatbot
+  language?: string | null
+  phone?: string | null
+  location?: string | null
+  hours?: string | null
+  services_products?: string | null
+  pricings?: string | null
+  brand_voice_examples?: string | null
+  web_link?: string | null
+  booking_link?: string | null
+  faq_1?: string | null
+  faq_2?: string | null
+  faq_3?: string | null
+  allowed_ctas?: string | null
+  cta_links?: { label: string; url: string }[]
+  dm_enabled?: boolean
+  dm_trigger_keywords?: string[]
+  dm_trigger_mode?: string
+  dm_template?: string | null
   services?: { service_name: string; price_range?: string | null }[]
 }
 

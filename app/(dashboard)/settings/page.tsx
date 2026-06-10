@@ -63,8 +63,16 @@ export default function BrandBrainPage() {
             escalationRules: profile.escalation_rules ?? "",
             emojiAllowed: profile.emoji_allowed ?? true,
             formalityLevel: profile.formality_level ?? 50,
-            allowedCtas: [],
+            allowedCtas: profile.allowed_ctas
+              ? profile.allowed_ctas.split(",").map((c) => c.trim()).filter(Boolean)
+              : [],
           });
+          // Automation fields (previously not persisted)
+          const p = profile as unknown as Record<string, unknown>;
+          if (typeof p.dm_enabled === "boolean") setDmLogic(p.dm_enabled);
+          if (Array.isArray(p.dm_trigger_keywords) && p.dm_trigger_keywords.length) {
+            setTriggerKeywords(p.dm_trigger_keywords as string[]);
+          }
         }
       })
       .catch(() => {
@@ -79,15 +87,25 @@ export default function BrandBrainPage() {
     setSaving(true);
     setSaveError("");
     try {
+      // Fold escalation keywords into the free-text escalation rules the agent reads.
+      const escalationCombined = [
+        brand.escalationRules,
+        escalationKeywords.length ? `Escalate on: ${escalationKeywords.join(", ")}` : "",
+      ].filter(Boolean).join("\n");
+
       await upsertBrandProfile({
         business_name: brand.businessName,
         description: brand.description || null,
         tone: brand.tones,
         tone_notes: brand.customToneNotes || null,
         cta_keywords: brand.ctaKeywords,
-        escalation_rules: brand.escalationRules || null,
+        escalation_rules: escalationCombined || null,
         emoji_allowed: brand.emojiAllowed,
         formality_level: brand.formalityLevel,
+        // Persist CTA + DM automation so the agents actually use them
+        allowed_ctas: brand.allowedCtas.length ? brand.allowedCtas.join(", ") : null,
+        dm_enabled: dmLogic,
+        dm_trigger_keywords: triggerKeywords,
         services: brand.services.map((s) => ({
           service_name: s.name,
           price_range: s.priceRange || null,
