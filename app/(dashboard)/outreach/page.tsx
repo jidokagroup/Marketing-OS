@@ -257,9 +257,9 @@ export default function SocialIntelPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-text-primary">Social Intel</h1>
+            <h1 className="text-xl font-semibold tracking-tight text-text-primary">Outreach</h1>
           </div>
-          <p className="text-xs text-text-muted">Review AI-generated drafts before anything is posted.</p>
+          <p className="text-xs text-text-muted">Outbound AI drafts for X &amp; Reddit — review before anything is posted.</p>
         </div>
 
         {/* Search */}

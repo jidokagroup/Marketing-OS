@@ -68,7 +68,7 @@ export async function handleDm(event: DmEvent, brand: BrandBrain): Promise<DmRes
     // Don't ghost the person — send a brief, fixed holding message (no AI, so it
     // can't improvise on a sensitive refund/billing/legal topic) and flag for a human.
     const emoji = brand.emoji_allowed
-    const holding = `Great question${emoji ? ' 🙏' : ''} — I want to make sure you get the right answer, so I'm passing this to a team member at ${brand.business_name}. They'll follow up here shortly!`
+    const holding = `Thanks for reaching out${emoji ? ' 🙌' : ''} — you'll hear back from ${brand.business_name} directly to continue this conversation. Hang tight, someone will be in touch shortly!`
 
     if (brand.page_token) {
       const send = await sendInstagramMessage({

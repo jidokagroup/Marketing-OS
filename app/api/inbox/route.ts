@@ -24,29 +24,84 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
   const offset = (page - 1) * PAGE_SIZE
 
-  // Escalated DM conversations needing a human — independent of comments.
-  // RLS (user_id = auth.uid()) scopes this to the caller.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: escalatedDms } = await (supabase as any)
-    .from('dm_conversations')
-    .select('id, recipient_ig_id, recipient_username, history, handoff_reason, last_message_at')
-    .eq('conversation_stage', 'escalated')
-    .order('last_message_at', { ascending: false })
-    .limit(50)
-
-  const dms = escalatedDms ?? []
-
-  // Step 1: get user's social account IDs
+  // Step 1: user's connected accounts (id, IG business id, platform)
   const { data: userAccounts } = await supabase
     .from('social_accounts')
-    .select('id')
+    .select('id, external_account_id, platform')
     .eq('user_id', user.id)
 
-  const accountIds = (userAccounts ?? []).map((a: { id: string }) => a.id)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const accounts = (userAccounts ?? []) as any[]
+  const accountIds = accounts.map((a) => a.id)
+  const igBusinessIds = accounts.map((a) => a.external_account_id).filter(Boolean)
+  const platformByAccountId: Record<string, string> = {}
+  const platformByIgId: Record<string, string> = {}
+  for (const a of accounts) {
+    platformByAccountId[a.id] = a.platform ?? 'instagram'
+    if (a.external_account_id) platformByIgId[a.external_account_id] = a.platform ?? 'instagram'
+  }
+
+  // All DM conversations (escalations + responses log). RLS scopes to the caller.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: allDms } = await (supabase as any)
+    .from('dm_conversations')
+    .select('id, social_account_id, recipient_ig_id, recipient_username, history, handoff_reason, conversation_stage, last_message_at')
+    .order('last_message_at', { ascending: false })
+    .limit(100)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dmRows = (allDms ?? []) as any[]
+  const dms = dmRows.filter((d) => d.conversation_stage === 'escalated')
+
+  // ── Per-platform responses log: everything the AI has sent ──
+  type ResponseLogItem = {
+    id: string; channel: 'comment' | 'dm'; platform: string;
+    recipient: string; incoming_text: string; response_text: string; ts: string | null;
+  }
+  const responses: ResponseLogItem[] = []
+
+  // DM responses (assistant turns), pairing each with the user message before it.
+  for (const d of dmRows) {
+    const platform = platformByAccountId[d.social_account_id] ?? 'instagram'
+    const hist: Array<{ role: string; content: string; ts: string }> = Array.isArray(d.history) ? d.history : []
+    hist.forEach((m, i) => {
+      if (m.role !== 'assistant') return
+      let incoming = ''
+      for (let j = i - 1; j >= 0; j--) { if (hist[j].role === 'user') { incoming = hist[j].content; break } }
+      responses.push({
+        id: `dm:${d.id}:${i}`, channel: 'dm', platform,
+        recipient: d.recipient_username ?? `IG ${d.recipient_ig_id}`,
+        incoming_text: incoming, response_text: m.content, ts: m.ts ?? d.last_message_at,
+      })
+    })
+  }
+
+  // Comment responses (auto-posted replies) from the processing log.
+  if (igBusinessIds.length > 0) {
+    const { data: log } = await supabase
+      .from('comment_processing_log')
+      .select('id, ig_business_id, comment_text, response_text, processed_at')
+      .in('ig_business_id', igBusinessIds)
+      .eq('reply_status', 'replied')
+      .order('processed_at', { ascending: false })
+      .limit(100)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of ((log ?? []) as any[])) {
+      if (!r.response_text) continue
+      responses.push({
+        id: `c:${r.id}`, channel: 'comment',
+        platform: platformByIgId[r.ig_business_id] ?? 'instagram',
+        recipient: '(comment reply)', incoming_text: r.comment_text ?? '',
+        response_text: r.response_text, ts: r.processed_at,
+      })
+    }
+  }
+
+  responses.sort((a, b) => new Date(b.ts ?? 0).getTime() - new Date(a.ts ?? 0).getTime())
 
   if (accountIds.length === 0) {
     return NextResponse.json({
-      data: [], dms,
+      data: [], dms, responses,
       pagination: { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 },
     })
   }
@@ -61,7 +116,7 @@ export async function GET(request: NextRequest) {
 
   if (commentIds.length === 0) {
     return NextResponse.json({
-      data: [], dms,
+      data: [], dms, responses,
       pagination: { page, pageSize: PAGE_SIZE, total: 0, totalPages: 0 },
     })
   }
@@ -85,6 +140,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     data: data ?? [],
     dms,
+    responses,
     pagination: {
       page,
       pageSize: PAGE_SIZE,
