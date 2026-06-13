@@ -95,7 +95,7 @@ export interface Database {
 // Enums
 // ---------------------------------------------------------------------------
 
-export type SocialPlatform = 'instagram' | 'facebook'
+export type SocialPlatform = 'instagram' | 'facebook' | 'x'
 export type ReplyStatus = 'pending' | 'approved' | 'rejected' | 'posted'
 export type SubscriptionPlan =
   | 'starter'

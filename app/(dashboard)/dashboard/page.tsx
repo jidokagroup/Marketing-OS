@@ -28,6 +28,7 @@ const socialShareLinks = (code: string, url: string) => [
 const socialAccounts = [
   {
     name: "Instagram",
+    platform: "instagram",
     icon: "📸",
     status: "live" as const,
     desc: "Comments, DMs & Stories",
@@ -36,6 +37,7 @@ const socialAccounts = [
   },
   {
     name: "TikTok",
+    platform: "tiktok",
     icon: "🎵",
     status: "soon" as const,
     desc: "Comments & DM replies",
@@ -44,6 +46,7 @@ const socialAccounts = [
   },
   {
     name: "YouTube",
+    platform: "youtube",
     icon: "▶️",
     status: "soon" as const,
     desc: "Comment management",
@@ -52,14 +55,16 @@ const socialAccounts = [
   },
   {
     name: "X / Twitter",
+    platform: "x",
     icon: "𝕏",
-    status: "soon" as const,
+    status: "live" as const,
     desc: "Mentions & replies",
-    href: null,
-    cta: "Coming Soon",
+    href: "/api/social/connect/x",
+    cta: "Connect Now",
   },
   {
     name: "Facebook",
+    platform: "facebook",
     icon: "📘",
     status: "soon" as const,
     desc: "Comments & Messenger",
@@ -204,7 +209,7 @@ export default async function DashboardPage() {
           <div className="space-y-2.5">
             {socialAccounts.map((account) => {
               const isLive = account.status === "live";
-              const isConnected = connectedPlatforms.includes(account.name.toLowerCase());
+              const isConnected = connectedPlatforms.includes(account.platform);
 
               if (isConnected) {
                 return (
