@@ -17,6 +17,9 @@ const protectedPaths = [
 
 const authPaths = ['/login', '/signup']
 
+// Marketing pages that should redirect logged-in users to the dashboard
+const marketingPaths = ['/', '/index.html']
+
 export async function middleware(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request)
 
@@ -24,6 +27,7 @@ export async function middleware(request: NextRequest) {
 
   const isProtected = protectedPaths.some((p) => pathname === p || pathname.startsWith(p + '/'))
   const isAuthPage = authPaths.some((p) => pathname === p || pathname.startsWith(p + '/'))
+  const isMarketingRoot = marketingPaths.includes(pathname)
 
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone()
@@ -32,7 +36,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if (isAuthPage && user) {
+  // Redirect authenticated users away from auth/marketing pages to the dashboard
+  if ((isAuthPage || isMarketingRoot) && user) {
     const dashUrl = request.nextUrl.clone()
     dashUrl.pathname = '/dashboard'
     dashUrl.search = ''
