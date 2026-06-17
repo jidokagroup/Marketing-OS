@@ -54,8 +54,8 @@ CREATE TABLE IF NOT EXISTS content_queue (
 );
 
 ALTER TABLE content_queue ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users see own content" ON content_queue
-  FOR ALL USING (user_id = auth.uid());
+CREATE POLICY "Users manage own content" ON content_queue
+  FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 CREATE INDEX IF NOT EXISTS idx_content_queue_user_status ON content_queue(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_content_queue_scheduled ON content_queue(scheduled_time) WHERE status = 'scheduled';
