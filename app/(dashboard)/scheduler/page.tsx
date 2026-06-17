@@ -74,6 +74,17 @@ export default function SchedulerPage() {
     );
   };
 
+  // X (Twitter) currently supports single-photo posts only — no video/carousel.
+  const xSelected = selectedPlatforms.includes("x");
+
+  // If X gets selected while a video/carousel type is chosen, fall back to a
+  // single photo so the batch stays valid for X.
+  useEffect(() => {
+    if (xSelected && (selectedType === "short_video" || selectedType === "carousel")) {
+      setSelectedType("post");
+    }
+  }, [xSelected, selectedType]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setUploadedFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
   };
@@ -332,20 +343,35 @@ export default function SchedulerPage() {
                 </a>
               </div>
             )}
+            {isAdmin && xSelected && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-zinc-500/20 bg-zinc-500/5 px-4 py-3">
+                <span className="text-zinc-300 shrink-0">✕</span>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  <strong className="text-text-primary">X supports single photo posts only.</strong>{" "}
+                  Video posting for X is coming soon.
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* Step 1: Content type */}
           <Card header={<h2 className="text-sm font-semibold text-text-primary">2 · What are you posting?</h2>}>
             <div className="grid sm:grid-cols-3 gap-3">
-              {contentTypes.map((ct) => (
+              {contentTypes.map((ct) => {
+                // X only supports single photos for now — lock video & carousel.
+                const ctLocked = xSelected && ct.id !== "post";
+                return (
                 <button
                   key={ct.id}
                   type="button"
-                  onClick={() => setSelectedType(ct.id)}
+                  disabled={ctLocked}
+                  onClick={() => { if (!ctLocked) setSelectedType(ct.id); }}
                   className={`flex flex-col items-start gap-2 p-4 rounded-xl border text-left transition-all
-                    ${selectedType === ct.id
-                      ? "border-primary/40 bg-primary/8 shadow-[0_0_16px_rgba(123,63,242,0.08)]"
-                      : "border-border bg-surface hover:border-primary/20"
+                    ${ctLocked
+                      ? "border-border bg-surface opacity-50 cursor-not-allowed"
+                      : selectedType === ct.id
+                        ? "border-primary/40 bg-primary/8 shadow-[0_0_16px_rgba(123,63,242,0.08)]"
+                        : "border-border bg-surface hover:border-primary/20"
                     }`}
                 >
                   <span className="text-2xl">{ct.icon}</span>
@@ -353,9 +379,16 @@ export default function SchedulerPage() {
                     <p className="text-sm font-semibold text-text-primary">{ct.label}</p>
                     <p className="text-[11px] text-text-muted mt-0.5 leading-snug">{ct.note}</p>
                   </div>
-                  {selectedType === ct.id && <span className="text-xs text-primary font-semibold">✓ Selected</span>}
+                  {ctLocked ? (
+                    <span className="text-[10px] text-text-muted border border-border px-2 py-0.5 rounded-full mt-0.5">
+                      Coming soon for X
+                    </span>
+                  ) : selectedType === ct.id ? (
+                    <span className="text-xs text-primary font-semibold">✓ Selected</span>
+                  ) : null}
                 </button>
-              ))}
+                );
+              })}
             </div>
 
             {selectedType === "post" && (
