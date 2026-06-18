@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,13 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  // Capture a collaborator referral code (?ref=CODE) so it can be attributed
+  // once the new account has a session (handled in the dashboard layout).
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) localStorage.setItem("collab_ref", ref.toUpperCase());
+  }, []);
 
   const strength = getStrength(password);
 

@@ -19,6 +19,20 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [loading]);
 
+  // Attribute a collaborator referral captured at signup (?ref=CODE), once the
+  // new account has a session. Fire once, then clear regardless of outcome.
+  useEffect(() => {
+    if (loading || !user) return;
+    const ref = localStorage.getItem("collab_ref");
+    if (!ref) return;
+    localStorage.removeItem("collab_ref");
+    fetch("/api/collab/referral", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: ref }),
+    }).catch(() => {});
+  }, [loading, user]);
+
   const derivedUser = {
     name: loading
       ? ""

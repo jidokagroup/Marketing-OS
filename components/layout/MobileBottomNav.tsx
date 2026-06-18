@@ -57,7 +57,7 @@ const navItems: MobileNavItem[] = [
     ),
   },
   {
-    href: "/collab",
+    href: "/collab-dashboard",
     label: "Collab",
     icon: (active: boolean) => (
       <svg className={`w-5 h-5 ${active ? "text-primary" : "text-white/65"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>

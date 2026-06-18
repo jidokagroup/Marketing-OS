@@ -17,6 +17,21 @@ async function requireAdmin() {
   return user
 }
 
+function codeBase(handle: string | null): string {
+  return (handle ?? '').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 8) || 'CREATOR'
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function generateReferralCode(svc: any, handle: string | null): Promise<string> {
+  const base = codeBase(handle)
+  for (let i = 0; i < 5; i++) {
+    const code = `${base}${Math.random().toString(36).slice(2, 5).toUpperCase()}`
+    const { data } = await svc.from('collab_applications').select('id').eq('referral_code', code).maybeSingle()
+    if (!data) return code
+  }
+  return `${base}${Date.now().toString(36).toUpperCase().slice(-4)}`
+}
+
 export async function GET() {
   if (!(await requireAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
@@ -44,6 +59,19 @@ export async function PATCH(request: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any
+
+  // On approval, mint a referral code if the applicant doesn't have one yet.
+  if (status === 'approved') {
+    const { data: current } = await svc
+      .from('collab_applications')
+      .select('referral_code, instagram_handle')
+      .eq('id', id)
+      .maybeSingle()
+    if (current && !current.referral_code) {
+      update.referral_code = await generateReferralCode(svc, current.instagram_handle)
+    }
+  }
+
   const { data, error } = await svc
     .from('collab_applications')
     .update(update)
