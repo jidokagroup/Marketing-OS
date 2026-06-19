@@ -36,16 +36,27 @@ export async function GET() {
     }
   }
 
-  if (!app) return NextResponse.json({ application: null, referrals: 0 })
+  if (!app) return NextResponse.json({ application: null, referrals: 0, referralsThisMonth: 0 })
 
   let referrals = 0
+  let referralsThisMonth = 0
   if (app.referral_code) {
     const { count } = await svc
       .from('collab_referrals')
       .select('id', { count: 'exact', head: true })
       .eq('referral_code', app.referral_code)
     referrals = count ?? 0
+
+    const monthStart = new Date()
+    monthStart.setUTCDate(1)
+    monthStart.setUTCHours(0, 0, 0, 0)
+    const { count: monthCount } = await svc
+      .from('collab_referrals')
+      .select('id', { count: 'exact', head: true })
+      .eq('referral_code', app.referral_code)
+      .gte('created_at', monthStart.toISOString())
+    referralsThisMonth = monthCount ?? 0
   }
 
-  return NextResponse.json({ application: app, referrals })
+  return NextResponse.json({ application: app, referrals, referralsThisMonth })
 }

@@ -17,6 +17,7 @@ type BillingStatus = { status: string | null };
 export default function CollabDashboardPage() {
   const [app, setApp] = useState<Application | null>(null);
   const [referrals, setReferrals] = useState(0);
+  const [referralsThisMonth, setReferralsThisMonth] = useState(0);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -33,6 +34,7 @@ export default function CollabDashboardPage() {
       const bill = await billRes.json().catch(() => ({}));
       setApp(me.application ?? null);
       setReferrals(me.referrals ?? 0);
+      setReferralsThisMonth(me.referralsThisMonth ?? 0);
       setBilling({ status: bill.status ?? null });
     } finally {
       setLoading(false);
@@ -136,17 +138,17 @@ export default function CollabDashboardPage() {
             </div>
           )}
 
-          {/* Free month + referrals stats */}
+          {/* Referrals stats — this month + all time */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4">
-              <p className="text-[10px] text-emerald-400 uppercase tracking-wider mb-1">Status</p>
-              <p className="text-lg font-bold text-text-primary">✓ Approved</p>
-              <p className="text-xs text-text-secondary mt-0.5">1 month free unlocked</p>
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Referrals this month</p>
+              <p className="text-2xl font-bold text-text-primary">{referralsThisMonth}</p>
+              <p className="text-xs text-text-secondary mt-0.5">since the 1st (UTC)</p>
             </div>
             <div className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Referrals</p>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider mb-1">Referrals all time</p>
               <p className="text-2xl font-bold text-text-primary">{referrals}</p>
-              <p className="text-xs text-text-secondary mt-0.5">signups from your link</p>
+              <p className="text-xs text-text-secondary mt-0.5">total signups from your link</p>
             </div>
           </div>
 
@@ -178,8 +180,7 @@ export default function CollabDashboardPage() {
             <p className="text-sm font-semibold text-text-primary mb-2">Your side of the collab</p>
             <ul className="space-y-1.5 text-xs text-text-secondary">
               <li className="flex gap-2"><span className="text-primary">①</span> Use Autom8 free for a month — no credit card.</li>
-              <li className="flex gap-2"><span className="text-primary">②</span> Only if it genuinely helps, share it: one video + one post, in your own words.</li>
-              <li className="flex gap-2"><span className="text-primary">③</span> Add your referral link so your audience gets set up — and you get credit.</li>
+              <li className="flex gap-2"><span className="text-primary">②</span> Add your referral link so your audience gets set up — and you get credit.</li>
             </ul>
           </div>
         </>
