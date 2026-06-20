@@ -15,6 +15,7 @@ const protectedPaths = [
   '/blog-admin',
   '/collab-admin',
   '/collab-dashboard',
+  '/admin-access',
 ]
 
 const authPaths = ['/login', '/signup']

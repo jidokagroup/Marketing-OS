@@ -46,6 +46,42 @@ export async function sendHelpEmail(ticket: TicketNotification): Promise<NotifyR
   }
 }
 
+export interface CollabApproval {
+  name: string
+  email: string
+  referralCode: string | null
+  dashboardUrl: string
+}
+
+/** Email a collaborator when their application is approved. Env-gated via Resend. */
+export async function sendCollabApprovalEmail(a: CollabApproval): Promise<NotifyResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.HELP_NOTIFY_FROM || 'Autom8 <onboarding@resend.dev>'
+  if (!apiKey) return { ok: false, skipped: true }
+
+  const subject = `🎉 You're approved for the Autom8 Collab Program`
+  const codeLine = a.referralCode ? `Your referral code: ${a.referralCode}\n` : ''
+  const text =
+    `Hi ${a.name},\n\n` +
+    `You've been approved for the Autom8 Creator Collab Program! 🎉\n\n` +
+    `Head to your collaborator dashboard to claim your free month and grab your referral link:\n` +
+    `${a.dashboardUrl}\n\n` +
+    codeLine +
+    `\nWelcome aboard,\nThe Autom8 Team`
+
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: a.email, subject, text }),
+    })
+    if (!res.ok) return { ok: false, error: `Resend ${res.status}: ${await res.text()}` }
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'email send error' }
+  }
+}
+
 /** SMS via Twilio. Needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER. */
 export async function sendHelpSms(ticket: TicketNotification): Promise<NotifyResult> {
   const sid = process.env.TWILIO_ACCOUNT_SID
