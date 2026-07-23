@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, FileText, ShieldCheck } from "lucide-react";
+import { ChevronRight, CreditCard, FileText, ShieldCheck } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
@@ -42,6 +42,39 @@ export default async function SettingsPage() {
           </div>
           <p className="text-sm text-muted-foreground">
             Use the sign-out button in the top bar when you are finished.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Billing
+          </CardTitle>
+          <CardDescription>
+            Subscription details for Jidoka Marketing Team OS.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-medium">Plan</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Marketing Team OS
+              </p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-medium">Status</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Stripe setup pending
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Account creation currently opens the dashboard directly. Stripe
+            subscription checkout will be connected here after the billing
+            account and price are configured.
           </p>
         </CardContent>
       </Card>
