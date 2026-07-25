@@ -1,14 +1,13 @@
 [build]
   command = "npm run build"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
 
 [functions]
-  included_files = [
-    "node_modules/next/dist/**",
-    "node_modules/next/package.json"
-  ]
+  node_bundler = "esbuild"
+  external_node_modules = ["next"]
 
 [[headers]]
   for = "/*"
