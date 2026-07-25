@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   outputFileTracingRoot: process.cwd(),
   // Keep these out of the server bundle so their internal file resolution
   // (e.g. pdfjs-dist's pdf.worker.mjs) works against node_modules at runtime.
