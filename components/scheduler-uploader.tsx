@@ -96,6 +96,15 @@ type GeneratedOption = {
   primary_script: string | null;
 };
 type CsvRow = Record<string, string>;
+type CommentDmFlowResponse = {
+  public_reply?: string;
+  dm_sequence?: string;
+  review_required?: boolean;
+  review_reason?: string;
+  risk_level?: "low" | "medium" | "high";
+  confidence?: "low" | "medium" | "high";
+  error?: string;
+};
 
 function splitPlatforms(value: string) {
   return value
@@ -300,6 +309,11 @@ export function SchedulerUploader({
   );
   const [useBestTime, setUseBestTime] = useState(true);
   const [commentDmEnabled, setCommentDmEnabled] = useState(false);
+  const [sampleComment, setSampleComment] = useState("");
+  const [commentAutoReply, setCommentAutoReply] = useState("");
+  const [dmSequence, setDmSequence] = useState("");
+  const [commentDmGenerating, setCommentDmGenerating] = useState(false);
+  const [commentDmReviewNote, setCommentDmReviewNote] = useState("");
 
   const agentsByName = useMemo(
     () =>
@@ -390,6 +404,57 @@ export function SchedulerUploader({
     });
   }
 
+  async function generateCommentDmDraft() {
+    if (!selectedAgentId || !titleValue.trim()) {
+      toast.error("Pick an agent and enter a title before generating the reply flow.");
+      return;
+    }
+    if (!platforms.includes("instagram")) {
+      toast.error("Comment to DM is only available for Instagram posts.");
+      return;
+    }
+
+    setCommentDmGenerating(true);
+    setCommentDmReviewNote("");
+    try {
+      const res = await fetch("/api/comment-dm/generate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          agent_id: selectedAgentId,
+          title: titleValue,
+          caption: captionOverride,
+          sample_comment: sampleComment,
+          trigger_keywords:
+            "guide, info, demo, audit, pricing, help, interested, send it",
+        }),
+      });
+      const json = await readJsonResponse<CommentDmFlowResponse>(res);
+      if (!res.ok) {
+        throw new Error(json.error ?? "Could not generate the comment-to-DM flow.");
+      }
+      setCommentAutoReply(json.public_reply ?? "");
+      setDmSequence(json.dm_sequence ?? "");
+      setCommentDmReviewNote(json.review_reason ?? "");
+      if (json.review_required) {
+        toast.info(json.review_reason || "Generated with a human review flag.");
+      } else {
+        toast.success("Generated public reply and DM sequence from Brand Brain.");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Generation failed.");
+    } finally {
+      setCommentDmGenerating(false);
+    }
+  }
+
+  function toggleCommentDmFlow(checked: boolean) {
+    setCommentDmEnabled(checked);
+    if (checked && !commentAutoReply.trim() && !dmSequence.trim()) {
+      void generateCommentDmDraft();
+    }
+  }
+
   async function onSingleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formEl = e.currentTarget;
@@ -430,8 +495,8 @@ export function SchedulerUploader({
         scheduled_time: scheduledTime,
         use_best_time: useBestTime,
         comment_dm_enabled: commentDmEnabled,
-        comment_auto_reply: String(form.get("comment_auto_reply") ?? ""),
-        dm_sequence: String(form.get("dm_sequence") ?? ""),
+        comment_auto_reply: commentAutoReply,
+        dm_sequence: dmSequence,
       });
       toast.success(
         result.matched
@@ -445,6 +510,10 @@ export function SchedulerUploader({
       setPlatforms(["instagram"]);
       setContentType("video");
       setCommentDmEnabled(false);
+      setSampleComment("");
+      setCommentAutoReply("");
+      setDmSequence("");
+      setCommentDmReviewNote("");
       startTransition(() => router.refresh());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
@@ -782,65 +851,86 @@ export function SchedulerUploader({
             </div>
 
             {!hasMailchimp && (
-            <div className="rounded-lg border p-4">
-              <label className="flex items-start gap-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={commentDmEnabled}
-                  onChange={(event) => setCommentDmEnabled(event.target.checked)}
-                  className="mt-1 h-4 w-4"
-                />
-                <span>
-                  <span className="flex items-center gap-2 font-medium">
-                    <MessageCircle className="h-4 w-4" />
-                    Instagram comment to DM flow
+              <div className="rounded-lg border p-4">
+                <label className="flex items-start gap-3 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={commentDmEnabled}
+                    onChange={(event) => toggleCommentDmFlow(event.target.checked)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span>
+                    <span className="flex items-center gap-2 font-medium">
+                      <MessageCircle className="h-4 w-4" />
+                      Instagram comment to DM flow
+                    </span>
+                    <span className="mt-1 block text-muted-foreground">
+                      When toggled on, comments can receive a dynamic public reply
+                      and a DM sequence for Instagram posts.
+                    </span>
                   </span>
-                  <span className="mt-1 block text-muted-foreground">
-                    When toggled on, comments can receive a dynamic public reply
-                    and a DM sequence for Instagram posts.
-                  </span>
-                </span>
-              </label>
-              {commentDmEnabled && (
-                <div className="mt-4 space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Thanks for commenting - sending it now.",
-                      "I just sent the guide to your DMs.",
-                      "Great question - sending the next step now.",
-                    ].map((template) => (
-                      <Badge key={template} variant="outline">
-                        {template}
-                      </Badge>
-                    ))}
+                </label>
+                {commentDmEnabled && (
+                  <div className="mt-4 space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                      <div className="space-y-2">
+                        <Label htmlFor="sample_comment">Sample comment</Label>
+                        <Input
+                          id="sample_comment"
+                          value={sampleComment}
+                          onChange={(event) => setSampleComment(event.target.value)}
+                          placeholder="e.g. Crushing, INFO, 1616161616"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void generateCommentDmDraft()}
+                        disabled={commentDmGenerating}
+                      >
+                        {commentDmGenerating && (
+                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                        )}
+                        Generate flow
+                      </Button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="comment_auto_reply">Comment reply</Label>
+                        <Textarea
+                          id="comment_auto_reply"
+                          name="comment_auto_reply"
+                          rows={3}
+                          value={commentAutoReply}
+                          onChange={(event) => setCommentAutoReply(event.target.value)}
+                          placeholder="Generate a public reply from the Brand Brain."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dm_sequence">DM sequence</Label>
+                        <Textarea
+                          id="dm_sequence"
+                          name="dm_sequence"
+                          rows={3}
+                          value={dmSequence}
+                          onChange={(event) => setDmSequence(event.target.value)}
+                          placeholder="Generate a DM sequence from the Brand Brain."
+                        />
+                      </div>
+                    </div>
+                    <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
+                      Generated from this agent&apos;s Brand Brain and Writing DNA.
+                      Public replies stay short; unclear or sensitive comments are
+                      flagged for human review before sending.
+                      {commentDmReviewNote && (
+                        <span className="mt-2 block font-medium text-foreground">
+                          Review note: {commentDmReviewNote}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="comment_auto_reply">Comment reply</Label>
-                    <Textarea
-                      id="comment_auto_reply"
-                      name="comment_auto_reply"
-                      rows={3}
-                      placeholder="Thanks for commenting - sending it now."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dm_sequence">DM sequence</Label>
-                    <Textarea
-                      id="dm_sequence"
-                      name="dm_sequence"
-                      rows={3}
-                      placeholder="DM 1: resource link. DM 2: follow-up question."
-                    />
-                  </div>
-                  </div>
-                  <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
-                    Preview: public comment reply first, then the DM sequence sends
-                    only for Instagram posts after the account is connected.
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
             )}
 
             <div className="rounded-lg border bg-muted/30 p-4">
