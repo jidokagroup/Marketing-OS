@@ -1,6 +1,7 @@
 import { Inbox } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { INBOX_PLATFORM_OPTIONS } from "@/lib/core-agents";
 import {
   asRows,
   formatDate,
@@ -41,11 +42,27 @@ type InboxMessage = {
   thread_id: string;
   role: string;
   body: string;
+  message_type?: string;
   status: string;
   created_at: string;
 };
 
-export default async function InboxPage() {
+function latestMessage(
+  messages: InboxMessage[],
+  threadId: string,
+  roles: string[],
+) {
+  return messages.find(
+    (message) => message.thread_id === threadId && roles.includes(message.role),
+  );
+}
+
+export default async function InboxPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ platform?: string; review?: string }>;
+}) {
+  const { platform = "all", review = "all" } = await searchParams;
   const { user, supabase } = await requireUser();
   const threadsResult = await opsTable(supabase, "marketing_os_inbox_threads")
     .select("id, campaign_id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at")
@@ -73,27 +90,29 @@ export default async function InboxPage() {
       .eq("owner_id", user.id),
   ]);
 
-  const threads = schemaMissing
+  const allThreads = schemaMissing
     ? asRows<InboxThread>(fallbackThreads.data)
     : asRows<InboxThread>(threadsResult.data);
+  const threads = allThreads.filter((thread) => {
+    const platformMatch = platform === "all" || thread.platform === platform;
+    const reviewMatch =
+      review !== "needs" ||
+      thread.status === "needs_review" ||
+      Boolean(thread.review_reason);
+    return platformMatch && reviewMatch;
+  });
   const messagesResult =
-    threads.length > 0
+    allThreads.length > 0
       ? await opsTable(supabase, "marketing_os_inbox_messages")
-          .select("id, thread_id, role, body, status, created_at")
+          .select("id, thread_id, role, body, message_type, status, created_at")
           .eq("owner_id", user.id)
           .in(
             "thread_id",
-            threads.map((thread) => thread.id),
+            allThreads.map((thread) => thread.id),
           )
           .order("created_at", { ascending: false })
       : { data: null, error: null };
   const messages = asRows<InboxMessage>(messagesResult.data);
-  const latestByThread = new Map<string, InboxMessage>();
-  for (const message of messages) {
-    if (!latestByThread.has(message.thread_id)) {
-      latestByThread.set(message.thread_id, message);
-    }
-  }
   const campaigns = schemaMissing
     ? []
     : asRows<CampaignRow>(campaignsResult.data);
@@ -105,25 +124,64 @@ export default async function InboxPage() {
     <div className="space-y-6">
       <PageHeader
         title="Inbox"
-        description="Review inbound comments, DMs, client messages, and AI-drafted replies before they move forward."
+        description="All comments and messages from connected platforms, with high-risk items held for human review."
       />
 
       {schemaMissing && <OpsSchemaNotice title="Campaign inbox links need migration 0016" />}
+
+      <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[220px_220px_auto]">
+        <select
+          name="platform"
+          defaultValue={platform}
+          className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          {INBOX_PLATFORM_OPTIONS.map((item) => (
+            <option key={item.key} value={item.key}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+        <select
+          name="review"
+          defaultValue={review}
+          className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="all">All review states</option>
+          <option value="needs">Needs human review</option>
+        </select>
+        <Button type="submit" variant="outline">
+          Filter
+        </Button>
+      </form>
 
       {threads.length === 0 ? (
         <EmptyState
           icon={Inbox}
           title="Inbox is clear"
-          description="Inbound social review threads and client communication items will appear here."
+          description="Inbound social comments, DMs, and review threads will appear here."
         />
       ) : (
         <div className="space-y-3">
           {threads.map((thread) => {
-            const latest = latestByThread.get(thread.id);
+            const customerMessage = latestMessage(messages, thread.id, [
+              "commenter",
+              "user",
+              "human",
+            ]);
+            const assistantDraft = latestMessage(messages, thread.id, [
+              "assistant",
+              "ai",
+            ]);
             const campaign = thread.campaign_id
               ? campaignById.get(thread.campaign_id)
               : null;
-            const client = thread.client_id ? clientById.get(thread.client_id) : null;
+            const client = thread.client_id
+              ? clientById.get(thread.client_id)
+              : null;
+            const suggestedReply =
+              assistantDraft?.body ??
+              "Thanks for reaching out. We are reviewing this and will follow up with the right next step.";
+
             return (
               <Card key={thread.id}>
                 <CardContent className="space-y-4 p-4">
@@ -150,22 +208,38 @@ export default async function InboxPage() {
                             : "outline"
                       }
                     >
-                      {titleCase(thread.status)}
+                      {thread.status === "needs_review"
+                        ? "Needs human review"
+                        : titleCase(thread.status)}
                     </Badge>
                   </div>
+
                   {thread.review_reason && (
                     <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
                       {thread.review_reason}
                     </p>
                   )}
-                  {latest && (
-                    <p className="text-sm text-muted-foreground">
-                      Latest {titleCase(latest.role)}: {latest.body}
-                    </p>
-                  )}
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Message
+                      </p>
+                      <p className="mt-2 text-sm">
+                        {customerMessage?.body ?? "No inbound body saved yet."}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Suggested reply
+                      </p>
+                      <p className="mt-2 text-sm">{suggestedReply}</p>
+                    </div>
+                  </div>
+
                   <form
                     action={updateInboxThreadStatusAction}
-                    className="grid gap-2 lg:grid-cols-[1fr_auto_auto_auto_auto]"
+                    className="space-y-3"
                   >
                     <input type="hidden" name="id" value={thread.id} />
                     <input
@@ -173,24 +247,36 @@ export default async function InboxPage() {
                       name="campaign_id"
                       value={thread.campaign_id ?? ""}
                     />
-                    <Textarea name="note" placeholder="Review note" />
-                    {["approved", "rejected", "posted", "resolved"].map((status) => (
+                    <input
+                      type="hidden"
+                      name="message_id"
+                      value={assistantDraft?.id ?? ""}
+                    />
+                    <Textarea
+                      name="reply"
+                      defaultValue={suggestedReply}
+                      rows={3}
+                      aria-label="Reply"
+                    />
+                    <Textarea
+                      name="note"
+                      placeholder="Internal note, optional"
+                      rows={2}
+                      aria-label="Internal note"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="submit" name="status" value="posted">
+                        Send reply
+                      </Button>
                       <Button
-                        key={status}
                         type="submit"
                         name="status"
-                        value={status}
-                        variant={
-                          status === "rejected"
-                            ? "destructive"
-                            : status === "approved"
-                              ? "default"
-                              : "outline"
-                        }
+                        value="resolved"
+                        variant="outline"
                       >
-                        {titleCase(status)}
+                        Mark resolved
                       </Button>
-                    ))}
+                    </div>
                   </form>
                 </CardContent>
               </Card>

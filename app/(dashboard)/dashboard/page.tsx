@@ -1,66 +1,60 @@
 import Link from "next/link";
-import {
-  CalendarClock,
-  CheckCircle2,
-  DollarSign,
-  Lightbulb,
-  ListChecks,
-  Target,
-  Users,
-} from "lucide-react";
+import { ArrowRight, MessageSquare, Target } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { CORE_AGENTS } from "@/lib/core-agents";
 import {
   asRows,
-  formatDate,
   formatMoney,
   isOpsSchemaMissing,
   opsTable,
-  progressPercent,
-  titleCase,
   type CampaignRow,
   type LeadRow,
   type RevenueEventRow,
   type WorkItemRow,
 } from "@/lib/marketing-os/operations";
-import { PageHeader } from "@/components/page-header";
-import {
-  DashboardChecklist,
-  type DashboardChecklistStep,
-} from "@/components/dashboard-checklist";
+import { cn } from "@/lib/utils";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
+import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-export const metadata = { title: "Command Center · Jidoka Marketing Team OS" };
+export const metadata = { title: "Core Command · Jidoka Marketing Team OS" };
 
-type ApprovalCount = { id: string };
+type TrainingRow = {
+  id: string;
+  agent_key: string;
+  updated_at: string;
+};
 
-async function getDashboardData() {
+async function getCommandData() {
   const { user, supabase } = await requireUser();
 
   const [
-    agents,
     clients,
+    agents,
     content,
-    assets,
     scheduledPosts,
-    latestAgent,
-    analytics,
-    pendingApprovals,
+    inboxThreads,
+    trainingResult,
     campaignsResult,
-    briefsResult,
     workResult,
     leadsResult,
     revenueResult,
   ] = await Promise.all([
     supabase
-      .from("marketing_os_writing_agents")
+      .from("marketing_os_clients")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id),
     supabase
-      .from("marketing_os_clients")
+      .from("marketing_os_writing_agents")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id),
     supabase
@@ -68,56 +62,42 @@ async function getDashboardData() {
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id),
     supabase
-      .from("marketing_os_uploaded_assets")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
-    supabase
       .from("marketing_os_scheduled_posts")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id),
-    supabase
-      .from("marketing_os_writing_agents")
-      .select("id, last_analyzed_at")
-      .eq("owner_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("marketing_os_platform_analytics")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
-    opsTable(supabase, "marketing_os_approval_requests")
+    opsTable(supabase, "marketing_os_inbox_threads")
       .select("id")
       .eq("owner_id", user.id)
-      .eq("status", "pending"),
+      .eq("status", "needs_review"),
+    opsTable(supabase, "marketing_os_core_agent_training")
+      .select("id, agent_key, updated_at")
+      .eq("owner_id", user.id),
     opsTable(supabase, "marketing_os_campaigns")
       .select(
         "id, owner_id, client_id, name, campaign_type, status, stage, health, priority, goal, primary_kpi, target_audience, owner_name, budget, actual_spend, expected_revenue, attributed_revenue, lead_goal, leads_count, start_date, end_date, notes, created_at, updated_at",
       )
       .eq("owner_id", user.id)
       .order("updated_at", { ascending: false })
-      .limit(6),
-    opsTable(supabase, "marketing_os_campaign_briefs")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
+      .limit(8),
     opsTable(supabase, "marketing_os_work_items")
       .select("id, campaign_id, client_id, title, description, work_type, status, priority, assignee_name, due_at, estimate_hours, actual_hours, created_at, updated_at")
       .eq("owner_id", user.id)
       .order("due_at", { ascending: true, nullsFirst: false })
-      .limit(8),
+      .limit(12),
     opsTable(supabase, "marketing_os_leads")
       .select("id, campaign_id, client_id, lead_name, email, status, estimated_value, actual_value, created_at")
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(25),
+      .limit(50),
     opsTable(supabase, "marketing_os_revenue_events")
       .select("id, campaign_id, client_id, amount, event_type, occurred_at")
       .eq("owner_id", user.id)
       .order("occurred_at", { ascending: false })
-      .limit(25),
+      .limit(50),
   ]);
 
   const opsSchemaReady = !isOpsSchemaMissing(campaignsResult.error);
+  const coreSchemaReady = !isOpsSchemaMissing(trainingResult.error);
   const campaigns = opsSchemaReady
     ? asRows<CampaignRow>(campaignsResult.data)
     : [];
@@ -126,37 +106,32 @@ async function getDashboardData() {
   const revenueEvents = opsSchemaReady
     ? asRows<RevenueEventRow>(revenueResult.data)
     : [];
+  const training = coreSchemaReady
+    ? asRows<TrainingRow>(trainingResult.data)
+    : [];
+  const trainingByAgent = new Map(training.map((item) => [item.agent_key, item]));
 
   return {
-    user,
     opsSchemaReady,
-    agents: agents.count ?? 0,
+    coreSchemaReady,
     clients: clients.count ?? 0,
+    agents: agents.count ?? 0,
     content: content.count ?? 0,
-    assets: assets.count ?? 0,
     scheduledPosts: scheduledPosts.count ?? 0,
-    latestAgent: latestAgent.data,
-    analytics: analytics.count ?? 0,
-    pendingApprovals: asRows<ApprovalCount>(pendingApprovals.data).length,
+    inboxNeedsReview: asRows<{ id: string }>(inboxThreads.data).length,
     campaigns,
-    briefCount: briefsResult.count ?? 0,
     workItems,
     leads,
     revenueEvents,
+    trainingByAgent,
   };
 }
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
-  const name =
-    data.user.user_metadata?.full_name ?? data.user.email?.split("@")[0];
-  const generateHref = data.latestAgent
-    ? `/agents/${data.latestAgent.id}?tab=generate`
-    : "/agents";
+  const data = await getCommandData();
   const activeCampaigns = data.campaigns.filter((item) =>
     ["planning", "active"].includes(item.status),
   );
-  const completedWork = data.workItems.filter((item) => item.status === "done");
   const openWork = data.workItems.filter(
     (item) => !["done", "cancelled"].includes(item.status),
   );
@@ -166,238 +141,191 @@ export default async function DashboardPage() {
       0,
     ) +
     data.revenueEvents.reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
-  const leadValue = data.leads.reduce(
-    (sum, item) =>
-      sum + Number(item.actual_value || item.estimated_value || 0),
+  const pipelineValue = data.leads.reduce(
+    (sum, item) => sum + Number(item.actual_value || item.estimated_value || 0),
     0,
   );
 
-  const checklist: DashboardChecklistStep[] = [
+  const metrics = [
+    { label: "Clients", value: data.clients, href: "/clients" },
+    { label: "Paid campaigns", value: activeCampaigns.length, href: "/campaigns" },
+    { label: "Open work", value: openWork.length, href: "/work" },
+    { label: "Content pieces", value: data.content, href: "/generated" },
+    { label: "Scheduled", value: data.scheduledPosts, href: "/calendar" },
+    { label: "Needs review", value: data.inboxNeedsReview, href: "/inbox" },
     {
-      id: "client",
-      label: "Create or choose a client",
-      autoDone: data.clients > 0,
-      href: data.clients > 0 ? "/clients" : "/clients/new",
-    },
-    {
-      id: "campaign",
-      label: "Create a campaign",
-      autoDone: data.campaigns.length > 0,
-      href: "/campaigns",
-    },
-    {
-      id: "strategy",
-      label: "Build the campaign strategy brief",
-      autoDone: data.briefCount > 0,
-      href: data.campaigns[0] ? `/campaigns/${data.campaigns[0].id}` : "/campaigns",
-    },
-    {
-      id: "work",
-      label: "Assign strategy, content, and publishing work",
-      autoDone: data.workItems.length > 0,
-      href: "/work",
-    },
-    {
-      id: "generate",
-      label: "Generate campaign content",
-      autoDone: data.content > 0,
-      href: generateHref,
-    },
-    {
-      id: "approval",
-      label: "Review and approve deliverables",
-      autoDone: data.content > 0 && data.pendingApprovals === 0,
-      href: "/content/approvals",
-    },
-    {
-      id: "schedule",
-      label: "Schedule and publish content",
-      autoDone: data.scheduledPosts > 0,
-      href: "/publishing",
-    },
-    {
-      id: "insights",
-      label: "Review leads, revenue, and next improvements",
-      autoDone: data.analytics > 0 || data.leads.length > 0,
+      label: revenueTotal ? "Revenue" : "Pipeline",
+      value: formatMoney(revenueTotal || pipelineValue),
       href: "/analytics",
-    },
-  ];
-
-  const stats = [
-    {
-      label: "Clients",
-      value: data.clients,
-      icon: Users,
-      href: "/clients",
-      detail: "Active workspaces",
-    },
-    {
-      label: "Campaigns",
-      value: activeCampaigns.length,
-      icon: Target,
-      href: "/campaigns",
-      detail: "Planning or active",
-    },
-    {
-      label: "Open Work",
-      value: openWork.length,
-      icon: ListChecks,
-      href: "/work",
-      detail: `${completedWork.length} completed`,
-    },
-    {
-      label: "Pending Approvals",
-      value: data.pendingApprovals,
-      icon: CheckCircle2,
-      href: "/content/approvals",
-      detail: "Client/internal review",
-    },
-    {
-      label: "Scheduled Posts",
-      value: data.scheduledPosts,
-      icon: CalendarClock,
-      href: "/publishing",
-      detail: "Publishing queue",
-    },
-    {
-      label: "Attributed Revenue",
-      value: formatMoney(revenueTotal || leadValue),
-      icon: DollarSign,
-      href: "/analytics",
-      detail: revenueTotal ? "Closed revenue" : "Pipeline value",
     },
   ];
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title={`Command Center${name ? ` · ${name}` : ""}`}
-        description="Campaign → strategy → work → content → approval → publishing → leads → revenue → insights → improvement."
+        title="Core Command"
+        description="Executive command watches the four Core agents and keeps the agency operating system moving."
       >
+        <ButtonLink href="/inbox" variant="outline">
+          <MessageSquare className="mr-1 h-4 w-4" />
+          Review inbox
+        </ButtonLink>
         <ButtonLink href="/campaigns">
           <Target className="mr-1 h-4 w-4" />
-          New campaign
+          Paid campaigns
         </ButtonLink>
       </PageHeader>
 
       {!data.opsSchemaReady && <OpsSchemaNotice />}
+      {!data.coreSchemaReady && (
+        <OpsSchemaNotice title="Core agent training needs migration 0017" />
+      )}
 
-      <DashboardChecklist steps={checklist} />
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
+      <section className="grid gap-4 xl:grid-cols-4">
+        {CORE_AGENTS.map((agent) => {
+          const Icon = agent.icon;
+          const training = data.trainingByAgent.get(agent.key);
           return (
-            <Link key={stat.label} href={stat.href}>
+            <Link key={agent.key} href={agent.href} className="group">
               <Card className="h-full transition-colors hover:border-primary/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.label}
-                  </CardTitle>
-                  <Icon className="h-4 w-4 text-muted-foreground" />
+                <CardHeader className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-destructive">
+                      {agent.segment}
+                    </p>
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <CardTitle>{agent.label}</CardTitle>
+                    <CardDescription className="mt-3 text-sm leading-6">
+                      {agent.summary}
+                    </CardDescription>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {stat.detail}
-                  </p>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {agent.systems.map((system) => (
+                      <div
+                        key={system}
+                        className="rounded-md bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+                      >
+                        {system}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t pt-4 text-sm">
+                    <Badge variant={training ? "default" : "outline"}>
+                      {training ? "Trained" : "Needs training"}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1 text-muted-foreground group-hover:text-foreground">
+                      Open
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
             </Link>
           );
         })}
-      </div>
+      </section>
 
-      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+      <Card>
+        <CardHeader>
+          <CardTitle>Operating Snapshot</CardTitle>
+          <CardDescription>
+            A compact readout of the work currently moving through the OS.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            {metrics.map((metric) => (
+              <Link
+                key={metric.label}
+                href={metric.href}
+                className={cn(
+                  "rounded-lg border p-4 transition-colors hover:border-primary/50",
+                  metric.label === "Needs review" &&
+                    Number(metric.value) > 0 &&
+                    "border-destructive/40 bg-destructive/5",
+                )}
+              >
+                <p className="text-xs font-medium text-muted-foreground">
+                  {metric.label}
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">
+                  {metric.value}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Campaign pipeline</CardTitle>
+            <CardTitle>Paid Campaigns</CardTitle>
+            <CardDescription>
+              Campaigns remain the execution center for client marketing work.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.campaigns.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                Campaigns will appear here after migration 0016 is applied and
-                the first campaign is created.
+                No paid campaigns yet. Create one when you are ready to plan
+                budget, channels, leads, and revenue attribution.
               </div>
             ) : (
-              data.campaigns.map((campaign) => {
-                const stageIndex = [
-                  "strategy",
-                  "work",
-                  "content",
-                  "approval",
-                  "publishing",
-                  "leads",
-                  "revenue",
-                  "insights",
-                  "improvement",
-                ].indexOf(campaign.stage);
-                const percent = progressPercent(stageIndex + 1, 9);
-                return (
-                  <Link
-                    key={campaign.id}
-                    href={`/campaigns/${campaign.id}`}
-                    className="block rounded-lg border p-4 transition-colors hover:border-primary/50"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{campaign.name}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {campaign.goal ?? "No campaign goal entered yet"}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">{titleCase(campaign.stage)}</Badge>
-                        <Badge
-                          variant={
-                            campaign.health === "blocked"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {titleCase(campaign.health)}
-                        </Badge>
-                      </div>
+              data.campaigns.slice(0, 5).map((campaign) => (
+                <Link
+                  key={campaign.id}
+                  href={`/campaigns/${campaign.id}`}
+                  className="block rounded-lg border p-4 transition-colors hover:border-primary/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{campaign.name}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {campaign.goal ?? "No goal entered yet"}
+                      </p>
                     </div>
-                    <div className="mt-4 h-2 rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-primary"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </Link>
-                );
-              })
+                    <Badge variant="outline">{campaign.status}</Badge>
+                  </div>
+                </Link>
+              ))
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Next work</CardTitle>
+            <CardTitle>Next Work</CardTitle>
+            <CardDescription>
+              Open tasks across strategy, content, publishing, analytics, and
+              client communication.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {openWork.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                No open work is due. Create campaign tasks from Work or from
-                Intelligence items.
+                No open work is due. Intelligence, campaigns, or client notes
+                can create the next task.
               </div>
             ) : (
               openWork.slice(0, 6).map((item) => (
                 <Link
                   key={item.id}
                   href="/work"
-                  className="block rounded-lg border p-3 transition-colors hover:border-primary/50"
+                  className="block rounded-lg border p-4 transition-colors hover:border-primary/50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-medium">{item.title}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {item.assignee_name ?? "Unassigned"} ·{" "}
-                        {formatDate(item.due_at)}
+                      <p className="font-medium">{item.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {item.assignee_name ?? "Unassigned"}
                       </p>
                     </div>
-                    <Badge variant="outline">{titleCase(item.status)}</Badge>
+                    <Badge variant="outline">{item.status}</Badge>
                   </div>
                 </Link>
               ))
@@ -405,38 +333,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4" />
-            Improvement loop
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
-          <div className="rounded-lg border p-4">
-            <p className="font-medium text-foreground">Insights</p>
-            <p className="mt-1">
-              Use Intelligence to save opportunities, add them to campaign
-              briefs, and convert them into work.
-            </p>
-          </div>
-          <div className="rounded-lg border p-4">
-            <p className="font-medium text-foreground">Revenue attribution</p>
-            <p className="mt-1">
-              Leads and revenue events roll up by campaign so the team can see
-              what work created pipeline.
-            </p>
-          </div>
-          <div className="rounded-lg border p-4">
-            <p className="font-medium text-foreground">Playbooks</p>
-            <p className="mt-1">
-              Winning campaign patterns become SOPs for the next client or
-              internal launch.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

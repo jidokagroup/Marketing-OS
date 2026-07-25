@@ -71,6 +71,7 @@ export default async function CalendarPage({
     client?: string;
     platform?: string;
     status?: string;
+    day?: string;
   }>;
 }) {
   const { supabase } = await requireUser();
@@ -80,8 +81,9 @@ export default async function CalendarPage({
     client = "all",
     platform = "all",
     status = "all",
+    day,
   } = await searchParams;
-  const monthOffset = Number(offset ?? 0) || 0;
+  const monthOffset = Math.max(0, Math.min(11, Number(offset ?? 0) || 0));
 
   const now = new Date();
   const base = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
@@ -142,6 +144,23 @@ export default async function CalendarPage({
   });
   const todayDate =
     now.getFullYear() === year && now.getMonth() === month ? now.getDate() : -1;
+  const requestedDay = Number(day ?? todayDate);
+  const selectedDay =
+    view === "month"
+      ? Math.max(1, Math.min(daysInMonth, requestedDay || 1))
+      : null;
+  const selectedDate = selectedDay ? new Date(year, month, selectedDay) : null;
+  const selectedPosts = selectedDay
+    ? postList.filter((post) => {
+        if (!post.scheduled_time) return false;
+        const date = new Date(post.scheduled_time);
+        return (
+          date.getFullYear() === year &&
+          date.getMonth() === month &&
+          date.getDate() === selectedDay
+        );
+      })
+    : [];
   const platforms = [
     "all",
     ...Array.from(new Set((posts ?? []).map((post) => post.platform))).sort(),
@@ -151,11 +170,11 @@ export default async function CalendarPage({
     <div>
       <PageHeader title="Calendar" description="Review drafts, scheduled posts, approvals, and account issues.">
         <div className="flex items-center gap-2">
-          <ButtonLink href={`/calendar?offset=${monthOffset - 1}&view=${view}&client=${client}&platform=${platform}&status=${status}`} variant="outline" size="icon-sm">
+          <ButtonLink href={`/calendar?offset=${Math.max(0, monthOffset - 1)}&view=${view}&client=${client}&platform=${platform}&status=${status}`} variant="outline" size="icon-sm">
             <ChevronLeft className="h-4 w-4" />
           </ButtonLink>
           <span className="min-w-36 text-center text-sm font-medium">{monthLabel}</span>
-          <ButtonLink href={`/calendar?offset=${monthOffset + 1}&view=${view}&client=${client}&platform=${platform}&status=${status}`} variant="outline" size="icon-sm">
+          <ButtonLink href={`/calendar?offset=${Math.min(11, monthOffset + 1)}&view=${view}&client=${client}&platform=${platform}&status=${status}`} variant="outline" size="icon-sm">
             <ChevronRight className="h-4 w-4" />
           </ButtonLink>
         </div>
@@ -264,14 +283,18 @@ export default async function CalendarPage({
                 >
                   {day && (
                     <>
-                      <div
+                      <Link
+                        href={`/calendar?offset=${monthOffset}&view=month&client=${client}&platform=${platform}&status=${status}&day=${day}`}
                         className={cn(
-                          "mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs",
+                          "mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs transition-colors hover:bg-muted",
                           day === todayDate && "bg-primary text-primary-foreground",
+                          day === selectedDay &&
+                            day !== todayDate &&
+                            "bg-muted text-foreground",
                         )}
                       >
                         {day}
-                      </div>
+                      </Link>
                       <div className="space-y-1">
                         {dayPosts.map((post) => (
                           <details
@@ -297,6 +320,36 @@ export default async function CalendarPage({
               );
             })}
           </div>
+        </div>
+      )}
+
+      {view === "month" && selectedDate && (
+        <div className="mt-6 space-y-3">
+          <h2 className="text-lg font-semibold">
+            {selectedDate.toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </h2>
+          {selectedPosts.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+              No content is scheduled on this date.
+            </div>
+          ) : (
+            selectedPosts.map((post) => {
+              const agent = agentById.get(post.agent_id);
+              const clientName = agent?.client_id ? clientById.get(agent.client_id) : null;
+              return (
+                <CalendarPostCard
+                  key={post.id}
+                  post={post}
+                  agentName={agent?.name ?? "Writing Agent"}
+                  clientName={clientName ?? "No client"}
+                />
+              );
+            })
+          )}
         </div>
       )}
     </div>

@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createCampaignAction } from "./actions";
 
-export const metadata = { title: "Campaigns · Jidoka Marketing Team OS" };
+export const metadata = { title: "Paid Ad Campaigns · Jidoka Marketing Team OS" };
 
 export default async function CampaignsPage() {
   const { user, supabase } = await requireUser();
@@ -68,8 +68,8 @@ export default async function CampaignsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Campaigns"
-        description="Plan and run marketing execution around campaigns instead of isolated content pieces."
+        title="Paid Ad Campaigns"
+        description="Plan and run paid client acquisition campaigns with budgets, channels, work, leads, revenue, and insights connected."
       />
 
       {schemaMissing && <OpsSchemaNotice />}
@@ -86,7 +86,7 @@ export default async function CampaignsPage() {
         <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
           <Card>
             <CardHeader>
-              <CardTitle>Create campaign</CardTitle>
+              <CardTitle>Create paid ad campaign</CardTitle>
               <CardDescription>
                 Start with the strategy, dates, owner, budget, and success
                 metric. More detail lives inside the campaign brief.
@@ -141,7 +141,7 @@ export default async function CampaignsPage() {
                   <Input name="end_date" type="date" aria-label="End date" />
                 </div>
                 <Button type="submit" className="w-full">
-                  Create campaign
+                  Create paid ad campaign
                 </Button>
               </form>
             </CardContent>
@@ -151,7 +151,7 @@ export default async function CampaignsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">
-                  Active campaigns
+                  Active paid campaigns
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-2xl font-bold tabular-nums">
@@ -186,7 +186,7 @@ export default async function CampaignsPage() {
         <EmptyState
           icon={Target}
           title="No campaigns yet"
-          description="Create the first campaign to connect strategy, work, content, approvals, publishing, leads, revenue, and insights."
+          description="Create the first paid campaign to connect strategy, work, content, publishing, leads, revenue, and insights."
         />
       ) : (
         !schemaMissing && (

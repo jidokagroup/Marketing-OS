@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 
+import { CONTENT_CHANNEL_OPTIONS } from "@/lib/core-agents";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,14 @@ export function GenerateForm({ agentId }: { agentId: string }) {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(form.entries());
+    const payload: Record<string, FormDataEntryValue | string[]> =
+      Object.fromEntries(form.entries());
+    const platforms = form
+      .getAll("platforms")
+      .map((value) => String(value))
+      .filter(Boolean);
+    payload.platforms = platforms.length ? platforms : ["instagram"];
+    payload.platform = platforms.length ? platforms.join(", ") : "Instagram";
     if (!String(payload.topic ?? "").trim()) {
       toast.error("Topic is required");
       return;
@@ -95,10 +103,6 @@ export function GenerateForm({ agentId }: { agentId: string }) {
           <Input id="goal" name="goal" placeholder="Drive DMs / book calls" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="platform">Platform</Label>
-          <Input id="platform" name="platform" placeholder="Instagram, Email…" />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="audience">Audience</Label>
           <Input id="audience" name="audience" placeholder="Coaches scaling to 7-figs" />
         </div>
@@ -114,6 +118,29 @@ export function GenerateForm({ agentId }: { agentId: string }) {
           <Label htmlFor="length">Length</Label>
           <Input id="length" name="length" placeholder="Short / Medium / Long" />
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label>Channels</Label>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {CONTENT_CHANNEL_OPTIONS.map((channel) => (
+            <label
+              key={channel.key}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors has-checked:border-primary has-checked:bg-muted/60"
+            >
+              <input
+                type="checkbox"
+                name="platforms"
+                value={channel.key}
+                defaultChecked={channel.key === "instagram"}
+                className="h-4 w-4"
+              />
+              <span>{channel.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Intelligence context is included automatically with every generation.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>

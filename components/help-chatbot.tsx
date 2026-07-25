@@ -51,9 +51,9 @@ function pageHint(pathname: string, primaryAgentId?: string): Answer {
     };
   }
   return {
-    text: "Start with Writing Agents, upload client files, run analysis, generate content, then schedule and review the calendar.",
-    href: agentHref(primaryAgentId, "assets"),
-    actionLabel: "Open Writing Agent",
+    text: "Start in Core Command, choose the agent closest to the work, then use the Content and Inbox flows for execution.",
+    href: "/dashboard",
+    actionLabel: "Open Core Command",
   };
 }
 
@@ -149,10 +149,11 @@ export function HelpChatbot({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
+  const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      text: "I can help with setup, voice analysis, scheduler, bulk upload, connections, Calendar, and Intelligence.",
+      text: "I am the JIDOKA Core Orchestrator. I can route work across Growth & Revenue, Client Delivery, Success & Intelligence, and Business Operations.",
     },
   ]);
 
@@ -167,30 +168,58 @@ export function HelpChatbot({
     ).map((platform) => platform.label);
   }, [accounts]);
 
+  async function saveChat(userQuestion: string, answer: Answer) {
+    try {
+      const res = await fetch("/api/core-chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          thread_id: threadId,
+          question: userQuestion,
+          answer: answer.text,
+          pathname,
+          action_href: answer.href,
+          action_label: answer.actionLabel,
+          disconnected,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        thread_id?: string;
+      };
+      if (json.thread_id) setThreadId(json.thread_id);
+    } catch {
+      // Chat guidance should keep working even if the memory endpoint is down.
+    }
+  }
+
+  function appendExchange(userQuestion: string) {
+    const answer = answerQuestion(
+      userQuestion,
+      disconnected,
+      pathname,
+      primaryAgentId,
+    );
+    setMessages((current) => [
+      ...current,
+      { role: "user", text: userQuestion },
+      {
+        role: "assistant",
+        ...answer,
+      },
+    ]);
+    void saveChat(userQuestion, answer);
+  }
+
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const clean = question.trim();
     if (!clean) return;
-    setMessages((current) => [
-      ...current,
-      { role: "user", text: clean },
-      {
-        role: "assistant",
-        ...answerQuestion(clean, disconnected, pathname, primaryAgentId),
-      },
-    ]);
+    appendExchange(clean);
     setQuestion("");
   }
 
   function ask(prompt: string) {
-    setMessages((current) => [
-      ...current,
-      { role: "user", text: prompt },
-      {
-        role: "assistant",
-        ...answerQuestion(prompt, disconnected, pathname, primaryAgentId),
-      },
-    ]);
+    appendExchange(prompt);
   }
 
   return (
@@ -200,7 +229,7 @@ export function HelpChatbot({
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4" />
-              <p className="font-medium">Jidoka Marketing Team OS Guide</p>
+              <p className="font-medium">JIDOKA Core Orchestrator</p>
             </div>
             <Button
               variant="ghost"

@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/empty-state";
 import { FilmSessionBuilder } from "@/components/film-session-builder";
 import { Clapperboard } from "lucide-react";
 
-export const metadata = { title: "New Film Session · Jidoka Marketing Team OS" };
+export const metadata = { title: "New Film Scripts · Jidoka Marketing Team OS" };
 
 export default async function NewFilmSessionPage() {
   const { supabase } = await requireUser();
@@ -16,7 +16,7 @@ export default async function NewFilmSessionPage() {
   return (
     <div className="mx-auto max-w-4xl">
       <PageHeader
-        title="New Film Session"
+        title="New Film Scripts"
         description="Batch-generate up to 50 filming scripts across formats, laid out like your reference sessions."
       />
       {!agents || agents.length === 0 ? (
