@@ -8,13 +8,6 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[functions."*"]
-  included_files = [
-    "node_modules/next/dist/**",
-    "node_modules/next/package.json",
-    "node_modules/styled-jsx/**"
-  ]
-
 [[headers]]
   for = "/*"
   [headers.values]
