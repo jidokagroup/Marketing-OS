@@ -17,6 +17,7 @@ function numberValue(formData: FormData, key: string, fallback = 0) {
 
 export async function saveTeamCapacityAction(formData: FormData) {
   const { user, supabase } = await requireUser();
+  const id = textValue(formData, "id");
   const memberName = textValue(formData, "member_name");
   if (!memberName) return;
 
@@ -29,26 +30,33 @@ export async function saveTeamCapacityAction(formData: FormData) {
         ? "near_capacity"
         : "available";
 
-  await opsTable(supabase, "marketing_os_team_capacity")
-    .upsert(
-      {
-        owner_id: user.id,
-        organization_id: user.id,
-        member_id: textValue(formData, "member_id"),
-        member_name: memberName,
-        email: textValue(formData, "email"),
-        role: textValue(formData, "role") ?? "strategist",
-        week_start: textValue(formData, "week_start") ?? currentWeekStart(),
-        planned_hours: planned,
-        allocated_hours: allocated,
-        status,
-        notes: textValue(formData, "notes"),
-      },
-      { onConflict: "owner_id,email,week_start" },
-    )
-    .select("id")
-    .maybeSingle();
+  const row = {
+    owner_id: user.id,
+    organization_id: user.id,
+    member_id: textValue(formData, "member_id"),
+    member_name: memberName,
+    email: textValue(formData, "email"),
+    role: textValue(formData, "role") ?? "strategist",
+    week_start: textValue(formData, "week_start") ?? currentWeekStart(),
+    planned_hours: planned,
+    allocated_hours: allocated,
+    status,
+    notes: textValue(formData, "notes"),
+  };
+
+  if (id) {
+    await opsTable(supabase, "marketing_os_team_capacity")
+      .update(row)
+      .eq("id", id)
+      .eq("owner_id", user.id);
+  } else {
+    await opsTable(supabase, "marketing_os_team_capacity")
+      .upsert(row, { onConflict: "owner_id,email,week_start" })
+      .select("id")
+      .maybeSingle();
+  }
 
   revalidatePath("/team");
+  revalidatePath("/settings");
   revalidatePath("/dashboard");
 }

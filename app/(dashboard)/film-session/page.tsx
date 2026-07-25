@@ -8,7 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-export const metadata = { title: "Film Sessions · Jidoka Marketing Team OS" };
+export const metadata = { title: "Film Scripts · Jidoka Marketing Team OS" };
 
 export default async function FilmSessionsPage() {
   const { supabase } = await requireUser();
@@ -23,7 +23,7 @@ export default async function FilmSessionsPage() {
   return (
     <div>
       <PageHeader
-        title="Film Sessions"
+        title="Film Scripts"
         description="Batch script docs — up to 50 scripts across formats, ready to film and export."
       >
         <ButtonLink href="/film-session/new">

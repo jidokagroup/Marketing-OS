@@ -6,6 +6,7 @@ import { embedQuery, toVectorLiteral } from "@/lib/ai/embeddings";
 import { runGeneration, type GenerationRequest, type DnaInput } from "@/lib/ai/generate";
 import { CLAUDE_MODEL } from "@/lib/ai/anthropic";
 import { buildBrandBrainBrief } from "@/lib/brand-brain";
+import { opsTable } from "@/lib/marketing-os/operations";
 import type { BrandBrain } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -17,6 +18,79 @@ type ScriptMatch = {
   id: string;
   content: string;
 };
+
+function cleanPlatformList(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return [
+    ...new Set(
+      value
+        .map((item) => String(item).trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function jsonArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.map((item) =>
+        typeof item === "string" ? item : JSON.stringify(item),
+      )
+    : [];
+}
+
+function readOpportunities(value: unknown) {
+  if (Array.isArray(value)) return jsonArray(value);
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return [...jsonArray(record.items), ...jsonArray(record.positioning)];
+  }
+  return [];
+}
+
+async function latestIntelligenceBrief(
+  supabase: unknown,
+  ownerId: string,
+) {
+  const { data } = await opsTable(
+    supabase,
+    "marketing_os_social_intelligence_reports",
+  )
+    .select(
+      "summary, trending_topics, hooks, audios, content_opportunities, scanned_at",
+    )
+    .eq("owner_id", ownerId)
+    .order("scanned_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const report = data as
+    | {
+        summary?: string | null;
+        trending_topics?: unknown;
+        hooks?: unknown;
+        audios?: unknown;
+        content_opportunities?: unknown;
+        scanned_at?: string | null;
+      }
+    | null;
+  if (!report) return "";
+
+  const parts = [
+    report.summary && `Latest intelligence summary: ${report.summary}`,
+    jsonArray(report.trending_topics).length &&
+      `Trending topics: ${jsonArray(report.trending_topics).join(" | ")}`,
+    jsonArray(report.hooks).length &&
+      `Hooks to adapt: ${jsonArray(report.hooks).join(" | ")}`,
+    readOpportunities(report.content_opportunities).length &&
+      `Opportunities: ${readOpportunities(report.content_opportunities).join(" | ")}`,
+    jsonArray(report.audios).length &&
+      `Audio/trend notes: ${jsonArray(report.audios).join(" | ")}`,
+  ].filter(Boolean);
+
+  return parts.length
+    ? `\nLatest Intelligence Context (${report.scanned_at ?? "latest scan"}):\n${parts.join("\n")}`
+    : "";
+}
 
 export async function POST(
   request: Request,
@@ -38,16 +112,23 @@ export async function POST(
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as Partial<GenerationRequest>;
+  const body = (await request.json().catch(() => ({}))) as Partial<
+    GenerationRequest & { platforms?: string[] }
+  >;
   const topic = String(body.topic ?? "").trim();
   if (!topic) {
     return NextResponse.json({ error: "Topic is required" }, { status: 400 });
   }
+  const platforms = cleanPlatformList(body.platforms);
+  const platformLabel =
+    platforms.length > 0
+      ? platforms.join(", ")
+      : body.platform?.trim() || undefined;
   const req: GenerationRequest = {
     topic,
     title: body.title?.trim() || topic,
     goal: body.goal?.trim() || undefined,
-    platform: body.platform?.trim() || undefined,
+    platform: platformLabel,
     audience: body.audience?.trim() || undefined,
     offer: body.offer?.trim() || undefined,
     cta: body.cta?.trim() || undefined,
@@ -130,7 +211,13 @@ export async function POST(
       .select("*")
       .eq("agent_id", agentId)
       .maybeSingle();
-    const brandBrief = buildBrandBrainBrief((brain as BrandBrain) ?? null);
+    const intelligenceBrief = await latestIntelligenceBrief(supabase, user.id);
+    const brandBrief = [
+      buildBrandBrainBrief((brain as BrandBrain) ?? null),
+      intelligenceBrief,
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     // 3) Generate + QC (with one auto-rewrite below threshold).
     const result = await runGeneration(req, dna, exemplars, brandBrief);
@@ -144,7 +231,7 @@ export async function POST(
         title: req.title ?? req.topic,
         topic: req.topic,
         goal: req.goal ?? null,
-        platform: req.platform ?? null,
+        platform: platformLabel ?? null,
         audience: req.audience ?? null,
         offer: req.offer ?? null,
         cta: req.cta ?? null,
