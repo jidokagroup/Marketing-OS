@@ -12,10 +12,31 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { readJsonResponse } from "@/lib/client-response";
 
-export function GenerateForm({ agentId }: { agentId: string }) {
+type GenerateFormDefaults = {
+  title?: string;
+  topic?: string;
+  goal?: string;
+  audience?: string;
+  offer?: string;
+  cta?: string;
+  length?: string;
+  notes?: string;
+  platforms?: string[];
+};
+
+export function GenerateForm({
+  agentId,
+  defaults = {},
+}: {
+  agentId: string;
+  defaults?: GenerateFormDefaults;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const defaultPlatforms = defaults.platforms?.length
+    ? defaults.platforms
+    : ["instagram"];
 
   useEffect(() => {
     if (!busy) {
@@ -82,6 +103,7 @@ export function GenerateForm({ agentId }: { agentId: string }) {
           id="title"
           name="title"
           placeholder="e.g. Morning Routine Myth — Reel 01"
+          defaultValue={defaults.title}
         />
         <p className="text-xs text-muted-foreground">
           The Smart Scheduler matches a video/carousel to this content when their
@@ -95,28 +117,54 @@ export function GenerateForm({ agentId }: { agentId: string }) {
           name="topic"
           required
           placeholder="e.g. Why most morning routines fail"
+          defaultValue={defaults.topic}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="goal">Goal</Label>
-          <Input id="goal" name="goal" placeholder="Drive DMs / book calls" />
+          <Input
+            id="goal"
+            name="goal"
+            placeholder="Drive DMs / book calls"
+            defaultValue={defaults.goal}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="audience">Audience</Label>
-          <Input id="audience" name="audience" placeholder="Coaches scaling to 7-figs" />
+          <Input
+            id="audience"
+            name="audience"
+            placeholder="Coaches scaling to 7-figs"
+            defaultValue={defaults.audience}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="offer">Offer</Label>
-          <Input id="offer" name="offer" placeholder="Group program" />
+          <Input
+            id="offer"
+            name="offer"
+            placeholder="Group program"
+            defaultValue={defaults.offer}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cta">CTA</Label>
-          <Input id="cta" name="cta" placeholder="Comment 'SCALE'" />
+          <Input
+            id="cta"
+            name="cta"
+            placeholder="Comment 'SCALE'"
+            defaultValue={defaults.cta}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="length">Length</Label>
-          <Input id="length" name="length" placeholder="Short / Medium / Long" />
+          <Input
+            id="length"
+            name="length"
+            placeholder="Short / Medium / Long"
+            defaultValue={defaults.length}
+          />
         </div>
       </div>
       <div className="space-y-2">
@@ -131,7 +179,7 @@ export function GenerateForm({ agentId }: { agentId: string }) {
                 type="checkbox"
                 name="platforms"
                 value={channel.key}
-                defaultChecked={channel.key === "instagram"}
+                defaultChecked={defaultPlatforms.includes(channel.key)}
                 className="h-4 w-4"
               />
               <span>{channel.label}</span>
@@ -144,7 +192,13 @@ export function GenerateForm({ agentId }: { agentId: string }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" name="notes" rows={3} placeholder="Anything specific to include…" />
+        <Textarea
+          id="notes"
+          name="notes"
+          rows={3}
+          placeholder="Anything specific to include…"
+          defaultValue={defaults.notes}
+        />
       </div>
       <Button type="submit" disabled={busy}>
         <Sparkles className="mr-1 h-4 w-4" />
