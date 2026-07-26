@@ -29,10 +29,36 @@ export default async function AgentDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; connect?: string; reason?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    connect?: string;
+    reason?: string;
+    title?: string;
+    topic?: string;
+    goal?: string;
+    audience?: string;
+    offer?: string;
+    cta?: string;
+    length?: string;
+    notes?: string;
+    platforms?: string;
+  }>;
 }) {
   const { id } = await params;
-  const { tab, connect, reason } = await searchParams;
+  const {
+    tab,
+    connect,
+    reason,
+    title,
+    topic,
+    goal,
+    audience,
+    offer,
+    cta,
+    length,
+    notes,
+    platforms,
+  } = await searchParams;
   const { supabase } = await requireUser();
   const allowedTabs = new Set([
     "assets",
@@ -42,6 +68,20 @@ export default async function AgentDetailPage({
     "connections",
     "knowledge",
   ]);
+  const generateDefaults = {
+    title,
+    topic,
+    goal,
+    audience,
+    offer,
+    cta,
+    length,
+    notes,
+    platforms: platforms
+      ?.split(/[|,;]/)
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean),
+  };
   const activeTab = tab && allowedTabs.has(tab) ? tab : "assets";
 
   const { data: agent } = await supabase
@@ -198,7 +238,7 @@ export default async function AgentDetailPage({
         </TabsContent>
         <TabsContent value="generate" className="mt-6">
           {hasDna ? (
-            <GenerateForm agentId={agent.id} />
+            <GenerateForm agentId={agent.id} defaults={generateDefaults} />
           ) : (
             <EmptyState
               icon={Sparkles}
