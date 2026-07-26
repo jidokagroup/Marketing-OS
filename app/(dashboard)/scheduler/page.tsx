@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   AlertCircle,
   CalendarClock,
+  CalendarDays,
   CopyPlus,
   Link2,
   MessageCircle,
@@ -70,14 +71,30 @@ export default async function SchedulerPage({
     ]);
 
   const agentList = agents ?? [];
+  const allPosts = posts ?? [];
   const postList =
-    status === "all" ? posts ?? [] : (posts ?? []).filter((post) => post.status === status);
+    status === "all" ? allPosts : allPosts.filter((post) => post.status === status);
   const connectedPlatforms = new Set(
     (accounts ?? [])
       .filter((account) => account.status === "active")
       .map((account) => account.platform),
   );
   const agentIdForConnections = defaultAgentId || agentList[0]?.id || "";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const calendarDays = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    return date;
+  });
+  const calendarByDay = new Map<string, typeof allPosts>();
+  for (const post of allPosts) {
+    if (!post.scheduled_time) continue;
+    const dateKey = new Date(post.scheduled_time).toISOString().slice(0, 10);
+    const dayPosts = calendarByDay.get(dateKey) ?? [];
+    dayPosts.push(post);
+    calendarByDay.set(dateKey, dayPosts);
+  }
 
   return (
     <div className="space-y-8">
@@ -86,7 +103,7 @@ export default async function SchedulerPage({
         description="Create social posts and Mailchimp email campaigns, bulk import a spreadsheet, and let Jidoka Marketing Team OS recommend timing from follower activity, audience behavior, and competitor windows."
       />
 
-      <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         {SCHEDULER_PLATFORMS.map((platform) => {
           const connected = connectedPlatforms.has(platform.key);
           const disabled = Boolean(platform.disabled);
@@ -148,7 +165,7 @@ export default async function SchedulerPage({
         <EmptyState
           icon={CalendarClock}
           title="No agents yet"
-          description="Create a writing agent before scheduling content."
+          description="Create a Client Content Agent before scheduling content."
           actionLabel="Go to agents"
           actionHref="/agents"
         />
@@ -161,6 +178,65 @@ export default async function SchedulerPage({
           generatedContent={generatedContent ?? []}
         />
       )}
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              Calendar
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Next 30 days from the Smart Scheduler queue.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {calendarDays.map((date) => {
+            const dateKey = date.toISOString().slice(0, 10);
+            const dayPosts = calendarByDay.get(dateKey) ?? [];
+            return (
+              <div key={dateKey} className="min-h-28 rounded-lg border p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    {date.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </p>
+                  <span className="text-xs text-muted-foreground">
+                    {date.toLocaleDateString("en-US", { weekday: "short" })}
+                  </span>
+                </div>
+                {dayPosts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Open</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {dayPosts.slice(0, 3).map((post) => (
+                      <div
+                        key={post.id}
+                        className="rounded-md bg-muted/40 px-2 py-1.5 text-xs"
+                      >
+                        <p className="truncate font-medium">{post.title}</p>
+                        <p className="text-muted-foreground">
+                          {PLATFORM_LABELS[
+                            post.platform as keyof typeof PLATFORM_LABELS
+                          ] ?? post.platform}
+                        </p>
+                      </div>
+                    ))}
+                    {dayPosts.length > 3 && (
+                      <p className="text-xs text-muted-foreground">
+                        +{dayPosts.length - 3} more
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       <div>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -36,7 +36,7 @@ export function AuthForm({ mode, action }: AuthFormProps) {
         <CardTitle>{isSignup ? "Create your account" : "Welcome back"}</CardTitle>
         <CardDescription>
           {isSignup
-            ? "Start building client-specific writing agents."
+            ? "Start building client-specific Client Content Agents."
             : "Sign in to your agency workspace."}
         </CardDescription>
       </CardHeader>

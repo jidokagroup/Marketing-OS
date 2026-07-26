@@ -12,7 +12,7 @@ const sections = [
   {
     title: "1. Overview",
     body: [
-      "This Privacy Policy explains how Jidoka Group collects, uses, stores, and shares information in connection with Jidoka Marketing Team OS, a marketing workflow platform for client-specific writing agents, content generation, scheduling, account connections, and analytics.",
+      "This Privacy Policy explains how Jidoka Group collects, uses, stores, and shares information in connection with Jidoka Marketing Team OS, a marketing workflow platform for client-specific Client Content Agents, content generation, scheduling, account connections, and analytics.",
       "Jidoka Marketing Team OS is designed for business marketing workflows. It is not intended to store patient records, protected health information, payment card data, government IDs, passwords, or other regulated sensitive information unless Jidoka Group has separately agreed in writing that the service is configured for that use.",
     ],
   },
@@ -28,7 +28,7 @@ const sections = [
   {
     title: "3. How We Use Information",
     body: [
-      "We use information to provide the Jidoka Marketing Team OS service, including creating writing agents, extracting brand voice and knowledge from uploaded materials, generating draft marketing content, scheduling posts and email campaigns, displaying connected account status, importing analytics, and helping users navigate the platform.",
+      "We use information to provide the Jidoka Marketing Team OS service, including creating Client Content Agents, extracting brand voice and knowledge from uploaded materials, generating draft marketing content, scheduling posts and email campaigns, displaying connected account status, importing analytics, and helping users navigate the platform.",
       "We may also use information to secure the service, troubleshoot errors, prevent abuse, improve features, maintain records, comply with legal obligations, and communicate about service updates or support requests.",
     ],
   },

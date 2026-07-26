@@ -63,7 +63,7 @@ const TEMPLATE_EXAMPLE = [
   "video",
   "2026-07-02 09:00",
   "offer-myths.mp4",
-  "Optional caption override. Leave blank to match the Writing Agent title.",
+  "Optional caption override. Leave blank to match the Client Content Agent title.",
   "yes",
   "Thanks for commenting! Sending the guide now.",
   "DM 1: send resource link; DM 2: ask if they want a consult.",
@@ -632,7 +632,7 @@ export function SchedulerUploader({
           <CardTitle>New scheduled post</CardTitle>
           <CardDescription>
             Pick one or more platforms, upload media, and use the exact title the
-            Writing Agent generated so the caption or email copy attaches automatically.
+            Client Content Agent generated so the caption or email copy attaches automatically.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -661,7 +661,7 @@ export function SchedulerUploader({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="agent_id">Writing Agent</Label>
+                <Label htmlFor="agent_id">Client Content Agent</Label>
                 <select
                   id="agent_id"
                   name="agent_id"
@@ -759,7 +759,7 @@ export function SchedulerUploader({
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
                   Disconnected: {disconnectedSelected.join(", ")}. Jidoka Marketing Team OS will
                   save these as scheduled drafts, but automatic publishing needs the
-                  accounts connected from the Writing Agent&apos;s Connections tab.
+                  accounts connected from the Client Content Agent&apos;s Connections tab.
                 </div>
               )}
             </div>

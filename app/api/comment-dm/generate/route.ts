@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Body;
   const agentId = text(body.agent_id);
   if (!agentId) {
-    return NextResponse.json({ error: "Choose a Writing Agent first." }, { status: 400 });
+    return NextResponse.json({ error: "Choose a Client Content Agent first." }, { status: 400 });
   }
 
   const { data: agent } = await supabase

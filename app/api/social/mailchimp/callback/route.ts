@@ -106,7 +106,7 @@ async function handleMailchimpCallback(request: Request, origin: string) {
     .eq("owner_id", user.id)
     .maybeSingle();
   if (!agent) {
-    return redirectToAgents(origin, "error", "This writing agent could not be found.");
+    return redirectToAgents(origin, "error", "This Client Content Agent could not be found.");
   }
 
   const redirectUri = `${origin}/api/social/mailchimp/callback`;

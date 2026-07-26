@@ -162,7 +162,7 @@ export function AnalyticsExtendedSections({
             <CardDescription>
               {emailPlatform
                 ? `${emailPlatform} is connected. Live campaign metrics start with the first sent campaign.`
-                : "Connect an email platform (like Mailchimp) from a Writing Agent's Connections tab to attach live campaign metrics."}
+                : "Connect an email platform (like Mailchimp) from a Client Content Agent's Connections tab to attach live campaign metrics."}
             </CardDescription>
           </CardHeader>
           <CardContent>

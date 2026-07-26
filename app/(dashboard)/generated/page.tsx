@@ -168,7 +168,7 @@ export default async function GeneratedPage({
         <EmptyState
           icon={Sparkles}
           title="Nothing generated yet"
-          description="Open a Writing Agent, use the Generate tab, and create the first caption, script, email, or carousel draft."
+          description="Open a Client Content Agent, use the Generate tab, and create the first caption, script, email, or carousel draft."
           actionLabel="Generate first piece"
           actionHref={firstAgentHref}
         />
@@ -329,7 +329,7 @@ export default async function GeneratedPage({
               <EmptyState
                 icon={Sparkles}
                 title="No generated content matches"
-                description="Clear a filter or generate a new piece from a Writing Agent."
+                description="Clear a filter or generate a new piece from a Client Content Agent."
                 actionLabel="Generate content"
                 actionHref={firstAgentHref}
               />

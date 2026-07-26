@@ -287,6 +287,7 @@ export async function runContentGeneratorTrendReport({
   brandBrainBrief,
   goal,
   offer,
+  browserScanContext,
 }: {
   client: ContentGeneratorClient;
   sources: ContentGeneratorSource[];
@@ -294,6 +295,7 @@ export async function runContentGeneratorTrendReport({
   brandBrainBrief: string;
   goal: string | null;
   offer: string | null;
+  browserScanContext?: string | null;
 }): Promise<ContentGeneratorTrendReport> {
   const cleanSources = sources.slice(0, MAX_SOURCES);
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -321,6 +323,9 @@ export async function runContentGeneratorTrendReport({
         )
         .join("\n\n")
     : "No public page text was fetched. Use the watchlist as context only.";
+  const browserBlock = browserScanContext
+    ? `Chrome extension scan context:\n${browserScanContext.slice(0, 40_000)}`
+    : "Chrome extension scan context: not connected for this run.";
   const clientBlock = client
     ? `Client: ${client.name}${client.industry ? `\nIndustry: ${client.industry}` : ""}${
         client.notes ? `\nClient notes: ${client.notes}` : ""
@@ -343,6 +348,7 @@ export async function runContentGeneratorTrendReport({
         `${brandBrainBrief || "Brand Brain: not available. Keep the output practical, specific, and neutral."}\n\n` +
         `Watchlist:\n${sourceList || "No sources submitted."}\n\n` +
         `Fetched public evidence:\n${fetchedBlock}\n\n` +
+        `${browserBlock}\n\n` +
         "Create a weekly trend report and 5-8 on-brand content ideas. " +
         "Each idea must be ready for a client agent to generate final copy, and each must include a Smart Scheduler suggestion.",
       jsonSchema: reportJsonSchema,

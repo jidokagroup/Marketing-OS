@@ -85,7 +85,7 @@ export default async function ClientsPage() {
         <EmptyState
           icon={Users}
           title="No clients yet"
-          description="Add a client to group the writing agents you build for them."
+          description="Add a client to group the Client Content Agents you build for them."
           actionLabel="Add your first client"
           actionHref="/clients/new"
         />
@@ -126,7 +126,7 @@ export default async function ClientsPage() {
                 <div className="grid gap-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Bot className="h-3.5 w-3.5" />
-                    {clientAgents.length} Writing Agent{clientAgents.length === 1 ? "" : "s"}
+                    {clientAgents.length} Client Content Agent{clientAgents.length === 1 ? "" : "s"}
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-3.5 w-3.5" />
@@ -182,7 +182,7 @@ export default async function ClientsPage() {
                     variant="outline"
                     size="sm"
                   >
-                    Create Writing Agent
+                    Create Client Content Agent
                   </ButtonLink>
                 </div>
 

@@ -255,7 +255,7 @@ export default async function CalendarPage({
               <CalendarPostCard
                 key={post.id}
                 post={post}
-                agentName={agent?.name ?? "Writing Agent"}
+                agentName={agent?.name ?? "Client Content Agent"}
                 clientName={clientName ?? "No client"}
               />
             );
@@ -344,7 +344,7 @@ export default async function CalendarPage({
                 <CalendarPostCard
                   key={post.id}
                   post={post}
-                  agentName={agent?.name ?? "Writing Agent"}
+                  agentName={agent?.name ?? "Client Content Agent"}
                   clientName={clientName ?? "No client"}
                 />
               );

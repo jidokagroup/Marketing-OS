@@ -201,7 +201,7 @@ export default async function ClientDetailPage({
         description={client.notes || "Client workspace, agents, generated content, and scheduled posts."}
       >
         <ButtonLink href={`/agents/new?client_id=${client.id}`}>
-          Create Writing Agent
+          Create Client Content Agent
           <ArrowRight className="ml-1 h-4 w-4" />
         </ButtonLink>
       </PageHeader>
@@ -209,7 +209,7 @@ export default async function ClientDetailPage({
       {client.industry && <Badge variant="secondary">{client.industry}</Badge>}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard icon={Bot} label="Writing Agents" value={agentList.length} />
+        <StatCard icon={Bot} label="Client Content Agents" value={agentList.length} />
         <StatCard icon={Sparkles} label="Generated Pieces" value={generated?.length ?? 0} />
         <StatCard icon={Inbox} label="Inbox Review" value={commentDmItems.length} />
       </div>
@@ -220,7 +220,7 @@ export default async function ClientDetailPage({
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold">Brand Brain</h2>
           <p className="text-sm text-muted-foreground">
-            Auto-filled by the Writing Agent after uploaded content is analyzed.
+            Auto-filled by the Client Content Agent after uploaded content is analyzed.
             Edit anything the client wants to refine.
           </p>
         </div>
@@ -228,7 +228,7 @@ export default async function ClientDetailPage({
           <BrandBrainForm agentId={primaryAgent.id} brain={brandBrain} />
         ) : (
           <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-            Create a Writing Agent first. The Brand Brain will be filled from
+            Create a Client Content Agent first. The Brand Brain will be filled from
             that agent uploads and can be edited here.
           </div>
         )}
@@ -236,7 +236,7 @@ export default async function ClientDetailPage({
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Writing Agents</h2>
+          <h2 className="text-lg font-semibold">Client Content Agents</h2>
           <ButtonLink href={`/agents/new?client_id=${client.id}`} variant="outline" size="sm">
             New agent
           </ButtonLink>

@@ -163,7 +163,7 @@ async function handleXCallback(request: Request, origin: string) {
       origin,
       pkce.agentId,
       "error",
-      "This writing agent could not be found.",
+      "This Client Content Agent could not be found.",
     );
   }
 

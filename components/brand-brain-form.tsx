@@ -84,7 +84,7 @@ export function BrandBrainForm({
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-muted-foreground">
-              The Writing Agent fills in voice and knowledge details first. Complete
+              The Client Content Agent fills in voice and knowledge details first. Complete
               the missing business facts below.
             </span>
             <span className="font-semibold tabular-nums">{completion}% complete</span>
@@ -98,7 +98,7 @@ export function BrandBrainForm({
             </p>
           )}
           <div className="rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
-            Tip: use the Writing Agent Knowledge Base for extracted offers,
+            Tip: use the Client Content Agent Knowledge Base for extracted offers,
             objections, testimonials, and competitor notes before typing details
             from scratch.
           </div>

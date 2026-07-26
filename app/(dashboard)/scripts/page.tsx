@@ -56,10 +56,10 @@ export default async function ScriptsPage({
     <div>
       <PageHeader
         title="Source Library"
-        description="Search the source files uploaded to your Writing Agents. Upload new files from the agent that owns them."
+        description="Search the source files uploaded to your Client Content Agents. Upload new files from the agent that owns them."
       >
         <ButtonLink href="/agents" variant="outline">
-          Open Writing Agents
+          Open Client Content Agents
         </ButtonLink>
       </PageHeader>
 
@@ -74,7 +74,7 @@ export default async function ScriptsPage({
       ) : (
         <div className="space-y-4">
           <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-            This is a reference view. For everyday work, open the Writing Agent to
+            This is a reference view. For everyday work, open the Client Content Agent to
             upload files, analyze voice, generate content, and view the Knowledge Base.
           </div>
 

@@ -12,7 +12,13 @@ import type { SocialPlatform } from "@/lib/supabase/types";
 
 export type SchedulerPlatform = Extract<
   SocialPlatform,
-  "instagram" | "facebook" | "youtube" | "tiktok" | "x" | "mailchimp"
+  | "instagram"
+  | "facebook"
+  | "youtube"
+  | "tiktok"
+  | "x"
+  | "linkedin"
+  | "mailchimp"
 >;
 export type SchedulerContentType = "video" | "photo" | "carousel" | "email_campaign";
 
@@ -86,11 +92,11 @@ export const PLATFORM_DEFINITIONS: PlatformDefinition[] = [
     key: "linkedin",
     label: "LinkedIn",
     icon: Globe2,
-    scheduler: false,
+    scheduler: true,
     posting: false,
     mediaTypes: ["video", "photo", "carousel"],
     connectable: false,
-    note: "Planned for company page publishing, lead-gen content, and analytics.",
+    note: "Plan LinkedIn company page content, then publish manually until LinkedIn posting is connected.",
   },
   {
     key: "mailchimp",

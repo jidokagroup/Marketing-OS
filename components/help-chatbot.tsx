@@ -38,7 +38,7 @@ function pageHint(pathname: string, primaryAgentId?: string): Answer {
   }
   if (pathname.startsWith("/agents")) {
     return {
-      text: "You are in Writing Agents. Open an agent to upload files, analyze voice, connect accounts, generate content, or view the Knowledge Base.",
+      text: "You are in Client Content Agents. Open an agent to upload files, analyze voice, connect accounts, generate content, or view the Knowledge Base.",
       href: agentHref(primaryAgentId, "assets"),
       actionLabel: "Open Agent",
     };
@@ -76,7 +76,7 @@ function answerQuestion(
   }
   if (q.includes("brand") || q.includes("voice") || q.includes("dna")) {
     return {
-      text: "Open the Writing Agent, upload client content, then run analysis. Brand Voice DNA and the Knowledge Base are generated from those files.",
+      text: "Open the Client Content Agent, upload client content, then run analysis. Brand Voice DNA and the Knowledge Base are generated from those files.",
       href: agentHref(primaryAgentId, "dna"),
       actionLabel: "Open Voice DNA",
     };
@@ -84,7 +84,7 @@ function answerQuestion(
   if (q.includes("connect") || q.includes("account")) {
     return {
       text: disconnected.length
-        ? `These accounts still need attention: ${disconnected.join(", ")}. Open a Writing Agent, then use the Connections tab.`
+        ? `These accounts still need attention: ${disconnected.join(", ")}. Open a Client Content Agent, then use the Connections tab.`
         : "All tracked platforms show as connected somewhere in this workspace.",
       href: agentHref(primaryAgentId, "connections"),
       actionLabel: "Open Connections",

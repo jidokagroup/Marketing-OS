@@ -67,7 +67,7 @@ export function AgentForm({
       <div className="space-y-2">
         <Label htmlFor="client_id">Client *</Label>
         <p className="text-xs text-muted-foreground">
-          Each client gets their own Writing Agent because the uploaded data and voice are different.
+          Each client gets their own Client Content Agent because the uploaded data and voice are different.
         </p>
         {/* Plain select keeps the value in the form payload reliably. */}
         <select

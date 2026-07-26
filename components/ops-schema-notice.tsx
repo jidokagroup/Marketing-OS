@@ -28,7 +28,7 @@ export function OpsSchemaNotice({
         </div>
       </CardHeader>
       <CardContent className="text-sm text-amber-900">
-        Existing clients, writing agents, generated content, film sessions,
+        Existing clients, Client Content Agents, generated content, film sessions,
         scheduler, analytics, inbox, and integrations remain available.
       </CardContent>
     </Card>

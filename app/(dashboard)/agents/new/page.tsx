@@ -24,7 +24,7 @@ export default async function NewAgentPage({
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader
-        title="New writing agent"
+        title="New Client Content Agent"
         description="Step 1 of 3 — choose the client this agent belongs to. You'll add assets and run analysis next."
       />
       <WizardSteps current={1} />
@@ -32,7 +32,7 @@ export default async function NewAgentPage({
         <EmptyState
           icon={Users}
           title="Create a client first"
-          description="Each Writing Agent belongs to one client so its uploaded files, voice, and knowledge stay separate."
+          description="Each Client Content Agent belongs to one client so its uploaded files, voice, and knowledge stay separate."
           actionLabel="Create client"
           actionHref="/clients/new"
         />

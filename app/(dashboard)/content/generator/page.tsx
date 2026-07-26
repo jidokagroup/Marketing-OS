@@ -16,6 +16,7 @@ import {
   titleCase,
 } from "@/lib/marketing-os/operations";
 import { EmptyState } from "@/components/empty-state";
+import { ChromeExtensionConnect } from "@/components/chrome-extension-connect";
 import { PageHeader } from "@/components/page-header";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Badge } from "@/components/ui/badge";
@@ -361,6 +362,18 @@ export default async function ContentGeneratorPage({
                 Logged-in Chrome session scans need a browser connector.
               </p>
             </div>
+
+            <ChromeExtensionConnect
+              watchlistFieldId="competitor_accounts"
+              scanContextFieldId="browser_scan_context"
+            />
+            <Textarea
+              id="browser_scan_context"
+              name="browser_scan_context"
+              className="hidden"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="space-y-2">

@@ -9,7 +9,7 @@ export interface TitleMatch {
 }
 
 /**
- * Match a scheduled post to a writing agent's generated content by TITLE
+ * Match a scheduled post to a Client Content Agent's generated content by TITLE
  * (case-insensitive). Returns the caption (short version) and full script
  * to attach to the post, or null when there's no matching voice content.
  */

@@ -71,6 +71,13 @@ const DEFAULT_POSTING_WINDOWS: Record<
       "Keeps image-only thought leadership posts near morning conversation peaks.",
     confidence: 68,
   },
+  linkedin: {
+    window: "Tue-Thu, 8:00-10:00 AM",
+    days: "Tuesday, Wednesday, Thursday",
+    reason:
+      "Prioritizes weekday professional browsing windows for company page education, POV, and lead-gen posts.",
+    confidence: 73,
+  },
   mailchimp: {
     window: "Tue-Thu, 9:00-11:00 AM",
     days: "Tuesday, Wednesday, Thursday",

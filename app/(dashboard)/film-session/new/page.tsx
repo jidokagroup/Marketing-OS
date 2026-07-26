@@ -23,7 +23,7 @@ export default async function NewFilmSessionPage() {
         <EmptyState
           icon={Clapperboard}
           title="No agents yet"
-          description="Create and analyze a writing agent first so scripts match its voice."
+          description="Create and analyze a Client Content Agent first so scripts match its voice."
           actionLabel="Go to agents"
           actionHref="/agents"
         />

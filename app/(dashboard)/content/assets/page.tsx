@@ -80,8 +80,8 @@ export default async function AssetsPage() {
         <EmptyState
           icon={FolderOpen}
           title="No assets found"
-          description="Upload files through a Writing Agent or attach media to scheduled posts."
-          actionLabel="Open Writing Agents"
+          description="Upload files through a Client Content Agent or attach media to scheduled posts."
+          actionLabel="Open Client Content Agents"
           actionHref="/agents"
         />
       ) : (

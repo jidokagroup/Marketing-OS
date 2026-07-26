@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     if (!firstAgent?.id) {
       return NextResponse.redirect(
         `${origin}/agents?connect=error&reason=${encodeURIComponent(
-          "Create or open a Writing Agent before connecting Mailchimp.",
+          "Create or open a Client Content Agent before connecting Mailchimp.",
         )}`,
       );
     }

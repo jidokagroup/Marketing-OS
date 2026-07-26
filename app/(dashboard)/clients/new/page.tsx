@@ -7,7 +7,7 @@ export const metadata = { title: "New Client · Jidoka Marketing Team OS" };
 export default function NewClientPage() {
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="New client" description="Group writing agents under a client." />
+      <PageHeader title="New client" description="Group Client Content Agents under a client." />
       <Card>
         <CardContent className="pt-6">
           <ClientForm />

@@ -152,6 +152,7 @@ export async function generateCompetitorIdeasAction(formData: FormData) {
   const sources = parseSources(String(formData.get("competitor_accounts") ?? ""));
   const goal = textValue(formData, "goal");
   const offer = textValue(formData, "offer");
+  const browserScanContext = textValue(formData, "browser_scan_context");
 
   const { data: client } = clientId
     ? await supabase
@@ -231,6 +232,7 @@ export async function generateCompetitorIdeasAction(formData: FormData) {
     brandBrainBrief: buildBrandBrainBrief((brandBrain as BrandBrain) ?? null),
     goal,
     offer,
+    browserScanContext,
   });
 
   const { data: insertedReport, error: reportError } = await supabase

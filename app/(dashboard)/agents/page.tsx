@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { AgentStatus } from "@/lib/supabase/types";
 
-export const metadata = { title: "Writing Agents · Jidoka Marketing Team OS" };
+export const metadata = { title: "Client Content Agents · Jidoka Marketing Team OS" };
 
 export default async function AgentsPage({
   searchParams,
@@ -41,7 +41,7 @@ export default async function AgentsPage({
   return (
     <div>
       <PageHeader
-        title="Writing Agents"
+        title="Client Content Agents"
         description="Client-specific agents that replicate a creator's voice."
       >
         <ButtonLink href="/agents/new">
@@ -54,7 +54,7 @@ export default async function AgentsPage({
       {!agents || agents.length === 0 ? (
         <EmptyState
           icon={Bot}
-          title="No writing agents yet"
+          title="No Client Content Agents yet"
           description="Create an agent, upload the creator's content, and run Voice Intelligence Analysis."
           actionLabel="Create your first agent"
           actionHref="/agents/new"

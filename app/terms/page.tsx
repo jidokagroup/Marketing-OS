@@ -12,7 +12,7 @@ const sections = [
   {
     title: "1. Who These Terms Cover",
     body: [
-      "These Terms and Conditions govern access to and use of the Jidoka Marketing Team OS platform and related services made available by Jidoka Group. Jidoka Marketing Team OS is a marketing workflow platform used to organize client content, create writing agents, generate draft marketing materials, connect approved social and email accounts, schedule content, and review performance data.",
+      "These Terms and Conditions govern access to and use of the Jidoka Marketing Team OS platform and related services made available by Jidoka Group. Jidoka Marketing Team OS is a marketing workflow platform used to organize client content, create Client Content Agents, generate draft marketing materials, connect approved social and email accounts, schedule content, and review performance data.",
       "By using Jidoka Marketing Team OS, you agree to these Terms on behalf of yourself and, if you use Jidoka Marketing Team OS for a company or client, on behalf of that organization.",
     ],
   },

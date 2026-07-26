@@ -20,19 +20,19 @@ type Step = {
 };
 
 const DEFAULT_STEPS: Step[] = [
-  { label: "Create or open a Writing Agent for the client.", done: false },
+  { label: "Create or open a Client Content Agent for the client.", done: false },
   {
     label: "Upload the client files once, then run Voice Intelligence Analysis.",
     done: false,
   },
   {
     label:
-      "Review Brand Voice DNA and the Knowledge Base after the Writing Agent analyzes uploaded files.",
+      "Review Brand Voice DNA and the Knowledge Base after the Client Content Agent analyzes uploaded files.",
     done: false,
   },
   { label: "Generate captions and scripts with exact titles.", done: false },
   {
-    label: "Connect social accounts in the Writing Agent's Connections tab.",
+    label: "Connect social accounts in the Client Content Agent's Connections tab.",
     done: false,
   },
   {

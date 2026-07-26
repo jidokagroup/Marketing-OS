@@ -72,22 +72,13 @@ export default async function ContentPage() {
       metricLabel: "sessions",
     },
     {
-      title: "Smart Scheduler",
+      title: "Smart Scheduler + Calendar",
       description:
-        "Create posts, bulk import CSVs, attach media, set comment-to-DM flows, and queue drafts.",
+        "Create posts, attach media, use comment-to-DM flows, and review scheduled content in one workflow.",
       href: "/scheduler",
       icon: CalendarDays,
       metric: scheduledCount ?? 0,
       metricLabel: "scheduled",
-    },
-    {
-      title: "Content Calendar",
-      description:
-        "View the next 12 months, select days, and edit captions, dates, and times.",
-      href: "/calendar",
-      icon: CalendarDays,
-      metric: scheduledCount ?? 0,
-      metricLabel: "items",
     },
     {
       title: "Assets Log",
@@ -110,7 +101,7 @@ export default async function ContentPage() {
     {
       title: "Client Agents",
       description:
-        "Create and train the writing agents that hold each client's Brand Brain and voice memory.",
+        "Create and train the Client Content Agents that hold each client's Brand Brain and voice memory.",
       href: "/agents",
       icon: Bot,
       metric: null,
