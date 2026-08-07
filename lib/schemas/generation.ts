@@ -19,9 +19,9 @@ export const generatedContentJsonSchema = obj({
   alternate_hooks: strArr("3-5 alternate opening hooks"),
   alternate_ctas: strArr("2-4 alternate calls to action"),
   short_version: str("a tighter, shorter cut"),
-  long_version: str("an expanded, longer cut"),
+  long_version: str("an expanded, longer cut; if Blog post is selected, make this a complete blog post"),
   organic_version: str("a non-salesy, value-first cut"),
-  sales_version: str("a conversion-focused cut"),
+  sales_version: str("a conversion-focused cut; if Email is selected, make this a complete email draft with subject line and body"),
 });
 
 /** Quality Control Engine — the ten authenticity sub-scores (0-100). */

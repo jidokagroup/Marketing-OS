@@ -150,6 +150,7 @@ export function HelpChatbot({
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [answering, setAnswering] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -168,7 +169,7 @@ export function HelpChatbot({
     ).map((platform) => platform.label);
   }, [accounts]);
 
-  async function saveChat(userQuestion: string, answer: Answer) {
+  async function saveChat(userQuestion: string, answer: Answer): Promise<Answer | null> {
     try {
       const res = await fetch("/api/core-chat", {
         method: "POST",
@@ -185,11 +186,22 @@ export function HelpChatbot({
       });
       const json = (await res.json().catch(() => ({}))) as {
         thread_id?: string;
+        answer?: string;
+        action_href?: string;
+        action_label?: string;
       };
       if (json.thread_id) setThreadId(json.thread_id);
+      if (json.answer && json.answer !== answer.text) {
+        return {
+          text: json.answer,
+          href: json.action_href ?? answer.href,
+          actionLabel: json.action_label ?? answer.actionLabel,
+        };
+      }
     } catch {
       // Chat guidance should keep working even if the memory endpoint is down.
     }
+    return null;
   }
 
   function appendExchange(userQuestion: string) {
@@ -207,7 +219,19 @@ export function HelpChatbot({
         ...answer,
       },
     ]);
-    void saveChat(userQuestion, answer);
+    setAnswering(true);
+    void saveChat(userQuestion, answer)
+      .then((memoryAnswer) => {
+        if (!memoryAnswer) return;
+        setMessages((current) =>
+          current.map((message, index) =>
+            index === current.length - 1 && message.role === "assistant"
+              ? { role: "assistant", ...memoryAnswer }
+              : message,
+          ),
+        );
+      })
+      .finally(() => setAnswering(false));
   }
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -272,6 +296,7 @@ export function HelpChatbot({
               {[
                 "What do I do on this page?",
                 "How do I schedule a post?",
+                "What does our playbook say?",
                 "Are accounts disconnected?",
               ].map((prompt) => (
                 <Button
@@ -280,6 +305,7 @@ export function HelpChatbot({
                   variant="outline"
                   size="xs"
                   onClick={() => ask(prompt)}
+                  disabled={answering}
                 >
                   {prompt}
                 </Button>
@@ -291,8 +317,9 @@ export function HelpChatbot({
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder="Ask how to..."
+              disabled={answering}
             />
-            <Button type="submit" size="icon" aria-label="Send help question">
+            <Button type="submit" size="icon" aria-label="Send help question" disabled={answering}>
               <Send className="h-4 w-4" />
             </Button>
           </form>

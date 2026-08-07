@@ -12,7 +12,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { getPlatformDefinition, SCHEDULER_PLATFORMS } from "@/lib/social/platforms";
+import {
+  getPlatformDefinition,
+  isAutoPublishableContent,
+  SCHEDULER_PLATFORMS,
+} from "@/lib/social/platforms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +38,13 @@ import {
 } from "@/components/ui/tabs";
 
 const CONTENT_TYPES = ["video", "photo", "carousel", "email_campaign"] as const;
-const MAX_MEDIA_UPLOAD_BYTES = 50 * 1024 * 1024;
+const DEFAULT_MAX_MEDIA_UPLOAD_MB = 500;
+const configuredMaxMediaMb = Number(process.env.NEXT_PUBLIC_MAX_MEDIA_UPLOAD_MB);
+const MAX_MEDIA_UPLOAD_MB =
+  Number.isFinite(configuredMaxMediaMb) && configuredMaxMediaMb > 0
+    ? configuredMaxMediaMb
+    : DEFAULT_MAX_MEDIA_UPLOAD_MB;
+const MAX_MEDIA_UPLOAD_BYTES = MAX_MEDIA_UPLOAD_MB * 1024 * 1024;
 const CONTENT_TYPE_LABELS: Record<(typeof CONTENT_TYPES)[number], string> = {
   video: "Video",
   photo: "Photo",
@@ -73,7 +83,7 @@ const TEMPLATE_EMAIL_EXAMPLE = [
   "Weekly Client Newsletter",
   "Jidoka Marketing Team OS Demo Client",
   "",
-  "mailchimp",
+  "email",
   "email_campaign",
   "2026-07-03 10:00",
   "",
@@ -96,20 +106,37 @@ type GeneratedOption = {
   primary_script: string | null;
 };
 type CsvRow = Record<string, string>;
-type CommentDmFlowResponse = {
-  public_reply?: string;
-  dm_sequence?: string;
-  review_required?: boolean;
-  review_reason?: string;
-  risk_level?: "low" | "medium" | "high";
-  confidence?: "low" | "medium" | "high";
-  error?: string;
-};
+
+function normalizeSchedulerPlatform(value: string) {
+  const key = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  if (
+    [
+      "email",
+      "email_campaign",
+      "gmail",
+      "google_workspace",
+      "google_workspace_gmail",
+      "resend",
+      "smtp",
+      "privateemail",
+      "custom_smtp",
+      "hubspot",
+      "klaviyo",
+      "activecampaign",
+      "constant_contact",
+      "custom_api",
+      "mailchimp",
+    ].includes(key)
+  ) {
+    return "mailchimp";
+  }
+  return key;
+}
 
 function splitPlatforms(value: string) {
   return value
     .split(/[|,;]/)
-    .map((part) => part.trim().toLowerCase())
+    .map(normalizeSchedulerPlatform)
     .filter(Boolean);
 }
 
@@ -206,15 +233,15 @@ function validateMedia(platforms: string[], contentType: string, file: File | nu
   }
   if (platforms.includes("mailchimp")) {
     if (platforms.length > 1) {
-      return "Mailchimp email campaigns need a separate scheduled item from social posts.";
+      return "Email campaigns need a separate scheduled item from social posts.";
     }
     if (contentType !== "email_campaign") {
-      return "Mailchimp uses the email campaign content type.";
+      return "Email campaigns use the email campaign content type.";
     }
     return null;
   }
   if (contentType === "email_campaign") {
-    return "Email campaign is only for Mailchimp.";
+    return "Email campaign is only for the Email Campaign platform.";
   }
   if (platforms.includes("youtube")) {
     if (contentType !== "video") return "YouTube is video-only, so choose video.";
@@ -233,7 +260,7 @@ function validateMedia(platforms: string[], contentType: string, file: File | nu
     return "Photo posts need an image file.";
   }
   if (file && file.size > MAX_MEDIA_UPLOAD_BYTES) {
-    return "Media uploads must be under 50 MB.";
+    return `Media uploads must be under ${MAX_MEDIA_UPLOAD_MB} MB.`;
   }
   return null;
 }
@@ -287,12 +314,14 @@ async function createPost(payload: Record<string, unknown>) {
 export function SchedulerUploader({
   agents,
   connectedPlatforms = [],
+  emailProviderLabel = "your selected email provider",
   defaultAgentId = "",
   defaultTitle = "",
   generatedContent = [],
 }: {
   agents: AgentOption[];
   connectedPlatforms?: string[];
+  emailProviderLabel?: string;
   defaultAgentId?: string;
   defaultTitle?: string;
   generatedContent?: GeneratedOption[];
@@ -309,11 +338,6 @@ export function SchedulerUploader({
   );
   const [useBestTime, setUseBestTime] = useState(true);
   const [commentDmEnabled, setCommentDmEnabled] = useState(false);
-  const [sampleComment, setSampleComment] = useState("");
-  const [commentAutoReply, setCommentAutoReply] = useState("");
-  const [dmSequence, setDmSequence] = useState("");
-  const [commentDmGenerating, setCommentDmGenerating] = useState(false);
-  const [commentDmReviewNote, setCommentDmReviewNote] = useState("");
 
   const agentsByName = useMemo(
     () =>
@@ -326,6 +350,7 @@ export function SchedulerUploader({
   const hasX = platforms.includes("x");
   const hasYouTube = platforms.includes("youtube");
   const hasMailchimp = platforms.includes("mailchimp");
+  const emailCampaignProviderLabel = `Email campaign via ${emailProviderLabel}`;
   const mediaAccept = hasMailchimp
     ? undefined
     : hasX
@@ -338,6 +363,15 @@ export function SchedulerUploader({
     [connectedPlatforms],
   );
   const disconnectedSelected = platforms.filter((platform) => !connected.has(platform));
+  const disconnectedSelectedLabels = disconnectedSelected.map((platform) =>
+    platform === "mailchimp"
+      ? "Email Campaign"
+      : getPlatformDefinition(platform)?.label ?? platform,
+  );
+  const autoPublishableSelected = platforms.every((platform) =>
+    isAutoPublishableContent(platform, contentType),
+  );
+  const manualDraftSelected = !autoPublishableSelected;
   const captionPreview = captionOverride.trim();
 
   function pickGeneratedContent(id: string) {
@@ -352,7 +386,9 @@ export function SchedulerUploader({
         "",
     );
     if (selected.platform) {
-      const key = selected.platform.trim().toLowerCase();
+      const key =
+        splitPlatforms(selected.platform)[0] ??
+        selected.platform.trim().toLowerCase();
       const definition = SCHEDULER_PLATFORMS.find((platform) => platform.key === key);
       if (definition?.disabled) {
         toast.info(definition.disabledReason ?? `${definition.label} is not available yet.`);
@@ -404,57 +440,6 @@ export function SchedulerUploader({
     });
   }
 
-  async function generateCommentDmDraft() {
-    if (!selectedAgentId || !titleValue.trim()) {
-      toast.error("Pick an agent and enter a title before generating the reply flow.");
-      return;
-    }
-    if (!platforms.includes("instagram")) {
-      toast.error("Comment to DM is only available for Instagram posts.");
-      return;
-    }
-
-    setCommentDmGenerating(true);
-    setCommentDmReviewNote("");
-    try {
-      const res = await fetch("/api/comment-dm/generate", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          agent_id: selectedAgentId,
-          title: titleValue,
-          caption: captionOverride,
-          sample_comment: sampleComment,
-          trigger_keywords:
-            "guide, info, demo, audit, pricing, help, interested, send it",
-        }),
-      });
-      const json = await readJsonResponse<CommentDmFlowResponse>(res);
-      if (!res.ok) {
-        throw new Error(json.error ?? "Could not generate the comment-to-DM flow.");
-      }
-      setCommentAutoReply(json.public_reply ?? "");
-      setDmSequence(json.dm_sequence ?? "");
-      setCommentDmReviewNote(json.review_reason ?? "");
-      if (json.review_required) {
-        toast.info(json.review_reason || "Generated with a human review flag.");
-      } else {
-        toast.success("Generated public reply and DM sequence from Brand Brain.");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Generation failed.");
-    } finally {
-      setCommentDmGenerating(false);
-    }
-  }
-
-  function toggleCommentDmFlow(checked: boolean) {
-    setCommentDmEnabled(checked);
-    if (checked && !commentAutoReply.trim() && !dmSequence.trim()) {
-      void generateCommentDmDraft();
-    }
-  }
-
   async function onSingleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formEl = e.currentTarget;
@@ -495,8 +480,8 @@ export function SchedulerUploader({
         scheduled_time: scheduledTime,
         use_best_time: useBestTime,
         comment_dm_enabled: commentDmEnabled,
-        comment_auto_reply: commentAutoReply,
-        dm_sequence: dmSequence,
+        comment_auto_reply: String(form.get("comment_auto_reply") ?? ""),
+        dm_sequence: String(form.get("dm_sequence") ?? ""),
       });
       toast.success(
         result.matched
@@ -510,10 +495,6 @@ export function SchedulerUploader({
       setPlatforms(["instagram"]);
       setContentType("video");
       setCommentDmEnabled(false);
-      setSampleComment("");
-      setCommentAutoReply("");
-      setDmSequence("");
-      setCommentDmReviewNote("");
       startTransition(() => router.refresh());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
@@ -726,10 +707,10 @@ export function SchedulerUploader({
                           {disabled
                             ? "API setup in progress"
                             : platform.key === "mailchimp"
-                            ? "Email campaign"
-                            : platform.key === "x"
-                            ? "Image-only"
-                            : platform.key === "youtube"
+                              ? emailCampaignProviderLabel
+                              : platform.key === "x"
+                                ? "Image-only"
+                                : platform.key === "youtube"
                             ? "Video-only"
                             : "Video, photo, carousel"}
                         </span>
@@ -752,14 +733,20 @@ export function SchedulerUploader({
               )}
               {hasMailchimp && (
                 <p className="text-xs text-muted-foreground">
-                  Mailchimp is selected, so Jidoka Marketing Team OS creates a separate email campaign draft.
+                  {emailCampaignProviderLabel} is selected, so Jidoka Marketing Team OS creates a separate email campaign draft.
                 </p>
               )}
               {disconnectedSelected.length > 0 && (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
-                  Disconnected: {disconnectedSelected.join(", ")}. Jidoka Marketing Team OS will
+                  Disconnected: {disconnectedSelectedLabels.join(", ")}. Jidoka Marketing Team OS will
                   save these as scheduled drafts, but automatic publishing needs the
                   accounts connected from the Writing Agent&apos;s Connections tab.
+                </div>
+              )}
+              {disconnectedSelected.length === 0 && manualDraftSelected && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  Automatic posting is live only for Instagram and Facebook photo/video posts right now.
+                  This selection will save as a timed draft for manual publishing.
                 </div>
               )}
             </div>
@@ -803,7 +790,7 @@ export function SchedulerUploader({
                 />
                 {hasMailchimp && (
                   <p className="text-xs text-muted-foreground">
-                    Email campaigns use the title and email copy. Media upload is not required.
+                    {emailProviderLabel} email campaigns use the title and email copy. Media upload is not required.
                   </p>
                 )}
               </div>
@@ -851,86 +838,65 @@ export function SchedulerUploader({
             </div>
 
             {!hasMailchimp && (
-              <div className="rounded-lg border p-4">
-                <label className="flex items-start gap-3 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={commentDmEnabled}
-                    onChange={(event) => toggleCommentDmFlow(event.target.checked)}
-                    className="mt-1 h-4 w-4"
-                  />
-                  <span>
-                    <span className="flex items-center gap-2 font-medium">
-                      <MessageCircle className="h-4 w-4" />
-                      Instagram comment to DM flow
-                    </span>
-                    <span className="mt-1 block text-muted-foreground">
-                      When toggled on, comments can receive a dynamic public reply
-                      and a DM sequence for Instagram posts.
-                    </span>
+            <div className="rounded-lg border p-4">
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={commentDmEnabled}
+                  onChange={(event) => setCommentDmEnabled(event.target.checked)}
+                  className="mt-1 h-4 w-4"
+                />
+                <span>
+                  <span className="flex items-center gap-2 font-medium">
+                    <MessageCircle className="h-4 w-4" />
+                    Instagram comment to DM flow
                   </span>
-                </label>
-                {commentDmEnabled && (
-                  <div className="mt-4 space-y-4">
-                    <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-                      <div className="space-y-2">
-                        <Label htmlFor="sample_comment">Sample comment</Label>
-                        <Input
-                          id="sample_comment"
-                          value={sampleComment}
-                          onChange={(event) => setSampleComment(event.target.value)}
-                          placeholder="e.g. Crushing, INFO, 1616161616"
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => void generateCommentDmDraft()}
-                        disabled={commentDmGenerating}
-                      >
-                        {commentDmGenerating && (
-                          <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                        )}
-                        Generate flow
-                      </Button>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="comment_auto_reply">Comment reply</Label>
-                        <Textarea
-                          id="comment_auto_reply"
-                          name="comment_auto_reply"
-                          rows={3}
-                          value={commentAutoReply}
-                          onChange={(event) => setCommentAutoReply(event.target.value)}
-                          placeholder="Generate a public reply from the Brand Brain."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dm_sequence">DM sequence</Label>
-                        <Textarea
-                          id="dm_sequence"
-                          name="dm_sequence"
-                          rows={3}
-                          value={dmSequence}
-                          onChange={(event) => setDmSequence(event.target.value)}
-                          placeholder="Generate a DM sequence from the Brand Brain."
-                        />
-                      </div>
-                    </div>
-                    <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
-                      Generated from this agent&apos;s Brand Brain and Writing DNA.
-                      Public replies stay short; unclear or sensitive comments are
-                      flagged for human review before sending.
-                      {commentDmReviewNote && (
-                        <span className="mt-2 block font-medium text-foreground">
-                          Review note: {commentDmReviewNote}
-                        </span>
-                      )}
-                    </div>
+                  <span className="mt-1 block text-muted-foreground">
+                    When toggled on, comments can receive a dynamic public reply
+                    and a DM sequence for Instagram posts.
+                  </span>
+                </span>
+              </label>
+              {commentDmEnabled && (
+                <div className="mt-4 space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Thanks for commenting - sending it now.",
+                      "I just sent the guide to your DMs.",
+                      "Great question - sending the next step now.",
+                    ].map((template) => (
+                      <Badge key={template} variant="outline">
+                        {template}
+                      </Badge>
+                    ))}
                   </div>
-                )}
-              </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="comment_auto_reply">Comment reply</Label>
+                    <Textarea
+                      id="comment_auto_reply"
+                      name="comment_auto_reply"
+                      rows={3}
+                      placeholder="Thanks for commenting - sending it now."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dm_sequence">DM sequence</Label>
+                    <Textarea
+                      id="dm_sequence"
+                      name="dm_sequence"
+                      rows={3}
+                      placeholder="DM 1: resource link. DM 2: follow-up question."
+                    />
+                  </div>
+                  </div>
+                  <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
+                    Preview: public comment reply first, then the DM sequence sends
+                    only for Instagram posts after the account is connected.
+                  </div>
+                </div>
+              )}
+            </div>
             )}
 
             <div className="rounded-lg border bg-muted/30 p-4">
@@ -950,6 +916,9 @@ export function SchedulerUploader({
                           {CONTENT_TYPE_LABELS[contentType]}
                         </Badge>
                         <Badge variant="secondary">medium confidence</Badge>
+                        {!isAutoPublishableContent(platform, contentType) && (
+                          <Badge variant="outline">manual draft</Badge>
+                        )}
                       </div>
                       <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
                         {captionPreview ||
@@ -971,7 +940,7 @@ export function SchedulerUploader({
               )}
               {working
                 ? "Saving…"
-                : disconnectedSelected.length > 0
+                : disconnectedSelected.length > 0 || manualDraftSelected
                   ? "Save draft"
                   : "Add to scheduler"}
             </Button>

@@ -3,6 +3,15 @@ import { notFound } from "next/navigation";
 import { BookOpen, Trash2, FileText } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import {
+  getEmailProviderDefinition,
+  normalizeEmailProvider,
+} from "@/lib/email-providers";
+import {
+  asRow,
+  isOpsSchemaMissing,
+  opsTable,
+} from "@/lib/marketing-os/operations";
 import { AgentStatusBadge } from "@/components/agent-status-badge";
 import { AssetUploader } from "@/components/asset-uploader";
 import { AssetLibraryTable } from "@/components/asset-library-table";
@@ -10,13 +19,13 @@ import { AnalyzeButton } from "@/components/analyze-button";
 import { VoiceDnaPanel, type DnaData } from "@/components/voice-dna-panel";
 import { GenerateForm } from "@/components/generate-form";
 import { AgentConnections } from "@/components/agent-connections";
+import { AgentDetailTabs } from "@/components/agent-detail-tabs";
 import { ScoreBadge } from "@/components/score-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Fingerprint, Sparkles } from "lucide-react";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
@@ -29,37 +38,11 @@ export default async function AgentDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{
-    tab?: string;
-    connect?: string;
-    reason?: string;
-    title?: string;
-    topic?: string;
-    goal?: string;
-    audience?: string;
-    offer?: string;
-    cta?: string;
-    length?: string;
-    notes?: string;
-    platforms?: string;
-  }>;
+  searchParams: Promise<{ tab?: string; connect?: string; reason?: string }>;
 }) {
   const { id } = await params;
-  const {
-    tab,
-    connect,
-    reason,
-    title,
-    topic,
-    goal,
-    audience,
-    offer,
-    cta,
-    length,
-    notes,
-    platforms,
-  } = await searchParams;
-  const { supabase } = await requireUser();
+  const { tab, connect, reason } = await searchParams;
+  const { user, supabase } = await requireUser();
   const allowedTabs = new Set([
     "assets",
     "dna",
@@ -68,20 +51,6 @@ export default async function AgentDetailPage({
     "connections",
     "knowledge",
   ]);
-  const generateDefaults = {
-    title,
-    topic,
-    goal,
-    audience,
-    offer,
-    cta,
-    length,
-    notes,
-    platforms: platforms
-      ?.split(/[|,;]/)
-      .map((item) => item.trim().toLowerCase())
-      .filter(Boolean),
-  };
   const activeTab = tab && allowedTabs.has(tab) ? tab : "assets";
 
   const { data: agent } = await supabase
@@ -141,6 +110,26 @@ export default async function AgentDetailPage({
     .eq("agent_id", id)
     .order("created_at", { ascending: false });
   const accountList = accounts ?? [];
+  const emailProviderResult = await opsTable(
+    supabase,
+    "marketing_os_email_provider_settings",
+  )
+    .select("provider, provider_label, status")
+    .eq("owner_id", user.id)
+    .maybeSingle();
+  const emailProviderSettings = isOpsSchemaMissing(emailProviderResult.error)
+    ? null
+    : asRow<{
+        provider: string;
+        provider_label: string | null;
+        status: string;
+      }>(emailProviderResult.data);
+  const selectedEmailProvider = normalizeEmailProvider(
+    emailProviderSettings?.provider,
+  );
+  const selectedEmailProviderLabel =
+    emailProviderSettings?.provider_label ??
+    getEmailProviderDefinition(selectedEmailProvider).label;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -182,7 +171,7 @@ export default async function AgentDetailPage({
 
       <ConnectionNotice status={connect} reason={reason} />
 
-      <Tabs defaultValue={activeTab}>
+      <AgentDetailTabs activeTab={activeTab}>
         <TabsList>
           <TabsTrigger value="assets">Assets</TabsTrigger>
           <TabsTrigger value="dna">Brand Voice DNA</TabsTrigger>
@@ -238,7 +227,7 @@ export default async function AgentDetailPage({
         </TabsContent>
         <TabsContent value="generate" className="mt-6">
           {hasDna ? (
-            <GenerateForm agentId={agent.id} defaults={generateDefaults} />
+            <GenerateForm agentId={agent.id} />
           ) : (
             <EmptyState
               icon={Sparkles}
@@ -277,7 +266,13 @@ export default async function AgentDetailPage({
           )}
         </TabsContent>
         <TabsContent value="connections" className="mt-6">
-          <AgentConnections agentId={agent.id} accounts={accountList} />
+          <AgentConnections
+            agentId={agent.id}
+            accounts={accountList}
+            emailProvider={selectedEmailProvider}
+            emailProviderLabel={selectedEmailProviderLabel}
+            emailProviderStatus={emailProviderSettings?.status ?? "needs_setup"}
+          />
         </TabsContent>
         <TabsContent value="knowledge" className="mt-6">
           {dna.knowledge ? (
@@ -290,7 +285,7 @@ export default async function AgentDetailPage({
             />
           )}
         </TabsContent>
-      </Tabs>
+      </AgentDetailTabs>
     </div>
   );
 }

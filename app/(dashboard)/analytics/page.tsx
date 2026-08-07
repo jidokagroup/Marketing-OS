@@ -3,6 +3,11 @@ import { BarChart3, CheckCircle2, DollarSign, Eye, Heart, Sparkles, TrendingUp }
 
 import { requireUser } from "@/lib/auth";
 import {
+  getEmailProviderDefinition,
+  normalizeEmailProvider,
+} from "@/lib/email-providers";
+import {
+  asRow,
   asRows,
   formatMoney,
   isOpsSchemaMissing,
@@ -121,7 +126,13 @@ export default async function AnalyticsPage({
   } = await searchParams;
   const attribution = await getAttributionData(supabase, user.id);
 
-  const [{ data: rows }, { data: latestAgent }, { data: accounts }, { count: scheduledCount }] =
+  const [
+    { data: rows },
+    { data: latestAgent },
+    { data: accounts },
+    { count: scheduledCount },
+    emailProviderResult,
+  ] =
     await Promise.all([
       supabase
         .from("marketing_os_platform_analytics")
@@ -138,14 +149,35 @@ export default async function AnalyticsPage({
         .maybeSingle(),
       supabase.from("marketing_os_social_accounts").select("platform, status"),
       supabase.from("marketing_os_scheduled_posts").select("id", { count: "exact", head: true }),
+      opsTable(supabase, "marketing_os_email_provider_settings")
+        .select("provider, provider_label, status")
+        .eq("owner_id", user.id)
+        .maybeSingle(),
     ]);
 
   const allData = rows ?? [];
+  const emailProviderSettings = isOpsSchemaMissing(emailProviderResult.error)
+    ? null
+    : asRow<{ provider: string; provider_label: string | null; status: string }>(
+        emailProviderResult.data,
+      );
+  const selectedEmailProvider = normalizeEmailProvider(
+    emailProviderSettings?.provider,
+  );
+  const selectedEmailProviderLabel =
+    emailProviderSettings?.provider_label ??
+    getEmailProviderDefinition(selectedEmailProvider).label;
   const connectedPlatforms = new Set<string>(
     (accounts ?? [])
       .filter((account) => account.status === "active")
       .map((account) => account.platform),
   );
+  if (
+    selectedEmailProvider !== "mailchimp" &&
+    emailProviderSettings?.status === "connected"
+  ) {
+    connectedPlatforms.add("mailchimp");
+  }
   const analyticsPlatforms = new Set<string>(
     allData.map((row) => row.platform).filter(Boolean),
   );
@@ -220,7 +252,9 @@ export default async function AnalyticsPage({
   const emailPlatform = (accounts ?? []).some(
     (account) => account.platform === "mailchimp" && account.status === "active",
   )
-    ? "Mailchimp"
+    ? selectedEmailProviderLabel
+    : selectedEmailProvider !== "mailchimp" && emailProviderSettings?.status === "connected"
+      ? selectedEmailProviderLabel
     : null;
   const backfillNotice =
     backfill === "success"
@@ -658,8 +692,8 @@ function AnalyticsBackfillPanel({
         </form>
         <p className="mt-3 text-xs text-muted-foreground">
           Backfill imports historical posts from connected Instagram, Facebook,
-          YouTube, and X accounts. Mailchimp and TikTok are listed on Analytics,
-          but historical imports for those platforms are not live yet.
+          YouTube, and X accounts. Email provider and TikTok analytics are
+          listed here, but historical imports for those platforms are not live yet.
         </p>
       </CardContent>
     </Card>

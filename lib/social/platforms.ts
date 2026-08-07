@@ -94,13 +94,13 @@ export const PLATFORM_DEFINITIONS: PlatformDefinition[] = [
   },
   {
     key: "mailchimp",
-    label: "Mailchimp",
+    label: "Email Campaign",
     icon: Mail,
     scheduler: true,
     posting: false,
     mediaTypes: ["email_campaign"],
     connectable: true,
-    note: "Connect through Mailchimp OAuth to schedule email campaign drafts and track campaign performance.",
+    note: "Choose the email provider in Settings. Mailchimp OAuth is available when Mailchimp is selected.",
   },
 ];
 
@@ -131,6 +131,17 @@ export function isAllowedContentType(
       !definition.disabled &&
       definition.mediaTypes.includes(contentType as SchedulerContentType),
   );
+}
+
+export function isAutoPublishableContent(platform: string, contentType: string) {
+  const definition = getPlatformDefinition(platform);
+  if (!definition?.posting || definition.disabled) return false;
+
+  if (platform === "instagram" || platform === "facebook") {
+    return contentType === "video" || contentType === "photo";
+  }
+
+  return false;
 }
 
 export function connectionLabel(platform: string, connected: boolean) {

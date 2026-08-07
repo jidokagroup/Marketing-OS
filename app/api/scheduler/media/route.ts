@@ -5,10 +5,15 @@ import { getAuthContext } from "@/lib/auth";
 export const runtime = "nodejs";
 
 // Media goes straight from the browser to Supabase Storage via a signed
-// upload URL, so Vercel's 4.5 MB request-body cap no longer applies. The
-// ceiling is Supabase's file-size limit (50 MB on the default plan; raise
-// the bucket/global limit in the Supabase dashboard to go higher).
-const MAX_MEDIA_BYTES = 50 * 1024 * 1024;
+// upload URL, so platform request-body caps do not apply. Keep this limit in
+// sync with the Supabase Storage bucket limit for marketing-os-media.
+const DEFAULT_MAX_MEDIA_UPLOAD_MB = 500;
+const configuredMaxMediaMb = Number(process.env.NEXT_PUBLIC_MAX_MEDIA_UPLOAD_MB);
+const MAX_MEDIA_UPLOAD_MB =
+  Number.isFinite(configuredMaxMediaMb) && configuredMaxMediaMb > 0
+    ? configuredMaxMediaMb
+    : DEFAULT_MAX_MEDIA_UPLOAD_MB;
+const MAX_MEDIA_BYTES = MAX_MEDIA_UPLOAD_MB * 1024 * 1024;
 
 export async function POST(request: Request) {
   const context = await getAuthContext();
@@ -38,7 +43,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "file_size is required" }, { status: 400 });
   }
   if (fileSize > MAX_MEDIA_BYTES) {
-    return NextResponse.json({ error: "Media file exceeds 50 MB" }, { status: 413 });
+    return NextResponse.json(
+      { error: `Media file exceeds ${MAX_MEDIA_UPLOAD_MB} MB` },
+      { status: 413 },
+    );
   }
 
   const { data: agent } = await supabase

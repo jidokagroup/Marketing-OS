@@ -83,10 +83,12 @@ export default async function GeneratedDetailPage({
         ? "Approved and scheduled"
         : "Draft review";
 
+  const platformText = String(content.platform ?? "").toLowerCase();
+  const wantsBlogPost = platformText.includes("blog");
   const variants: { value: string; label: string; text: string | null }[] = [
     { value: "primary", label: "Reel script", text: content.primary_script },
     { value: "short", label: "Short caption", text: content.short_version },
-    { value: "long", label: "Long caption", text: content.long_version },
+    { value: "long", label: wantsBlogPost ? "Blog post" : "Long caption", text: content.long_version },
     { value: "organic", label: "Carousel copy", text: content.organic_version },
     { value: "sales", label: "Email", text: content.sales_version },
   ];

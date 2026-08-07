@@ -12,9 +12,19 @@ import {
 
 import { requireUser } from "@/lib/auth";
 import {
+  getEmailProviderDefinition,
+  normalizeEmailProvider,
+} from "@/lib/email-providers";
+import {
+  asRow,
+  isOpsSchemaMissing,
+  opsTable,
+} from "@/lib/marketing-os/operations";
+import {
   PLATFORM_LABELS,
   SCHEDULER_PLATFORMS,
   connectionLabel,
+  isAutoPublishableContent,
 } from "@/lib/social/platforms";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -36,6 +46,12 @@ import {
 
 export const metadata = { title: "Smart Scheduler · Jidoka Marketing Team OS" };
 
+type EmailProviderSettingsRow = {
+  provider: string;
+  provider_label: string | null;
+  status: string;
+};
+
 function confidenceLabel(value: number | null) {
   if (value == null) return "low confidence";
   if (value >= 80) return "high confidence";
@@ -48,17 +64,23 @@ export default async function SchedulerPage({
 }: {
   searchParams: Promise<{ status?: string; title?: string; agent_id?: string }>;
 }) {
-  const { supabase } = await requireUser();
+  const { user, supabase } = await requireUser();
   const { status = "all", title = "", agent_id: defaultAgentId = "" } =
     await searchParams;
 
-  const [{ data: agents }, { data: posts }, { data: accounts }, { data: generatedContent }] =
+  const [
+    { data: agents },
+    { data: posts },
+    { data: accounts },
+    { data: generatedContent },
+    emailProviderResult,
+  ] =
     await Promise.all([
       supabase.from("marketing_os_writing_agents").select("id, name").order("name"),
       supabase
         .from("marketing_os_scheduled_posts")
         .select(
-          "id, title, platform, content_type, status, scheduled_time, caption, generated_content_id, media_path, best_posting_window, ideal_days, confidence_score, schedule_reason, comment_dm_enabled, comment_auto_reply, dm_sequence, social_account_id, writing_agents:marketing_os_writing_agents(name)",
+          "id, title, platform, content_type, status, scheduled_time, caption, generated_content_id, media_path, best_posting_window, ideal_days, confidence_score, schedule_reason, comment_dm_enabled, comment_auto_reply, dm_sequence, social_account_id, error, writing_agents:marketing_os_writing_agents(name)",
         )
         .order("created_at", { ascending: false }),
       supabase.from("marketing_os_social_accounts").select("platform, status"),
@@ -67,35 +89,65 @@ export default async function SchedulerPage({
         .select("id, agent_id, title, topic, platform, short_version, organic_version, primary_script")
         .order("created_at", { ascending: false })
         .limit(100),
+      opsTable(supabase, "marketing_os_email_provider_settings")
+        .select("provider, provider_label, status")
+        .eq("owner_id", user.id)
+        .maybeSingle(),
     ]);
 
   const agentList = agents ?? [];
   const postList =
     status === "all" ? posts ?? [] : (posts ?? []).filter((post) => post.status === status);
+  const emailProviderSettings = isOpsSchemaMissing(emailProviderResult.error)
+    ? null
+    : asRow<EmailProviderSettingsRow>(emailProviderResult.data);
+  const selectedEmailProvider = normalizeEmailProvider(
+    emailProviderSettings?.provider,
+  );
+  const selectedEmailProviderDefinition =
+    getEmailProviderDefinition(selectedEmailProvider);
+  const selectedEmailProviderLabel =
+    emailProviderSettings?.provider_label ??
+    selectedEmailProviderDefinition.label;
   const connectedPlatforms = new Set(
     (accounts ?? [])
       .filter((account) => account.status === "active")
       .map((account) => account.platform),
   );
+  const emailProviderConnected =
+    selectedEmailProvider === "mailchimp"
+      ? connectedPlatforms.has("mailchimp")
+      : emailProviderSettings?.status === "connected";
+  if (emailProviderConnected) connectedPlatforms.add("mailchimp");
   const agentIdForConnections = defaultAgentId || agentList[0]?.id || "";
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Smart Scheduler"
-        description="Create social posts and Mailchimp email campaigns, bulk import a spreadsheet, and let Jidoka Marketing Team OS recommend timing from follower activity, audience behavior, and competitor windows."
+        description={`Create social posts and ${selectedEmailProviderLabel} email campaigns, bulk import a spreadsheet, and let Jidoka Marketing Team OS recommend timing from follower activity, audience behavior, and competitor windows.`}
       />
 
       <div className="grid gap-2 rounded-lg border bg-muted/30 p-3 sm:grid-cols-2 lg:grid-cols-6">
         {SCHEDULER_PLATFORMS.map((platform) => {
+          const isEmailCampaign = platform.key === "mailchimp";
           const connected = connectedPlatforms.has(platform.key);
           const disabled = Boolean(platform.disabled);
+          const autoPostingLive = platform.mediaTypes.some((type) =>
+            isAutoPublishableContent(platform.key, type),
+          );
           const statusLabel = disabled
             ? "API setup"
             : connected
               ? "Connected"
               : "Not connected";
-          const canConnectNow = platform.connectable && !disabled;
+          const canConnectNow =
+            platform.connectable &&
+            !disabled &&
+            (!isEmailCampaign || selectedEmailProvider === "mailchimp");
+          const platformLabel = isEmailCampaign
+            ? "Email Campaign"
+            : platform.label;
           return (
             <div
               key={platform.key}
@@ -105,7 +157,7 @@ export default async function SchedulerPage({
               title={disabled ? platform.disabledReason : connectionLabel(platform.key, connected)}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium">{platform.label}</span>
+                <span className="font-medium">{platformLabel}</span>
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <span
                     className={`h-2.5 w-2.5 rounded-full ${
@@ -123,8 +175,19 @@ export default async function SchedulerPage({
                 <div className="text-xs font-medium text-muted-foreground">
                   API setup in progress
                 </div>
+              ) : isEmailCampaign && selectedEmailProvider !== "mailchimp" ? (
+                <div className="space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    Provider: {selectedEmailProviderLabel}
+                  </div>
+                  <ButtonLink href="/settings" variant="outline" size="xs">
+                    Edit provider
+                  </ButtonLink>
+                </div>
               ) : connected ? (
-                <div className="text-xs font-medium text-emerald-600">Connected</div>
+                <div className="text-xs font-medium text-emerald-600">
+                  {autoPostingLive ? "Auto-posting live" : "Connected for planning"}
+                </div>
               ) : canConnectNow && agentIdForConnections ? (
                 <a
                   href={`/api/social/connect?agent_id=${agentIdForConnections}&platform=${platform.key}`}
@@ -156,6 +219,7 @@ export default async function SchedulerPage({
         <SchedulerUploader
           agents={agentList}
           connectedPlatforms={[...connectedPlatforms]}
+          emailProviderLabel={selectedEmailProviderLabel}
           defaultAgentId={defaultAgentId}
           defaultTitle={title}
           generatedContent={generatedContent ?? []}
@@ -191,6 +255,10 @@ export default async function SchedulerPage({
             {postList.map((p) => {
               const agent = p.writing_agents as unknown as { name: string } | null;
               const isEmailCampaign = p.platform === "mailchimp";
+              const autoPublishable = isAutoPublishableContent(
+                p.platform,
+                p.content_type,
+              );
               return (
                 <Card key={p.id}>
                   <CardContent className="space-y-3 py-4">
@@ -261,9 +329,14 @@ export default async function SchedulerPage({
                           </Badge>
                         )}
                         {p.social_account_id ? (
-                          <Badge>Connected</Badge>
+                          <Badge>
+                            {autoPublishable ? "Auto-posting live" : "Connected"}
+                          </Badge>
                         ) : (
                           <Badge variant="destructive">Disconnected</Badge>
+                        )}
+                        {!autoPublishable && (
+                          <Badge variant="outline">Manual draft</Badge>
                         )}
                       </div>
                     </div>
@@ -287,7 +360,19 @@ export default async function SchedulerPage({
                           account disconnected
                         </Badge>
                       )}
+                      {p.social_account_id && !autoPublishable && (
+                        <Badge variant="outline">
+                          <AlertCircle className="h-3 w-3" />
+                          auto-posting not live
+                        </Badge>
+                      )}
                     </div>
+
+                    {p.error && (
+                      <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        {p.error}
+                      </div>
+                    )}
 
                     {p.comment_dm_enabled && (
                       <div className="rounded-md border p-3 text-sm">
@@ -337,7 +422,9 @@ export default async function SchedulerPage({
                             className="h-8 w-auto"
                           />
                           <Button variant="outline" size="sm" type="submit">
-                            {p.social_account_id ? "Schedule" : "Save draft time"}
+                            {p.social_account_id && autoPublishable
+                              ? "Schedule"
+                              : "Save draft time"}
                           </Button>
                         </form>
                       )}

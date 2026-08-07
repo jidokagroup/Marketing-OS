@@ -4,8 +4,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptToken } from "@/lib/crypto";
 import {
   isMetaConfigured,
+  publishToFacebook,
   publishToInstagram,
 } from "@/lib/social/meta";
+import {
+  getPlatformDefinition,
+  isAutoPublishableContent,
+} from "@/lib/social/platforms";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -27,14 +32,14 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
 
-  // Due posts across all users.
+  // Due posts across all users. Only platforms/content types with a live
+  // publisher should be marked scheduled, but this also cleans up older rows.
   const { data: due } = await admin
     .from("marketing_os_scheduled_posts")
     .select(
       "id, agent_id, owner_id, platform, caption, media_path, content_type, social_account_id",
     )
     .eq("status", "scheduled")
-    .eq("platform", "instagram")
     .lte("scheduled_time", nowIso)
     .limit(25);
 
@@ -44,10 +49,17 @@ export async function GET(request: Request) {
     try {
       await admin.from("marketing_os_scheduled_posts").update({ status: "posting" }).eq("id", post.id);
 
+      if (!isAutoPublishableContent(post.platform, post.content_type)) {
+        const label = getPlatformDefinition(post.platform)?.label ?? post.platform;
+        throw new Error(
+          `${label} ${post.content_type} auto-publishing is not live yet. Keep this as a draft or publish manually.`,
+        );
+      }
+
       // Resolve the account to post with.
       let accountQuery = admin
         .from("marketing_os_social_accounts")
-        .select("id, page_token_encrypted, external_account_id, status")
+        .select("id, page_token_encrypted, external_account_id, page_id, status")
         .eq("agent_id", post.agent_id)
         .eq("status", "active");
       accountQuery = post.social_account_id
@@ -65,13 +77,23 @@ export async function GET(request: Request) {
         .createSignedUrl(post.media_path, 1800);
       if (!signed?.signedUrl) throw new Error("Could not sign media URL");
 
-      const mediaId = await publishToInstagram({
-        igUserId: account.external_account_id,
-        pageToken: decryptToken(account.page_token_encrypted),
-        caption: post.caption ?? "",
-        mediaUrl: signed.signedUrl,
-        contentType: post.content_type,
-      });
+      const pageToken = decryptToken(account.page_token_encrypted);
+      const mediaId =
+        post.platform === "instagram"
+          ? await publishToInstagram({
+              igUserId: account.external_account_id,
+              pageToken,
+              caption: post.caption ?? "",
+              mediaUrl: signed.signedUrl,
+              contentType: post.content_type,
+            })
+          : await publishToFacebook({
+              pageId: account.page_id ?? account.external_account_id,
+              pageToken,
+              caption: post.caption ?? "",
+              mediaUrl: signed.signedUrl,
+              contentType: post.content_type,
+            });
 
       await admin
         .from("marketing_os_scheduled_posts")

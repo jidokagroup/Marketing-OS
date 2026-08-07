@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
 import { matchGeneratedByTitle } from "@/lib/scheduler";
+import {
+  getPlatformDefinition,
+  isAutoPublishableContent,
+} from "@/lib/social/platforms";
 
 export async function scheduleAction(formData: FormData) {
   const { supabase } = await requireUser();
@@ -13,15 +17,22 @@ export async function scheduleAction(formData: FormData) {
 
   const { data: post } = await supabase
     .from("marketing_os_scheduled_posts")
-    .select("social_account_id")
+    .select("social_account_id, platform, content_type")
     .eq("id", id)
     .maybeSingle();
+  const autoPublishable = post
+    ? isAutoPublishableContent(post.platform, post.content_type)
+    : false;
 
   await supabase
     .from("marketing_os_scheduled_posts")
     .update({
       scheduled_time: new Date(when).toISOString(),
-      status: post?.social_account_id ? "scheduled" : "draft",
+      status: post?.social_account_id && autoPublishable ? "scheduled" : "draft",
+      error:
+        post?.social_account_id && !autoPublishable
+          ? `${getPlatformDefinition(post.platform)?.label ?? post.platform} ${post.content_type} auto-publishing is not live yet.`
+          : null,
     })
     .eq("id", id);
   revalidatePath("/scheduler");
@@ -136,22 +147,31 @@ export async function deletePostAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
 
-  const { data: post } = await supabase
+  const { data: post, error: postError } = await supabase
     .from("marketing_os_scheduled_posts")
     .select("media_path")
     .eq("id", id)
     .maybeSingle();
+  if (postError) throw new Error(postError.message);
+
   if (post?.media_path) {
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from("marketing_os_scheduled_posts")
       .select("id", { count: "exact", head: true })
       .eq("media_path", post.media_path)
       .neq("id", id);
+    if (countError) throw new Error(countError.message);
+
     if (!count) {
       await supabase.storage.from("marketing-os-media").remove([post.media_path]);
     }
   }
-  await supabase.from("marketing_os_scheduled_posts").delete().eq("id", id);
+  const { error: deleteError } = await supabase
+    .from("marketing_os_scheduled_posts")
+    .delete()
+    .eq("id", id);
+  if (deleteError) throw new Error(deleteError.message);
+
   revalidatePath("/scheduler");
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
