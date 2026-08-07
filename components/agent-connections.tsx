@@ -12,7 +12,7 @@ import {
 } from "@/lib/marketing-integrations";
 import type { SocialAccount } from "@/lib/supabase/types";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, ButtonLink, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 function accountFor(
@@ -28,7 +28,11 @@ function accountFor(
   );
 }
 
-function setupState(platform: PlatformDefinition, connected: boolean) {
+function setupState(
+  platform: PlatformDefinition,
+  connected: boolean,
+  emailProviderLabel: string,
+) {
   if (connected) {
     return {
       label: "Connected now",
@@ -62,10 +66,10 @@ function setupState(platform: PlatformDefinition, connected: boolean) {
   }
   if (platform.key === "mailchimp") {
     return {
-      label: "Email connection",
+      label: "Email provider",
       variant: "outline" as const,
       description:
-        "Connect Mailchimp so Jidoka Marketing Team OS can prepare email campaigns and read audience/campaign performance.",
+        `Email campaigns use ${emailProviderLabel}. Change the provider from Settings when a client uses a different email platform.`,
     };
   }
   if (platform.connectable) {
@@ -102,12 +106,18 @@ function integrationStatusVariant(status: MarketingIntegrationStatus) {
 export function AgentConnections({
   agentId,
   accounts,
+  emailProvider = "resend",
+  emailProviderLabel = "Resend",
+  emailProviderStatus = "needs_setup",
 }: {
   agentId: string;
   accounts: Pick<
     SocialAccount,
     "id" | "platform" | "username" | "status"
   >[];
+  emailProvider?: string;
+  emailProviderLabel?: string;
+  emailProviderStatus?: string;
 }) {
   return (
     <div className="space-y-4">
@@ -130,11 +140,17 @@ export function AgentConnections({
       <div className="grid gap-3 md:grid-cols-2">
         {PLATFORM_DEFINITIONS.filter((platform) => platform.scheduler).map((platform) => {
           const account = accountFor(platform, accounts);
-          const connected = account?.status === "active";
           const Icon = platform.icon ?? Plug;
-          const canConnectNow = platform.connectable;
+          const isEmailCampaign = platform.key === "mailchimp";
+          const emailProviderReady =
+            isEmailCampaign &&
+            emailProvider !== "mailchimp" &&
+            emailProviderStatus === "connected";
+          const connected = account?.status === "active" || emailProviderReady;
+          const canConnectNow =
+            platform.connectable && (!isEmailCampaign || emailProvider === "mailchimp");
           const disabled = Boolean(platform.disabled);
-          const state = setupState(platform, connected);
+          const state = setupState(platform, connected, emailProviderLabel);
 
           return (
             <Card key={platform.key} className={disabled ? "opacity-60" : undefined}>
@@ -177,6 +193,9 @@ export function AgentConnections({
                   {platform.key === "tiktok" && (
                     <Badge variant="outline">API setup in progress</Badge>
                   )}
+                  {isEmailCampaign && (
+                    <Badge variant="outline">{emailProviderLabel}</Badge>
+                  )}
                 </div>
 
                 <p className="text-xs text-muted-foreground">{state.description}</p>
@@ -204,6 +223,11 @@ export function AgentConnections({
                       <Plug className="mr-1 h-3.5 w-3.5" />
                       Connect
                     </a>
+                  ) : isEmailCampaign ? (
+                    <ButtonLink href="/settings" variant="outline" size="sm">
+                      <Plug className="mr-1 h-3.5 w-3.5" />
+                      Edit provider
+                    </ButtonLink>
                   ) : (
                     <Button variant="outline" size="sm" disabled>
                       <Plug className="mr-1 h-3.5 w-3.5" />

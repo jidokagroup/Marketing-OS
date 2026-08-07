@@ -12,31 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { readJsonResponse } from "@/lib/client-response";
 
-type GenerateFormDefaults = {
-  title?: string;
-  topic?: string;
-  goal?: string;
-  audience?: string;
-  offer?: string;
-  cta?: string;
-  length?: string;
-  notes?: string;
-  platforms?: string[];
-};
-
-export function GenerateForm({
-  agentId,
-  defaults = {},
-}: {
-  agentId: string;
-  defaults?: GenerateFormDefaults;
-}) {
+export function GenerateForm({ agentId }: { agentId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const defaultPlatforms = defaults.platforms?.length
-    ? defaults.platforms
-    : ["instagram"];
 
   useEffect(() => {
     if (!busy) {
@@ -95,7 +74,7 @@ export function GenerateForm({
     <form onSubmit={onSubmit} className="space-y-5 rounded-lg border p-5">
       <div className="rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">
         Jidoka Marketing Team OS generates a package: reel script, short caption, long caption,
-        carousel copy, email version, hooks, and CTA options.
+        carousel copy, email version, blog post version, hooks, and CTA options.
       </div>
       <div className="space-y-2">
         <Label htmlFor="title">Title</Label>
@@ -103,7 +82,6 @@ export function GenerateForm({
           id="title"
           name="title"
           placeholder="e.g. Morning Routine Myth — Reel 01"
-          defaultValue={defaults.title}
         />
         <p className="text-xs text-muted-foreground">
           The Smart Scheduler matches a video/carousel to this content when their
@@ -117,54 +95,28 @@ export function GenerateForm({
           name="topic"
           required
           placeholder="e.g. Why most morning routines fail"
-          defaultValue={defaults.topic}
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="goal">Goal</Label>
-          <Input
-            id="goal"
-            name="goal"
-            placeholder="Drive DMs / book calls"
-            defaultValue={defaults.goal}
-          />
+          <Input id="goal" name="goal" placeholder="Drive DMs / book calls" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="audience">Audience</Label>
-          <Input
-            id="audience"
-            name="audience"
-            placeholder="Coaches scaling to 7-figs"
-            defaultValue={defaults.audience}
-          />
+          <Input id="audience" name="audience" placeholder="Coaches scaling to 7-figs" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="offer">Offer</Label>
-          <Input
-            id="offer"
-            name="offer"
-            placeholder="Group program"
-            defaultValue={defaults.offer}
-          />
+          <Input id="offer" name="offer" placeholder="Group program" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="cta">CTA</Label>
-          <Input
-            id="cta"
-            name="cta"
-            placeholder="Comment 'SCALE'"
-            defaultValue={defaults.cta}
-          />
+          <Input id="cta" name="cta" placeholder="Comment 'SCALE'" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="length">Length</Label>
-          <Input
-            id="length"
-            name="length"
-            placeholder="Short / Medium / Long"
-            defaultValue={defaults.length}
-          />
+          <Input id="length" name="length" placeholder="Short / Medium / Long" />
         </div>
       </div>
       <div className="space-y-2">
@@ -179,7 +131,7 @@ export function GenerateForm({
                 type="checkbox"
                 name="platforms"
                 value={channel.key}
-                defaultChecked={defaultPlatforms.includes(channel.key)}
+                defaultChecked={channel.key === "instagram"}
                 className="h-4 w-4"
               />
               <span>{channel.label}</span>
@@ -192,13 +144,7 @@ export function GenerateForm({
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          name="notes"
-          rows={3}
-          placeholder="Anything specific to include…"
-          defaultValue={defaults.notes}
-        />
+        <Textarea id="notes" name="notes" rows={3} placeholder="Anything specific to include…" />
       </div>
       <Button type="submit" disabled={busy}>
         <Sparkles className="mr-1 h-4 w-4" />

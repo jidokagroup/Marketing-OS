@@ -3,6 +3,7 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Mail,
   Plug,
   ShieldCheck,
   UserCog,
@@ -10,20 +11,29 @@ import {
 
 import { requireUser } from "@/lib/auth";
 import {
+  EMAIL_PROVIDER_DEFINITIONS,
+  emailProviderStatusLabel,
+  getEmailProviderDefinition,
+  normalizeEmailProvider,
+} from "@/lib/email-providers";
+import {
   PLATFORM_DEFINITIONS,
   connectionLabel,
 } from "@/lib/social/platforms";
 import {
+  asRow,
   asRows,
   currentWeekStart,
   isOpsSchemaMissing,
   opsTable,
   titleCase,
 } from "@/lib/marketing-os/operations";
+import { saveEmailProviderSettingsAction } from "@/app/(dashboard)/settings/actions";
 import { createPlaybookAction, updatePlaybookAction } from "@/app/(dashboard)/playbooks/actions";
 import { saveTeamCapacityAction } from "@/app/(dashboard)/team/actions";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
+import { PlaybookUploadForm } from "@/components/playbook-upload-form";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import {
@@ -71,6 +81,18 @@ type PlaybookRow = {
   last_reviewed_at: string | null;
 };
 
+type EmailProviderSettingsRow = {
+  id: string;
+  provider: string;
+  provider_label: string | null;
+  status: string;
+  from_name: string | null;
+  from_email: string | null;
+  reply_to_email: string | null;
+  custom_provider_name: string | null;
+  notes: string | null;
+};
+
 function readSteps(value: unknown) {
   if (!Array.isArray(value)) return "";
   return value
@@ -102,6 +124,7 @@ export default async function SettingsPage() {
   const [
     { data: accounts },
     { data: latestAgent },
+    emailProviderResult,
     capacityResult,
     playbooksResult,
   ] = await Promise.all([
@@ -116,6 +139,10 @@ export default async function SettingsPage() {
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    opsTable(supabase, "marketing_os_email_provider_settings")
+      .select("id, provider, provider_label, status, from_name, from_email, reply_to_email, custom_provider_name, notes")
+      .eq("owner_id", user.id)
+      .maybeSingle(),
     opsTable(supabase, "marketing_os_team_capacity")
       .select("id, member_id, member_name, email, role, week_start, planned_hours, allocated_hours, status, notes")
       .eq("owner_id", user.id)
@@ -127,9 +154,21 @@ export default async function SettingsPage() {
       .order("updated_at", { ascending: false }),
   ]);
 
+  const emailProviderSchemaMissing = isOpsSchemaMissing(emailProviderResult.error);
   const schemaMissing =
     isOpsSchemaMissing(capacityResult.error) ||
     isOpsSchemaMissing(playbooksResult.error);
+  const emailProviderSettings = emailProviderSchemaMissing
+    ? null
+    : asRow<EmailProviderSettingsRow>(emailProviderResult.data);
+  const selectedEmailProvider = normalizeEmailProvider(
+    emailProviderSettings?.provider,
+  );
+  const selectedEmailProviderDefinition =
+    getEmailProviderDefinition(selectedEmailProvider);
+  const selectedEmailProviderLabel =
+    emailProviderSettings?.provider_label ??
+    selectedEmailProviderDefinition.label;
   const accountList = (accounts ?? []) as AccountRow[];
   const capacityRows = schemaMissing
     ? []
@@ -165,7 +204,15 @@ export default async function SettingsPage() {
           {PLATFORM_DEFINITIONS.map((platform) => {
             const account = accountByPlatform.get(platform.key);
             const connected = account?.status === "active";
-            const canConnect = platform.connectable && !platform.disabled && latestAgent?.id;
+            const isEmailCampaign = platform.key === "mailchimp";
+            const canConnect =
+              platform.connectable &&
+              !platform.disabled &&
+              latestAgent?.id &&
+              (!isEmailCampaign || selectedEmailProvider === "mailchimp");
+            const label = isEmailCampaign
+              ? "Email Campaign"
+              : platform.label;
             return (
               <div
                 key={platform.key}
@@ -173,17 +220,23 @@ export default async function SettingsPage() {
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{platform.label}</p>
+                    <p className="font-medium">{label}</p>
                     <Badge
                       variant={
-                        platform.disabled
+                        isEmailCampaign && selectedEmailProvider !== "mailchimp"
+                          ? emailProviderSettings?.status === "connected"
+                            ? "default"
+                            : "outline"
+                          : platform.disabled
                           ? "outline"
                           : connected
                             ? "default"
                             : "destructive"
                       }
                     >
-                      {platform.disabled
+                      {isEmailCampaign && selectedEmailProvider !== "mailchimp"
+                        ? selectedEmailProviderLabel
+                        : platform.disabled
                         ? "API setup"
                         : connected
                           ? "Connected"
@@ -191,7 +244,9 @@ export default async function SettingsPage() {
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {account?.username ??
+                    {isEmailCampaign && selectedEmailProvider !== "mailchimp"
+                      ? `${selectedEmailProviderDefinition.connection}. ${selectedEmailProviderDefinition.bestFor}`
+                      : account?.username ??
                       platform.disabledReason ??
                       connectionLabel(platform.key, connected)}
                   </p>
@@ -205,6 +260,10 @@ export default async function SettingsPage() {
                   </a>
                 ) : platform.disabled ? (
                   <span className="text-sm text-muted-foreground">Pending API access</span>
+                ) : isEmailCampaign && selectedEmailProvider !== "mailchimp" ? (
+                  <span className="text-sm text-muted-foreground">
+                    Configure below
+                  </span>
                 ) : !latestAgent?.id ? (
                   <ButtonLink href="/agents" variant="outline" size="sm">
                     Create agent first
@@ -215,6 +274,140 @@ export default async function SettingsPage() {
               </div>
             );
           })}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Client Email Provider
+          </CardTitle>
+          <CardDescription>
+            Choose which provider Marketing OS uses for user/client marketing
+            emails. Platform emails like signup, billing, and alerts can still
+            run through Jidoka&apos;s own Resend setup.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {emailProviderSchemaMissing && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              Run the latest Supabase migration before saving provider choices.
+            </div>
+          )}
+          <form
+            action={saveEmailProviderSettingsAction}
+            className="grid gap-4 rounded-lg border p-4 lg:grid-cols-2"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="provider">Provider</Label>
+              <select
+                id="provider"
+                name="provider"
+                defaultValue={selectedEmailProvider}
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {EMAIL_PROVIDER_DEFINITIONS.map((provider) => (
+                  <option key={provider.key} value={provider.key}>
+                    {provider.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                name="status"
+                defaultValue={emailProviderSettings?.status ?? "needs_setup"}
+                className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="needs_setup">Needs setup</option>
+                <option value="connected">Connected</option>
+                <option value="not_connected">Not connected</option>
+                <option value="planned">Planned</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="from_name">From name</Label>
+              <Input
+                id="from_name"
+                name="from_name"
+                defaultValue={emailProviderSettings?.from_name ?? ""}
+                placeholder="Jidoka Group"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="from_email">From email</Label>
+              <Input
+                id="from_email"
+                name="from_email"
+                type="email"
+                defaultValue={emailProviderSettings?.from_email ?? ""}
+                placeholder="hello@jidokagroup.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reply_to_email">Reply-to email</Label>
+              <Input
+                id="reply_to_email"
+                name="reply_to_email"
+                type="email"
+                defaultValue={emailProviderSettings?.reply_to_email ?? ""}
+                placeholder="team@jidokagroup.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="custom_provider_name">Other provider name</Label>
+              <Input
+                id="custom_provider_name"
+                name="custom_provider_name"
+                defaultValue={emailProviderSettings?.custom_provider_name ?? ""}
+                placeholder="Only needed for Other / custom API"
+              />
+            </div>
+            <div className="space-y-2 lg:col-span-2">
+              <Label htmlFor="notes">Setup notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={emailProviderSettings?.notes ?? ""}
+                placeholder="API key location, list/audience name, SMTP host, or anything your team needs to finish setup."
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2">
+              <p className="text-sm text-muted-foreground">
+                Current email campaign provider:{" "}
+                <span className="font-medium text-foreground">
+                  {selectedEmailProviderLabel}
+                </span>
+              </p>
+              <Button type="submit" disabled={emailProviderSchemaMissing}>
+                Save provider
+              </Button>
+            </div>
+          </form>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {EMAIL_PROVIDER_DEFINITIONS.map((provider) => (
+              <div key={provider.key} className="rounded-lg border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-medium">{provider.label}</p>
+                  <Badge
+                    variant={provider.status === "live" ? "default" : "outline"}
+                  >
+                    {emailProviderStatusLabel(provider.status)}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {provider.bestFor}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {provider.connection}
+                </p>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -352,10 +545,13 @@ export default async function SettingsPage() {
           <CardHeader>
             <CardTitle>Playbooks</CardTitle>
             <CardDescription>
-              Editable SOPs and operating playbooks for the marketing team.
+              Upload, scan, or manually edit SOPs and operating playbooks for
+              the marketing team.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <PlaybookUploadForm />
+
             <form
               action={createPlaybookAction}
               className="grid gap-3 rounded-lg border p-4 lg:grid-cols-[1fr_180px_160px_auto]"

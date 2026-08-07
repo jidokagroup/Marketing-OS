@@ -285,7 +285,7 @@ export default async function ClientDetailPage({
           title="Recent Scheduled Posts"
           empty="Scheduled posts for this client's agents will appear here."
           items={(posts ?? []).map((post) => ({
-            href: "/calendar",
+            href: `/calendar?client=${client.id}&view=list`,
             title: post.title || "Untitled post",
             meta: [post.platform, post.status].filter(Boolean).join(" · "),
           }))}

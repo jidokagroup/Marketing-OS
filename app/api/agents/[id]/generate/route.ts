@@ -6,6 +6,7 @@ import { embedQuery, toVectorLiteral } from "@/lib/ai/embeddings";
 import { runGeneration, type GenerationRequest, type DnaInput } from "@/lib/ai/generate";
 import { CLAUDE_MODEL } from "@/lib/ai/anthropic";
 import { buildBrandBrainBrief } from "@/lib/brand-brain";
+import { CONTENT_CHANNEL_LABELS } from "@/lib/core-agents";
 import { opsTable } from "@/lib/marketing-os/operations";
 import type { BrandBrain } from "@/lib/supabase/types";
 
@@ -28,6 +29,10 @@ function cleanPlatformList(value: unknown) {
         .filter(Boolean),
     ),
   ];
+}
+
+function channelLabel(key: string) {
+  return CONTENT_CHANNEL_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
 function jsonArray(value: unknown): string[] {
@@ -122,7 +127,7 @@ export async function POST(
   const platforms = cleanPlatformList(body.platforms);
   const platformLabel =
     platforms.length > 0
-      ? platforms.join(", ")
+      ? platforms.map(channelLabel).join(", ")
       : body.platform?.trim() || undefined;
   const req: GenerationRequest = {
     topic,

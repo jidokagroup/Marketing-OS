@@ -10,6 +10,7 @@ import {
 } from "@/lib/core-agents";
 import {
   asRow,
+  asRows,
   isOpsSchemaMissing,
   opsTable,
   titleCase,
@@ -57,12 +58,28 @@ type TrainingRow = {
   status: string;
 };
 
+type MemoryRow = {
+  id: string;
+  record_type: string;
+  title: string;
+  information: string;
+  source: string;
+  memory_owner: string | null;
+  affected_business_systems: string[];
+  confidence_level: string;
+  updated_at: string;
+};
+
 function fieldValue(
   training: TrainingRow | null,
   key: string,
 ) {
   const value = training?.training_data?.[key];
   return typeof value === "string" ? value : "";
+}
+
+function truncate(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
 }
 
 export default async function CoreAgentTrainingPage({
@@ -75,20 +92,37 @@ export default async function CoreAgentTrainingPage({
   if (!agent) notFound();
 
   const { user, supabase } = await requireUser();
-  const trainingResult = await opsTable(
-    supabase,
-    "marketing_os_core_agent_training",
-  )
-    .select(
-      "id, training_data, operating_rules, approval_rules, handoff_rules, data_sources, updated_at, status",
+  const [trainingResult, memoryResult] = await Promise.all([
+    opsTable(
+      supabase,
+      "marketing_os_core_agent_training",
     )
-    .eq("owner_id", user.id)
-    .eq("agent_key", agent.key)
-    .maybeSingle();
+      .select(
+        "id, training_data, operating_rules, approval_rules, handoff_rules, data_sources, updated_at, status",
+      )
+      .eq("owner_id", user.id)
+      .eq("agent_key", agent.key)
+      .maybeSingle(),
+    opsTable(supabase, "marketing_os_memory_records")
+      .select("id, record_type, title, information, source, memory_owner, affected_business_systems, confidence_level, updated_at")
+      .eq("owner_id", user.id)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(50),
+  ]);
   const schemaMissing = isOpsSchemaMissing(trainingResult.error);
   const training = schemaMissing
     ? null
     : asRow<TrainingRow>(trainingResult.data);
+  const memorySchemaMissing = isOpsSchemaMissing(memoryResult.error);
+  const memories = memorySchemaMissing
+    ? []
+    : asRows<MemoryRow>(memoryResult.data).filter((memory) => {
+        if (memory.memory_owner === agent.label) return true;
+        return (memory.affected_business_systems ?? []).some((system) =>
+          agent.systems.includes(system),
+        );
+      });
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -105,7 +139,10 @@ export default async function CoreAgentTrainingPage({
       </PageHeader>
 
       {schemaMissing && (
-        <OpsSchemaNotice title="Core agent training needs migration 0017" />
+        <OpsSchemaNotice
+          title="Core agent training needs migration 0017"
+          migrationPath="supabase/migrations/0017_marketing_os_core_memory.sql"
+        />
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -115,6 +152,35 @@ export default async function CoreAgentTrainingPage({
           </div>
         ))}
       </div>
+
+      {!memorySchemaMissing && memories.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Orchestrator memory</CardTitle>
+            <CardDescription>
+              Playbooks and confirmed operating context routed to {agent.label}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {memories.slice(0, 6).map((memory) => (
+              <div key={memory.id} className="rounded-lg border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{memory.title}</p>
+                  <Badge variant="outline">{memory.record_type}</Badge>
+                  <Badge variant="secondary">{memory.confidence_level}</Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {truncate(memory.information, 520)}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Source: {memory.source} · Last updated{" "}
+                  {new Date(memory.updated_at).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {!schemaMissing && (
         <form action={saveCoreAgentTrainingAction} className="space-y-6">

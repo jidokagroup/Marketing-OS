@@ -67,7 +67,28 @@ export const MARKETING_INTEGRATIONS: MarketingIntegration[] = [
     name: "Mailchimp",
     category: "Email and SMS",
     status: "live",
-    summary: "OAuth connection, audience/campaign performance, and email campaign draft planning.",
+    summary: "Selectable email provider with OAuth connection, audience/campaign performance, and email campaign draft planning.",
+  },
+  {
+    key: "google-workspace",
+    name: "Google Workspace / Gmail",
+    category: "Email and SMS",
+    status: "api_setup",
+    summary: "Provider option for one-to-one outreach, warm follow-ups, drafts, and Gmail-based sending.",
+  },
+  {
+    key: "resend",
+    name: "Resend",
+    category: "Email and SMS",
+    status: "api_setup",
+    summary: "Provider option for transactional email, simple broadcasts, and Jidoka-owned domain sending.",
+  },
+  {
+    key: "custom-smtp",
+    name: "PrivateEmail / custom SMTP",
+    category: "Email and SMS",
+    status: "manual",
+    summary: "Provider option for send-only custom mailbox setup through SMTP credentials.",
   },
   {
     key: "klaviyo",
@@ -89,6 +110,13 @@ export const MARKETING_INTEGRATIONS: MarketingIntegration[] = [
     category: "Email and SMS",
     status: "planned",
     summary: "Planned for campaign drafts, contact lists, and email performance.",
+  },
+  {
+    key: "custom-email-api",
+    name: "Other / custom API",
+    category: "Email and SMS",
+    status: "planned",
+    summary: "Placeholder for client-requested email providers that need a custom connector.",
   },
   {
     key: "hubspot",

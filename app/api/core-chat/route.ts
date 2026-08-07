@@ -18,8 +18,64 @@ type ChatBody = {
   disconnected?: string[];
 };
 
+type MemoryAnswer = {
+  text: string;
+  href?: string;
+  actionLabel?: string;
+};
+
+type MemoryCandidate = {
+  title: string;
+  body: string;
+  owner?: string | null;
+  systems?: string[];
+  href: string;
+  actionLabel: string;
+};
+
 function cleanText(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function truncate(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
+}
+
+function keywords(value: string) {
+  const stop = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "how",
+    "what",
+    "when",
+    "where",
+    "why",
+    "can",
+    "you",
+    "our",
+    "this",
+    "that",
+    "from",
+    "into",
+    "about",
+    "does",
+    "should",
+  ]);
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stop.has(word));
+}
+
+function scoreCandidate(questionWords: string[], candidate: MemoryCandidate) {
+  const haystack = `${candidate.title} ${candidate.body}`.toLowerCase();
+  return questionWords.reduce(
+    (score, word) => score + (haystack.includes(word) ? 1 : 0),
+    0,
+  );
 }
 
 function classifyIntent(question: string) {
@@ -65,6 +121,125 @@ function needsDeveloperRequest(question: string) {
   ].some((term) => q.includes(term));
 }
 
+function formatSteps(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((item, index) => {
+      if (item && typeof item === "object" && "body" in item) {
+        return `${index + 1}. ${String(item.body)}`;
+      }
+      return `${index + 1}. ${String(item)}`;
+    })
+    .join("\n");
+}
+
+async function buildMemoryAnswer(
+  supabase: unknown,
+  ownerId: string,
+  question: string,
+): Promise<MemoryAnswer | null> {
+  const [memoryResult, playbookResult] = await Promise.all([
+    opsTable(supabase, "marketing_os_memory_records")
+      .select("record_type, title, information, memory_owner, affected_business_systems")
+      .eq("owner_id", ownerId)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(60),
+    opsTable(supabase, "marketing_os_playbooks")
+      .select("title, category, summary, steps, extracted_text, status")
+      .eq("owner_id", ownerId)
+      .in("status", ["active", "draft"])
+      .order("updated_at", { ascending: false })
+      .limit(30),
+  ]);
+
+  if (isOpsSchemaMissing(memoryResult.error) && isOpsSchemaMissing(playbookResult.error)) {
+    return null;
+  }
+
+  const candidates: MemoryCandidate[] = [];
+  if (!isOpsSchemaMissing(memoryResult.error) && Array.isArray(memoryResult.data)) {
+    for (const record of memoryResult.data as {
+      record_type?: string;
+      title?: string;
+      information?: string;
+      memory_owner?: string | null;
+      affected_business_systems?: string[];
+    }[]) {
+      candidates.push({
+        title: record.title ?? "Saved memory",
+        body: record.information ?? "",
+        owner: record.memory_owner,
+        systems: record.affected_business_systems ?? [],
+        href: record.record_type === "Playbook" ? "/playbooks" : "/dashboard",
+        actionLabel: record.record_type === "Playbook" ? "Open Playbooks" : "Open Core Command",
+      });
+    }
+  }
+
+  if (!isOpsSchemaMissing(playbookResult.error) && Array.isArray(playbookResult.data)) {
+    for (const playbook of playbookResult.data as {
+      title?: string;
+      category?: string;
+      summary?: string | null;
+      steps?: unknown;
+      extracted_text?: string | null;
+    }[]) {
+      candidates.push({
+        title: playbook.title ?? "Saved playbook",
+        body: [
+          playbook.category ? `Category: ${playbook.category}` : "",
+          playbook.summary ?? "",
+          formatSteps(playbook.steps),
+          playbook.extracted_text ?? "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        owner: "JIDOKA Core Orchestrator",
+        systems: [],
+        href: "/playbooks",
+        actionLabel: "Open Playbooks",
+      });
+    }
+  }
+
+  if (candidates.length === 0) return null;
+
+  const q = question.toLowerCase();
+  const asksForPlaybook =
+    q.includes("playbook") ||
+    q.includes("sop") ||
+    q.includes("process") ||
+    q.includes("workflow") ||
+    q.includes("handoff") ||
+    q.includes("standard");
+  const questionWords = keywords(question);
+  const ranked = candidates
+    .map((candidate) => ({
+      candidate,
+      score: scoreCandidate(questionWords, candidate),
+    }))
+    .sort((a, b) => b.score - a.score);
+  const relevant = ranked.filter((item) => item.score > 0).slice(0, 2);
+  const selected = relevant.length ? relevant : asksForPlaybook ? ranked.slice(0, 2) : [];
+  if (!selected.length) return null;
+
+  const primary = selected[0].candidate;
+  const supporting = selected
+    .map(({ candidate }) => `• ${candidate.title}: ${truncate(candidate.body, 420)}`)
+    .join("\n");
+  const owner = primary.owner ? ` I would route this through ${primary.owner}.` : "";
+  const systems = primary.systems?.length
+    ? ` Relevant systems: ${primary.systems.slice(0, 4).join(", ")}.`
+    : "";
+
+  return {
+    text: `Based on saved Core memory, here is what applies:\n${supporting}${owner}${systems}`,
+    href: primary.href,
+    actionLabel: primary.actionLabel,
+  };
+}
+
 export async function POST(request: Request) {
   const context = await getAuthContext();
   if (!context) {
@@ -73,12 +248,19 @@ export async function POST(request: Request) {
   const { user, supabase } = context;
   const body = (await request.json().catch(() => ({}))) as ChatBody;
   const question = cleanText(body.question);
-  const answer = cleanText(body.answer);
-  if (!question || !answer) {
-    return NextResponse.json({ error: "question and answer are required" }, { status: 400 });
+  const providedAnswer = cleanText(body.answer);
+  if (!question) {
+    return NextResponse.json({ error: "question is required" }, { status: 400 });
   }
 
   const intent = classifyIntent(question);
+  const memoryAnswer = await buildMemoryAnswer(supabase, user.id, question);
+  const finalAnswer =
+    memoryAnswer?.text ??
+    providedAnswer ??
+    "I can route this through JIDOKA Core. Start in Core Command or ask about a specific playbook, workflow, client, campaign, scheduler, or account connection.";
+  const actionHref = memoryAnswer?.href ?? cleanText(body.action_href);
+  const actionLabel = memoryAnswer?.actionLabel ?? cleanText(body.action_label);
   let threadId = cleanText(body.thread_id);
 
   try {
@@ -105,8 +287,8 @@ export async function POST(request: Request) {
     }
 
     const metadata = {
-      action_href: cleanText(body.action_href),
-      action_label: cleanText(body.action_label),
+      action_href: actionHref,
+      action_label: actionLabel,
       disconnected: Array.isArray(body.disconnected) ? body.disconnected : [],
     };
 
@@ -127,7 +309,7 @@ export async function POST(request: Request) {
         organization_id: user.id,
         thread_id: threadId,
         role: "assistant",
-        body: answer,
+        body: finalAnswer,
         page_path: cleanText(body.pathname),
         intent,
         route_to_agent: intent,
@@ -153,7 +335,7 @@ export async function POST(request: Request) {
           affected_agent: intent,
           affected_business_systems: [],
           current_behavior: question,
-          expected_behavior: answer,
+          expected_behavior: finalAnswer,
           business_impact:
             "Created from the in-app orchestrator chat. Email delivery is not configured, so this remains queued for external submission.",
           evidence: `Page: ${cleanText(body.pathname) ?? "unknown"}`,
@@ -173,6 +355,9 @@ export async function POST(request: Request) {
       thread_id: threadId,
       route_to_agent: intent,
       developer_request_id: developerRequestId,
+      answer: finalAnswer,
+      action_href: actionHref,
+      action_label: actionLabel,
     });
   } catch (error) {
     return NextResponse.json(

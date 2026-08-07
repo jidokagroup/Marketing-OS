@@ -11,6 +11,7 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
+import { PlaybookUploadForm } from "@/components/playbook-upload-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,10 @@ type PlaybookRow = {
   owner_name: string | null;
   last_reviewed_at: string | null;
   created_at: string;
+  source_type: string | null;
+  source_file_name: string | null;
+  extraction_status: string | null;
+  orchestrator_memory_id: string | null;
 };
 
 function readSteps(value: unknown) {
@@ -51,7 +56,7 @@ function readSteps(value: unknown) {
 export default async function PlaybooksPage() {
   const { user, supabase } = await requireUser();
   const playbooksResult = await opsTable(supabase, "marketing_os_playbooks")
-    .select("id, title, category, status, summary, steps, owner_name, last_reviewed_at, created_at")
+    .select("id, title, category, status, summary, steps, owner_name, last_reviewed_at, created_at, source_type, source_file_name, extraction_status, orchestrator_memory_id")
     .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
   const schemaMissing = isOpsSchemaMissing(playbooksResult.error);
@@ -66,12 +71,33 @@ export default async function PlaybooksPage() {
         description="Document SOPs, campaign processes, publishing standards, client handoffs, and lessons learned."
       />
 
-      {schemaMissing && <OpsSchemaNotice />}
+      {schemaMissing && (
+        <OpsSchemaNotice
+          title="Playbook upload memory needs the latest migration"
+          migrationPath="supabase/migrations/0019_marketing_os_playbook_upload_memory.sql"
+        />
+      )}
 
       {!schemaMissing && (
         <Card>
           <CardHeader>
-            <CardTitle>Create playbook</CardTitle>
+            <CardTitle>Upload playbook</CardTitle>
+            <CardDescription>
+              Upload an SOP, training doc, PDF, or notes file. Jidoka scans it,
+              saves a structured playbook, and adds it to Core orchestrator
+              memory.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PlaybookUploadForm />
+          </CardContent>
+        </Card>
+      )}
+
+      {!schemaMissing && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Create playbook manually</CardTitle>
             <CardDescription>
               Keep it short, operational, and tied to a repeatable marketing
               workflow.
@@ -149,9 +175,18 @@ export default async function PlaybooksPage() {
                       >
                         {titleCase(playbook.status)}
                       </Badge>
+                      {playbook.orchestrator_memory_id && (
+                        <Badge variant="secondary">Core memory</Badge>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {playbook.source_type === "upload" && (
+                      <p className="text-xs text-muted-foreground">
+                        Scanned from {playbook.source_file_name ?? "uploaded file"} ·{" "}
+                        {titleCase(playbook.extraction_status)}
+                      </p>
+                    )}
                     {playbook.summary && (
                       <p className="text-sm text-muted-foreground">
                         {playbook.summary}

@@ -11,8 +11,10 @@ import {
 
 export function OpsSchemaNotice({
   title = "Marketing OS operations tables are not live yet",
+  migrationPath = OPS_MIGRATION_PATH,
 }: {
   title?: string;
+  migrationPath?: string;
 }) {
   return (
     <Card className="border-amber-300 bg-amber-50/60 text-amber-950">
@@ -21,7 +23,7 @@ export function OpsSchemaNotice({
         <div>
           <CardTitle>{title}</CardTitle>
           <CardDescription className="text-amber-900/80">
-            Apply migration <span className="font-mono">{OPS_MIGRATION_PATH}</span>{" "}
+            Apply migration <span className="font-mono">{migrationPath}</span>{" "}
             in Supabase to turn on campaigns, work, leads, revenue, playbooks,
             team capacity, and intelligence actions.
           </CardDescription>

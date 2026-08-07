@@ -29,6 +29,7 @@ export default async function ContentPage() {
     { count: scheduledCount },
     { count: assetCount },
     ideaResult,
+    { data: latestAgent },
   ] = await Promise.all([
     supabase
       .from("marketing_os_generated_content")
@@ -45,9 +46,18 @@ export default async function ContentPage() {
     opsTable(supabase, "marketing_os_content_ideas")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", user.id),
+    supabase
+      .from("marketing_os_writing_agents")
+      .select("id")
+      .eq("owner_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
-  const generatorHref = "/content/generator";
+  const generatorHref = latestAgent?.id
+    ? `/agents/${latestAgent.id}?tab=generate`
+    : "/agents";
   const ideaCount = isOpsSchemaMissing(ideaResult.error)
     ? 0
     : (ideaResult.count ?? 0);
@@ -56,7 +66,7 @@ export default async function ContentPage() {
     {
       title: "Content Generator",
       description:
-        "Scan competitor and influencer watchlists, turn trends into on-brand ideas, and open the best ones in a client agent.",
+        "Generate channel-ready content using each client agent's Brand Brain, Voice DNA, and the latest Intelligence context.",
       href: generatorHref,
       icon: Sparkles,
       metric: generatedCount ?? 0,

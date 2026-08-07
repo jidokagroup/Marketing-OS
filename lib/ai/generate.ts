@@ -85,6 +85,12 @@ export function buildDnaBrief(dna: DnaInput): string {
 }
 
 function requestBlock(req: GenerationRequest): string {
+  const channelInstructions = [
+    req.platform?.toLowerCase().includes("email") &&
+      "Email channel selected: make sales_version a complete email draft with subject line, preview text, body copy, and CTA.",
+    req.platform?.toLowerCase().includes("blog") &&
+      "Blog post channel selected: make long_version a polished blog post with a headline, intro, scannable sections, and CTA.",
+  ].filter(Boolean);
   const lines = [
     `Topic: ${req.topic}`,
     req.goal && `Goal: ${req.goal}`,
@@ -94,6 +100,7 @@ function requestBlock(req: GenerationRequest): string {
     req.cta && `Desired CTA: ${req.cta}`,
     req.length && `Length: ${req.length}`,
     req.notes && `Notes: ${req.notes}`,
+    channelInstructions.length && `Channel instructions: ${channelInstructions.join(" ")}`,
   ].filter(Boolean);
   return lines.join("\n");
 }

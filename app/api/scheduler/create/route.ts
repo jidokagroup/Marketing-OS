@@ -6,6 +6,7 @@ import { ensureCommentDmInboxDraft } from "@/lib/inbox";
 import { matchGeneratedByTitle } from "@/lib/scheduler";
 import {
   getPlatformDefinition,
+  isAutoPublishableContent,
   isAllowedContentType,
   isSchedulerPlatform,
   SCHEDULER_PLATFORMS,
@@ -75,7 +76,7 @@ const DEFAULT_POSTING_WINDOWS: Record<
     window: "Tue-Thu, 9:00-11:00 AM",
     days: "Tuesday, Wednesday, Thursday",
     reason:
-      "Email campaigns perform best during mid-morning inbox review windows; Jidoka Marketing Team OS will refine this with Mailchimp audience and campaign data.",
+      "Email campaigns perform best during mid-morning inbox review windows; Jidoka Marketing Team OS will refine this with connected provider audience and campaign data.",
     confidence: 74,
   },
 };
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
   }
   if (platforms.includes("mailchimp") && platforms.length > 1) {
     return NextResponse.json(
-      { error: "Mailchimp email campaigns need a separate scheduled item from social posts." },
+      { error: "Email campaigns need a separate scheduled item from social posts." },
       { status: 400 },
     );
   }
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
             : invalidPlatform === "youtube"
               ? "YouTube only accepts video uploads in Jidoka Marketing Team OS."
               : invalidPlatform === "mailchimp"
-                ? "Mailchimp scheduler items must use the email campaign content type."
+                ? "Email Campaign scheduler items must use the email campaign content type."
             : "That content type is not available for every selected platform.",
       },
       { status: 400 },
@@ -166,7 +167,7 @@ export async function POST(request: Request) {
   }
   if (platforms.includes("mailchimp") && body.media_path) {
     return NextResponse.json(
-      { error: "Mailchimp email campaigns do not need a media upload." },
+      { error: "Email campaigns do not need a media upload." },
       { status: 400 },
     );
   }
@@ -236,6 +237,7 @@ export async function POST(request: Request) {
   for (const post of existingPosts ?? []) {
     if (!attachedPlatforms.has(post.platform)) continue;
     const socialAccountId = accountByPlatform.get(post.platform) ?? null;
+    const autoPublishable = isAutoPublishableContent(post.platform, contentType);
     await supabase
       .from("marketing_os_scheduled_posts")
       .update({
@@ -243,7 +245,11 @@ export async function POST(request: Request) {
         media_file_name: cleanText(body.media_file_name),
         content_type: contentType,
         scheduled_time: scheduledTime,
-        status: scheduledTime && socialAccountId ? "scheduled" : "draft",
+        status: scheduledTime && socialAccountId && autoPublishable ? "scheduled" : "draft",
+        error:
+          scheduledTime && socialAccountId && !autoPublishable
+            ? `${getPlatformDefinition(post.platform)?.label ?? post.platform} ${contentType} auto-publishing is not live yet. This item is saved as a draft.`
+            : null,
         ...(cleanText(body.caption) ? { caption: cleanText(body.caption) } : {}),
       })
       .eq("id", post.id);
@@ -253,6 +259,7 @@ export async function POST(request: Request) {
   const rows = newPlatforms.map((platform) => {
     const recommendation = DEFAULT_POSTING_WINDOWS[platform];
     const socialAccountId = accountByPlatform.get(platform) ?? null;
+    const autoPublishable = isAutoPublishableContent(platform, contentType);
     return {
       agent_id: agentId,
       owner_id: user.id,
@@ -263,7 +270,7 @@ export async function POST(request: Request) {
       media_path: body.media_path || null,
       media_file_name: cleanText(body.media_file_name),
       scheduled_time: scheduledTime,
-      status: scheduledTime && socialAccountId ? "scheduled" : "draft",
+      status: scheduledTime && socialAccountId && autoPublishable ? "scheduled" : "draft",
       generated_content_id: match?.generated_content_id ?? null,
       caption: selectedCaption,
       script: match?.script ?? null,
@@ -273,8 +280,16 @@ export async function POST(request: Request) {
       ideal_days: recommendation.days,
       confidence_score: recommendation.confidence,
       schedule_reason: body.use_best_time
-        ? recommendation.reason
-        : "Manual time selected. Best-time guidance remains visible for comparison.",
+        ? autoPublishable || !scheduledTime || !socialAccountId
+          ? recommendation.reason
+          : `${recommendation.reason} Auto-publishing for ${getPlatformDefinition(platform)?.label ?? platform} ${contentType} is not live yet, so this stays as a draft with timing attached.`
+        : autoPublishable || !scheduledTime || !socialAccountId
+          ? "Manual time selected. Best-time guidance remains visible for comparison."
+          : `Manual time selected. Auto-publishing for ${getPlatformDefinition(platform)?.label ?? platform} ${contentType} is not live yet, so this stays as a draft with timing attached.`,
+      error:
+        scheduledTime && socialAccountId && !autoPublishable
+          ? `${getPlatformDefinition(platform)?.label ?? platform} ${contentType} auto-publishing is not live yet.`
+          : null,
       comment_dm_enabled:
         platform === "instagram" ? Boolean(body.comment_dm_enabled) : false,
       comment_auto_reply:

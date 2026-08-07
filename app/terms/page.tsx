@@ -40,7 +40,7 @@ const sections = [
   {
     title: "5. Social, Email, and Third-Party Services",
     body: [
-      "When you connect accounts such as Instagram, Facebook, YouTube, X, or Mailchimp, you authorize Jidoka Marketing Team OS to request the access needed to support the actions you choose, such as reading account metadata, preparing content, scheduling drafts, or importing analytics.",
+      "When you connect accounts such as Instagram, Facebook, YouTube, X, or a selected email provider, you authorize Jidoka Marketing Team OS to request the access needed to support the actions you choose, such as reading account metadata, preparing content, scheduling drafts, or importing analytics.",
       "Third-party platforms are governed by their own terms, policies, permissions, rate limits, review requirements, and availability. Jidoka Group is not responsible for outages, rejections, permission changes, or policy decisions by those third-party services.",
     ],
   },

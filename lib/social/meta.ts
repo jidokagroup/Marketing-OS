@@ -237,6 +237,44 @@ export async function publishToInstagram(input: PublishInput): Promise<string> {
   return pubJson.id;
 }
 
+export interface FacebookPublishInput {
+  pageId: string;
+  pageToken: string;
+  caption: string;
+  mediaUrl: string;
+  contentType: string;
+}
+
+/** Publish a single photo or video to a Facebook Page. Returns the Page post/media id. */
+export async function publishToFacebook(input: FacebookPublishInput): Promise<string> {
+  const { pageId, pageToken, caption, mediaUrl, contentType } = input;
+  const isVideo = contentType === "video" || contentType === "reel";
+  if (contentType === "carousel") {
+    throw new Error("Facebook carousel auto-publishing is not live yet. Save it as a draft.");
+  }
+
+  const endpoint = `${META_GRAPH}/${pageId}/${isVideo ? "videos" : "photos"}`;
+  const params: Record<string, string> = {
+    access_token: pageToken,
+    published: "true",
+  };
+  if (isVideo) {
+    params.file_url = mediaUrl;
+    params.description = caption;
+  } else {
+    params.url = mediaUrl;
+    params.caption = caption;
+  }
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    body: new URLSearchParams(params),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error?.message ?? "Facebook publish failed");
+  return json.post_id ?? json.id;
+}
+
 export interface MediaInsights {
   reach: number;
   impressions: number;

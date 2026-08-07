@@ -21,7 +21,7 @@ const sections = [
     body: [
       "Account and workspace information: names, email addresses, client names, agent names, industry notes, connection status, and settings needed to operate the platform.",
       "Uploaded and entered content: scripts, captions, emails, transcripts, brand documents, notes, media file names, scheduled content, comments, campaign copy, and other materials you choose to add to Jidoka Marketing Team OS.",
-      "Connected platform information: account identifiers, usernames, page or channel identifiers, profile images, access tokens, refresh tokens when available, analytics data, post metadata, campaign metadata, and other information returned by platforms you choose to connect, including Meta, YouTube, X, and Mailchimp.",
+      "Connected platform information: account identifiers, usernames, page or channel identifiers, profile images, access tokens, refresh tokens when available, analytics data, post metadata, campaign metadata, and other information returned by platforms you choose to connect, including Meta, YouTube, X, and selected email providers.",
       "Usage and technical information: pages visited, actions taken, timestamps, device and browser information, error logs, IP-derived location, and basic security records needed to run, debug, and protect the service.",
     ],
   },

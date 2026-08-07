@@ -174,4 +174,11 @@ export const INBOX_PLATFORM_OPTIONS = [
 
 export const CONTENT_CHANNEL_OPTIONS = INBOX_PLATFORM_OPTIONS.filter(
   (platform) => platform.key !== "all",
-);
+).concat([
+  { key: "email", label: "Email" },
+  { key: "blog_post", label: "Blog post" },
+]);
+
+export const CONTENT_CHANNEL_LABELS = Object.fromEntries(
+  CONTENT_CHANNEL_OPTIONS.map((channel) => [channel.key, channel.label]),
+) as Record<string, string>;
