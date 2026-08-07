@@ -174,7 +174,7 @@ export default async function ContentGeneratorPage({
 }: {
   searchParams: Promise<{ report?: string; client?: string; agent_id?: string }>;
 }) {
-  const { report: reportId, client = "", agent_id: requestedAgentId = "" } =
+  const { report: reportId, client: rawClient = "", agent_id: requestedAgentId = "" } =
     await searchParams;
   const { user, supabase } = await requireUser();
 
@@ -197,7 +197,9 @@ export default async function ContentGeneratorPage({
     ? allAgentList.find((agent) => agent.id === requestedAgentId)
     : null;
   const scopedClientId =
-    client && client !== "all" ? client : requestedAgent?.client_id ?? "";
+    rawClient === "all"
+      ? ""
+      : rawClient || requestedAgent?.client_id || allAgentList[0]?.client_id || "";
   const agentList = scopedClientId
     ? allAgentList.filter((agent) => agent.client_id === scopedClientId)
     : allAgentList;

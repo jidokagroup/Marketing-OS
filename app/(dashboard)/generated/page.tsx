@@ -77,7 +77,7 @@ export default async function GeneratedPage({
   const {
     q = "",
     agent = "all",
-    client = "all",
+    client: rawClient = "",
     platform = "all",
     status = "all",
     type = "all",
@@ -93,12 +93,21 @@ export default async function GeneratedPage({
         .order("created_at", { ascending: false })
         .limit(200),
       supabase.from("marketing_os_scheduled_posts").select("generated_content_id, status"),
-      supabase.from("marketing_os_writing_agents").select("id, name, client_id").order("name"),
+      supabase
+        .from("marketing_os_writing_agents")
+        .select("id, name, client_id")
+        .order("updated_at", { ascending: false }),
       supabase.from("marketing_os_clients").select("id, name").order("name"),
     ]);
 
   const itemList = (items ?? []) as GeneratedItem[];
   const agentRows = agents ?? [];
+  const requestedAgent =
+    agent !== "all" ? agentRows.find((row) => row.id === agent) : null;
+  const client =
+    rawClient === "all"
+      ? "all"
+      : rawClient || requestedAgent?.client_id || agentRows[0]?.client_id || "all";
   const agentById = new Map(agentRows.map((row) => [row.id, row]));
   const clientById = new Map((clients ?? []).map((row) => [row.id, row.name]));
   const statusesByContent = new Map<string, string[]>();

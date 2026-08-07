@@ -74,7 +74,7 @@ export default async function SchedulerPage({
     status = "all",
     title = "",
     agent_id: requestedAgentId = "",
-    client = "",
+    client: rawClient = "",
   } = await searchParams;
 
   const [{ data: allAgents }, { data: clients }] = await Promise.all([
@@ -82,7 +82,7 @@ export default async function SchedulerPage({
       .from("marketing_os_writing_agents")
       .select("id, name, client_id")
       .eq("owner_id", user.id)
-      .order("name"),
+      .order("updated_at", { ascending: false }),
     supabase
       .from("marketing_os_clients")
       .select("id, name")
@@ -95,7 +95,9 @@ export default async function SchedulerPage({
     ? allAgentList.find((agent) => agent.id === requestedAgentId)
     : null;
   const scopedClientId =
-    client && client !== "all" ? client : requestedAgent?.client_id ?? "";
+    rawClient === "all"
+      ? ""
+      : rawClient || requestedAgent?.client_id || allAgentList[0]?.client_id || "";
   const scopedClient = scopedClientId
     ? (clients ?? []).find((item) => item.id === scopedClientId)
     : null;

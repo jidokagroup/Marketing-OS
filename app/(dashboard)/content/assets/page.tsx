@@ -40,9 +40,21 @@ export default async function AssetsPage({
 }: {
   searchParams: Promise<{ client?: string }>;
 }) {
-  const { client = "" } = await searchParams;
+  const { client: rawClient = "" } = await searchParams;
   const { user, supabase } = await requireUser();
-  const scopedClientId = client && client !== "all" ? client : "";
+  const { data: latestAgent } = rawClient
+    ? { data: null }
+    : await supabase
+        .from("marketing_os_writing_agents")
+        .select("client_id")
+        .eq("owner_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+  const scopedClientId =
+    rawClient === "all"
+      ? ""
+      : rawClient || latestAgent?.client_id || "";
   const { data: agents } = scopedClientId
     ? await supabase
         .from("marketing_os_writing_agents")

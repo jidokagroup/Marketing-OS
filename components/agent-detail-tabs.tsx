@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Tabs } from "@/components/ui/tabs";
@@ -15,15 +15,9 @@ export function AgentDetailTabs({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [value, setValue] = useState(activeTab);
-
-  useEffect(() => {
-    setValue(activeTab);
-  }, [activeTab]);
 
   function handleValueChange(nextValue: string | number) {
     const nextTab = String(nextValue);
-    setValue(nextTab);
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", nextTab);
@@ -36,7 +30,7 @@ export function AgentDetailTabs({
   }
 
   return (
-    <Tabs value={value} onValueChange={handleValueChange}>
+    <Tabs value={activeTab} onValueChange={handleValueChange}>
       {children}
     </Tabs>
   );
