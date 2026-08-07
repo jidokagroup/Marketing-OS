@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,21 @@ import { Badge } from "@/components/ui/badge";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const clientMatch = pathname.match(/^\/clients\/([^/]+)/);
+  const activeClient =
+    searchParams.get("client") ||
+    (clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : "");
+
+  function scopedHref(href: string) {
+    if (!activeClient) return href;
+    if (href !== "/content") {
+      return href;
+    }
+    const params = new URLSearchParams();
+    params.set("client", activeClient);
+    return `${href}?${params.toString()}`;
+  }
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">
@@ -30,7 +45,7 @@ export function Sidebar() {
                 </div>
               )}
               <Link
-                href={item.href}
+                href={scopedHref(item.href)}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   item.section && "ml-2",

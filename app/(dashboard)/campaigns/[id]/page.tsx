@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  ArrowRight,
   BarChart3,
   CalendarClock,
   CheckCircle2,
@@ -261,6 +262,13 @@ export default async function CampaignDetailPage({
         )
         .join("\n")
     : "";
+  const currentStageIndex = Math.max(
+    0,
+    WORKFLOW_STAGES.indexOf(campaign.stage),
+  );
+  const nextStage = WORKFLOW_STAGES[currentStageIndex + 1] ?? null;
+  const progressPercent =
+    ((currentStageIndex + 1) / WORKFLOW_STAGES.length) * 100;
 
   return (
     <div className="space-y-6">
@@ -316,33 +324,71 @@ export default async function CampaignDetailPage({
       </div>
 
       <Card>
-        <CardContent className="flex flex-wrap gap-2 py-4">
-          {WORKFLOW_STAGES.map((stage) => (
-            <form key={stage} action={advanceCampaignStageAction}>
+        <CardContent className="space-y-4 py-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Campaign progress
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>{titleCase(campaign.stage)}</Badge>
+                {nextStage ? (
+                  <>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Next: {titleCase(nextStage)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    Final workflow stage
+                  </span>
+                )}
+              </div>
+            </div>
+            <form
+              action={advanceCampaignStageAction}
+              className="flex flex-col gap-2 sm:flex-row sm:items-center"
+            >
               <input type="hidden" name="id" value={campaign.id} />
-              <input type="hidden" name="stage" value={stage} />
-              <Button
-                type="submit"
-                variant={campaign.stage === stage ? "default" : "outline"}
-                size="sm"
+              <select
+                name="stage"
+                defaultValue={campaign.stage}
+                className="flex h-9 min-w-44 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                aria-label="Campaign stage"
               >
-                {titleCase(stage)}
+                {WORKFLOW_STAGES.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {titleCase(stage)}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" size="sm">
+                Update stage
               </Button>
             </form>
-          ))}
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="brief">
-        <TabsList className="flex flex-wrap">
-          <TabsTrigger value="brief">Brief</TabsTrigger>
-          <TabsTrigger value="work">Work</TabsTrigger>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="approval">Approval</TabsTrigger>
-          <TabsTrigger value="publishing">Publishing</TabsTrigger>
-          <TabsTrigger value="revenue">Leads & Revenue</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="w-max">
+            <TabsTrigger value="brief">Brief</TabsTrigger>
+            <TabsTrigger value="work">Tasks</TabsTrigger>
+            <TabsTrigger value="content">Content</TabsTrigger>
+            <TabsTrigger value="approval">Approvals</TabsTrigger>
+            <TabsTrigger value="publishing">Publishing</TabsTrigger>
+            <TabsTrigger value="revenue">Leads & Revenue</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="brief" className="mt-6 space-y-4">
           <Card>

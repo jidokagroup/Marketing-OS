@@ -22,45 +22,109 @@ import {
 
 export const metadata = { title: "Content · Jidoka Marketing Team OS" };
 
-export default async function ContentPage() {
+export default async function ContentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string; agent_id?: string }>;
+}) {
   const { user, supabase } = await requireUser();
-  const [
-    { count: generatedCount },
-    { count: scheduledCount },
-    { count: assetCount },
-    ideaResult,
-    { data: latestAgent },
-  ] = await Promise.all([
-    supabase
-      .from("marketing_os_generated_content")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
-    supabase
-      .from("marketing_os_scheduled_posts")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
-    supabase
-      .from("marketing_os_uploaded_assets")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
-    opsTable(supabase, "marketing_os_content_ideas")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", user.id),
+  const { client = "", agent_id: requestedAgentId = "" } = await searchParams;
+
+  const [{ data: agents }, { data: clients }] = await Promise.all([
     supabase
       .from("marketing_os_writing_agents")
-      .select("id")
+      .select("id, name, client_id")
       .eq("owner_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("marketing_os_clients")
+      .select("id, name")
+      .eq("owner_id", user.id)
+      .order("name"),
   ]);
 
-  const generatorHref = latestAgent?.id
-    ? `/agents/${latestAgent.id}?tab=generate`
-    : "/agents";
+  const agentList = agents ?? [];
+  const requestedAgent = requestedAgentId
+    ? agentList.find((agent) => agent.id === requestedAgentId)
+    : null;
+  const scopedClientId =
+    client && client !== "all" ? client : requestedAgent?.client_id ?? "";
+  const scopedClient = scopedClientId
+    ? (clients ?? []).find((item) => item.id === scopedClientId)
+    : null;
+  const scopedAgents = scopedClientId
+    ? agentList.filter((agent) => agent.client_id === scopedClientId)
+    : agentList;
+  const scopedAgentIds = scopedAgents.map((agent) => agent.id);
+  const activeAgent =
+    (requestedAgent && scopedAgents.some((agent) => agent.id === requestedAgent.id)
+      ? requestedAgent
+      : null) ?? scopedAgents[0] ?? null;
+
+  const scopedQuery = new URLSearchParams();
+  if (scopedClientId) scopedQuery.set("client", scopedClientId);
+  const scopedQueryString = scopedQuery.toString();
+  const scopedSuffix = scopedQueryString ? `?${scopedQueryString}` : "";
+  const schedulerParams = new URLSearchParams(scopedQuery);
+  if (activeAgent?.id) schedulerParams.set("agent_id", activeAgent.id);
+  const schedulerSuffix = schedulerParams.toString()
+    ? `?${schedulerParams.toString()}`
+    : "";
+
+  let generatedQuery = supabase
+    .from("marketing_os_generated_content")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+  let scheduledQuery = supabase
+    .from("marketing_os_scheduled_posts")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+  let assetQuery = supabase
+    .from("marketing_os_uploaded_assets")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+  let ideaQuery = opsTable(supabase, "marketing_os_content_ideas")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+
+  if (scopedClientId) {
+    generatedQuery = generatedQuery.in("agent_id", scopedAgentIds);
+    scheduledQuery = scheduledQuery.in("agent_id", scopedAgentIds);
+    assetQuery = assetQuery.in("agent_id", scopedAgentIds);
+    ideaQuery = ideaQuery.eq("client_id", scopedClientId);
+  }
+
+  const [
+    generatedResult,
+    scheduledResult,
+    assetResult,
+    ideaResult,
+  ] =
+    scopedClientId && scopedAgentIds.length === 0
+      ? await Promise.all([
+          Promise.resolve({ count: 0 }),
+          Promise.resolve({ count: 0 }),
+          Promise.resolve({ count: 0 }),
+          ideaQuery,
+        ])
+      : await Promise.all([
+          generatedQuery,
+          scheduledQuery,
+          assetQuery,
+          ideaQuery,
+        ]);
+
+  const generatorHref = activeAgent?.id
+    ? `/agents/${activeAgent.id}?tab=generate`
+    : scopedClientId
+      ? `/agents/new?client_id=${scopedClientId}`
+      : "/agents";
   const ideaCount = isOpsSchemaMissing(ideaResult.error)
     ? 0
     : (ideaResult.count ?? 0);
+  const generatedCount = generatedResult.count ?? 0;
+  const scheduledCount = scheduledResult.count ?? 0;
+  const assetCount = assetResult.count ?? 0;
 
   const sections = [
     {
@@ -85,7 +149,7 @@ export default async function ContentPage() {
       title: "Smart Scheduler",
       description:
         "Create posts, bulk import CSVs, attach media, set comment-to-DM flows, and queue drafts.",
-      href: "/scheduler",
+      href: `/scheduler${schedulerSuffix}`,
       icon: CalendarDays,
       metric: scheduledCount ?? 0,
       metricLabel: "scheduled",
@@ -94,7 +158,7 @@ export default async function ContentPage() {
       title: "Content Calendar",
       description:
         "View the next 12 months, select days, and edit captions, dates, and times.",
-      href: "/calendar",
+      href: `/calendar${scopedSuffix}`,
       icon: CalendarDays,
       metric: scheduledCount ?? 0,
       metricLabel: "items",
@@ -103,7 +167,7 @@ export default async function ContentPage() {
       title: "Assets Log",
       description:
         "Review uploaded assets and extracted memory used by client-specific agents.",
-      href: "/content/assets",
+      href: `/content/assets${scopedSuffix}`,
       icon: FolderOpen,
       metric: assetCount ?? 0,
       metricLabel: "assets",
@@ -112,7 +176,7 @@ export default async function ContentPage() {
       title: "Ideas",
       description:
         "Turn Intelligence findings and manual notes into campaign-ready content ideas.",
-      href: "/content/ideas",
+      href: `/content/ideas${scopedSuffix}`,
       icon: Lightbulb,
       metric: ideaCount,
       metricLabel: "ideas",
@@ -121,7 +185,7 @@ export default async function ContentPage() {
       title: "Client Agents",
       description:
         "Create and train the writing agents that hold each client's Brand Brain and voice memory.",
-      href: "/agents",
+      href: scopedClientId ? `/agents?client=${scopedClientId}` : "/agents",
       icon: Bot,
       metric: null,
       metricLabel: "agents",
@@ -131,7 +195,7 @@ export default async function ContentPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Content"
+        title={scopedClient ? `${scopedClient.name} Content` : "Content"}
         description="Create, script, schedule, and store content without splitting the workflow across disconnected tools."
       >
         <ButtonLink href={generatorHref}>Generate content</ButtonLink>

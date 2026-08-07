@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import { NAV_ITEMS } from "@/lib/nav";
@@ -18,7 +18,22 @@ import {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const clientMatch = pathname.match(/^\/clients\/([^/]+)/);
+  const activeClient =
+    searchParams.get("client") ||
+    (clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : "");
+
+  function scopedHref(href: string) {
+    if (!activeClient) return href;
+    if (href !== "/content") {
+      return href;
+    }
+    const params = new URLSearchParams();
+    params.set("client", activeClient);
+    return `${href}?${params.toString()}`;
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -47,7 +62,7 @@ export function MobileNav() {
                   </div>
                 )}
                 <Link
-                  href={item.href}
+                  href={scopedHref(item.href)}
                   onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium",
