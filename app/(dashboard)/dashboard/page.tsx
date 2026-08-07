@@ -3,6 +3,7 @@ import { ArrowRight, MessageSquare, Target } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
 import { CORE_AGENTS } from "@/lib/core-agents";
+import { CORE_MODULES } from "@/lib/core-modules";
 import {
   asRows,
   formatMoney,
@@ -159,6 +160,9 @@ export default async function DashboardPage() {
       href: "/analytics",
     },
   ];
+  const coreSystemModules = CORE_MODULES.filter(
+    (module) => !["dashboard", "paid-campaigns"].includes(module.id),
+  );
 
   return (
     <div className="space-y-8">
@@ -257,6 +261,49 @@ export default async function DashboardPage() {
                 </p>
               </Link>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Core Systems</CardTitle>
+          <CardDescription>
+            The full Jidoka Core scaffold mapped into the Marketing OS.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {coreSystemModules.map((module) => {
+              const Icon = module.icon;
+              return (
+                <Link
+                  key={module.id}
+                  href={module.href}
+                  className="flex min-h-28 items-start gap-3 rounded-lg border p-3 transition-colors hover:border-primary/50"
+                >
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{module.label}</span>
+                      <Badge
+                        variant={
+                          module.status === "needs_api" ? "outline" : "secondary"
+                        }
+                      >
+                        {module.status === "needs_api"
+                          ? "Needs API"
+                          : module.status}
+                      </Badge>
+                    </span>
+                    <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                      {module.summary}
+                    </span>
+                  </span>
+                  <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                </Link>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
