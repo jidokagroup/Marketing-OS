@@ -37,30 +37,46 @@ type AgentOption = {
   client_id: string | null;
 };
 
-export default async function ContentIdeasPage() {
+export default async function ContentIdeasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string }>;
+}) {
+  const { client = "" } = await searchParams;
   const { user, supabase } = await requireUser();
+  const scopedClientId = client && client !== "all" ? client : "";
+  let ideasQuery = opsTable(supabase, "marketing_os_content_ideas")
+    .select("id, campaign_id, client_id, agent_id, title, description, source, format, platform, funnel_stage, status, created_at, updated_at")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false });
+  let campaignsQuery = opsTable(supabase, "marketing_os_campaigns")
+    .select(
+      "id, owner_id, client_id, name, campaign_type, status, stage, health, priority, goal, primary_kpi, target_audience, owner_name, budget, actual_spend, expected_revenue, attributed_revenue, lead_goal, leads_count, start_date, end_date, notes, created_at, updated_at",
+    )
+    .eq("owner_id", user.id)
+    .order("updated_at", { ascending: false });
+  let agentsQuery = supabase
+    .from("marketing_os_writing_agents")
+    .select("id, name, client_id")
+    .eq("owner_id", user.id)
+    .order("updated_at", { ascending: false });
+
+  if (scopedClientId) {
+    ideasQuery = ideasQuery.eq("client_id", scopedClientId);
+    campaignsQuery = campaignsQuery.eq("client_id", scopedClientId);
+    agentsQuery = agentsQuery.eq("client_id", scopedClientId);
+  }
+
   const [ideasResult, campaignsResult, clientsResult, agentsResult] =
     await Promise.all([
-      opsTable(supabase, "marketing_os_content_ideas")
-        .select("id, campaign_id, client_id, agent_id, title, description, source, format, platform, funnel_stage, status, created_at, updated_at")
-        .eq("owner_id", user.id)
-        .order("created_at", { ascending: false }),
-      opsTable(supabase, "marketing_os_campaigns")
-        .select(
-          "id, owner_id, client_id, name, campaign_type, status, stage, health, priority, goal, primary_kpi, target_audience, owner_name, budget, actual_spend, expected_revenue, attributed_revenue, lead_goal, leads_count, start_date, end_date, notes, created_at, updated_at",
-        )
-        .eq("owner_id", user.id)
-        .order("updated_at", { ascending: false }),
+      ideasQuery,
+      campaignsQuery,
       supabase
         .from("marketing_os_clients")
         .select("id, name, industry")
         .eq("owner_id", user.id)
         .order("name"),
-      supabase
-        .from("marketing_os_writing_agents")
-        .select("id, name, client_id")
-        .eq("owner_id", user.id)
-        .order("updated_at", { ascending: false }),
+      agentsQuery,
     ]);
 
   const schemaMissing = isOpsSchemaMissing(ideasResult.error);
@@ -78,7 +94,7 @@ export default async function ContentIdeasPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ideas"
+        title={scopedClientId ? "Client Ideas" : "Ideas"}
         description="Capture content ideas from strategy, intelligence, client notes, and team observations before generation."
       />
 
@@ -113,7 +129,7 @@ export default async function ContentIdeasPage() {
               </select>
               <select
                 name="agent_id"
-                defaultValue=""
+                defaultValue={latestAgentId ?? ""}
                 className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
               >
                 <option value="">No agent</option>
@@ -131,7 +147,7 @@ export default async function ContentIdeasPage() {
               />
               <select
                 name="client_id"
-                defaultValue=""
+                defaultValue={scopedClientId}
                 className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
               >
                 <option value="">No client</option>

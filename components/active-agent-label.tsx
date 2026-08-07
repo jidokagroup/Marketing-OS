@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export type ActiveAgentOption = {
   id: string;
@@ -19,10 +19,15 @@ export function ActiveAgentLabel({
   agents: ActiveAgentOption[];
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const agentMatch = pathname.match(/^\/agents\/([^/]+)/);
   const clientMatch = pathname.match(/^\/clients\/([^/]+)/);
-  const agentId = agentMatch?.[1] && agentMatch[1] !== "new" ? agentMatch[1] : null;
-  const clientId = clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : null;
+  const agentId =
+    searchParams.get("agent_id") ||
+    (agentMatch?.[1] && agentMatch[1] !== "new" ? agentMatch[1] : null);
+  const clientId =
+    searchParams.get("client") ||
+    (clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : null);
 
   const activeAgent = agentId
     ? agents.find((agent) => agent.id === agentId)

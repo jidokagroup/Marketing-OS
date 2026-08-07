@@ -58,7 +58,7 @@ export default async function GeneratedDetailPage({
 
   const { data: agent } = await supabase
     .from("marketing_os_writing_agents")
-    .select("id, name")
+    .select("id, name, client_id")
     .eq("id", content.agent_id)
     .maybeSingle();
 
@@ -95,12 +95,20 @@ export default async function GeneratedDetailPage({
 
   const hooks = (content.alternate_hooks ?? []) as string[];
   const ctas = (content.alternate_ctas ?? []) as string[];
+  const schedulerParams = new URLSearchParams({
+    agent_id: agent?.id ?? "",
+    title: content.title || content.topic || "",
+  });
+  if (agent?.client_id) schedulerParams.set("client", agent.client_id);
+  const generatedLibraryHref = agent?.client_id
+    ? `/generated?client=${agent.client_id}`
+    : "/generated";
 
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-6">
         <Link
-          href="/generated"
+          href={generatedLibraryHref}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
           ← All generated content
@@ -133,7 +141,7 @@ export default async function GeneratedDetailPage({
             </div>
           )}
           <ButtonLink
-            href={`/scheduler?agent_id=${agent?.id ?? ""}&title=${encodeURIComponent(content.title || content.topic || "")}`}
+            href={`/scheduler?${schedulerParams.toString()}`}
             variant="outline"
             size="sm"
           >

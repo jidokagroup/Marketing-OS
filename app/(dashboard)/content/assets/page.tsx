@@ -35,41 +35,80 @@ type MediaAsset = {
   created_at: string;
 };
 
-export default async function AssetsPage() {
+export default async function AssetsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string }>;
+}) {
+  const { client = "" } = await searchParams;
   const { user, supabase } = await requireUser();
-  const [mediaResult, campaignsResult, uploadedResult] = await Promise.all([
+  const scopedClientId = client && client !== "all" ? client : "";
+  const { data: agents } = scopedClientId
+    ? await supabase
+        .from("marketing_os_writing_agents")
+        .select("id")
+        .eq("owner_id", user.id)
+        .eq("client_id", scopedClientId)
+    : { data: [] };
+  const scopedAgentIds = (agents ?? []).map((agent) => agent.id);
+  let campaignsQuery = opsTable(supabase, "marketing_os_campaigns")
+    .select(
+      "id, owner_id, client_id, name, campaign_type, status, stage, health, priority, goal, primary_kpi, target_audience, owner_name, budget, actual_spend, expected_revenue, attributed_revenue, lead_goal, leads_count, start_date, end_date, notes, created_at, updated_at",
+    )
+    .eq("owner_id", user.id);
+  let uploadedQuery = supabase
+    .from("marketing_os_uploaded_assets")
+    .select("id, agent_id, title, kind, status, created_at")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(25);
+
+  if (scopedClientId) {
+    campaignsQuery = campaignsQuery.eq("client_id", scopedClientId);
+    uploadedQuery = uploadedQuery.in("agent_id", scopedAgentIds);
+  }
+
+  const [mediaResult, campaignsResult, uploadedResult] =
+    scopedClientId && scopedAgentIds.length === 0
+      ? await Promise.all([
+          opsTable(supabase, "marketing_os_media_assets")
+            .select("id, campaign_id, title, file_name, media_type, platform_fit, tags, created_at")
+            .eq("owner_id", user.id)
+            .order("created_at", { ascending: false }),
+          campaignsQuery,
+          Promise.resolve({ data: [] }),
+        ])
+      : await Promise.all([
     opsTable(supabase, "marketing_os_media_assets")
       .select("id, campaign_id, title, file_name, media_type, platform_fit, tags, created_at")
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false }),
-    opsTable(supabase, "marketing_os_campaigns")
-      .select(
-        "id, owner_id, client_id, name, campaign_type, status, stage, health, priority, goal, primary_kpi, target_audience, owner_name, budget, actual_spend, expected_revenue, attributed_revenue, lead_goal, leads_count, start_date, end_date, notes, created_at, updated_at",
-      )
-      .eq("owner_id", user.id),
-    supabase
-      .from("marketing_os_uploaded_assets")
-      .select("id, title, kind, status, created_at")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(25),
-  ]);
+          campaignsQuery,
+          uploadedQuery,
+        ]);
 
   const schemaMissing = isOpsSchemaMissing(mediaResult.error);
-  const assets = schemaMissing ? [] : asRows<MediaAsset>(mediaResult.data);
   const campaigns = schemaMissing
     ? []
     : asRows<CampaignRow>(campaignsResult.data);
   const campaignById = new Map(campaigns.map((item) => [item.id, item]));
+  const assets = schemaMissing
+    ? []
+    : asRows<MediaAsset>(mediaResult.data).filter(
+        (asset) => !scopedClientId || (asset.campaign_id && campaignById.has(asset.campaign_id)),
+      );
   const uploaded = uploadedResult.data ?? [];
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Assets"
+        title={scopedClientId ? "Client Assets" : "Assets"}
         description="Manage campaign-ready creative assets, uploads, platform fit, and source materials."
       >
-        <ButtonLink href="/agents" variant="outline">
+        <ButtonLink
+          href={scopedClientId ? `/agents?client=${scopedClientId}` : "/agents"}
+          variant="outline"
+        >
           Upload through agent
         </ButtonLink>
       </PageHeader>
@@ -82,7 +121,7 @@ export default async function AssetsPage() {
           title="No assets found"
           description="Upload files through a Writing Agent or attach media to scheduled posts."
           actionLabel="Open Writing Agents"
-          actionHref="/agents"
+          actionHref={scopedClientId ? `/agents?client=${scopedClientId}` : "/agents"}
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">

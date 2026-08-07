@@ -62,42 +62,108 @@ function confidenceLabel(value: number | null) {
 export default async function SchedulerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; title?: string; agent_id?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    title?: string;
+    agent_id?: string;
+    client?: string;
+  }>;
 }) {
   const { user, supabase } = await requireUser();
-  const { status = "all", title = "", agent_id: defaultAgentId = "" } =
-    await searchParams;
+  const {
+    status = "all",
+    title = "",
+    agent_id: requestedAgentId = "",
+    client = "",
+  } = await searchParams;
+
+  const [{ data: allAgents }, { data: clients }] = await Promise.all([
+    supabase
+      .from("marketing_os_writing_agents")
+      .select("id, name, client_id")
+      .eq("owner_id", user.id)
+      .order("name"),
+    supabase
+      .from("marketing_os_clients")
+      .select("id, name")
+      .eq("owner_id", user.id)
+      .order("name"),
+  ]);
+
+  const allAgentList = allAgents ?? [];
+  const requestedAgent = requestedAgentId
+    ? allAgentList.find((agent) => agent.id === requestedAgentId)
+    : null;
+  const scopedClientId =
+    client && client !== "all" ? client : requestedAgent?.client_id ?? "";
+  const scopedClient = scopedClientId
+    ? (clients ?? []).find((item) => item.id === scopedClientId)
+    : null;
+  const scopedAgents = scopedClientId
+    ? allAgentList.filter((agent) => agent.client_id === scopedClientId)
+    : allAgentList;
+  const scopedAgentIds = scopedAgents.map((agent) => agent.id);
+  const effectiveDefaultAgentId =
+    requestedAgentId && scopedAgents.some((agent) => agent.id === requestedAgentId)
+      ? requestedAgentId
+      : scopedAgents[0]?.id ?? "";
+
+  let postsQuery = supabase
+    .from("marketing_os_scheduled_posts")
+    .select(
+      "id, title, platform, content_type, status, scheduled_time, caption, generated_content_id, media_path, best_posting_window, ideal_days, confidence_score, schedule_reason, comment_dm_enabled, comment_auto_reply, dm_sequence, social_account_id, error, writing_agents:marketing_os_writing_agents(name)",
+    )
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false });
+  let accountsQuery = supabase
+    .from("marketing_os_social_accounts")
+    .select("platform, status")
+    .eq("owner_id", user.id);
+  let generatedContentQuery = supabase
+    .from("marketing_os_generated_content")
+    .select("id, agent_id, title, topic, platform, short_version, organic_version, primary_script")
+    .eq("owner_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (scopedClientId) {
+    postsQuery = postsQuery.in("agent_id", scopedAgentIds);
+    accountsQuery = accountsQuery.in("agent_id", scopedAgentIds);
+    generatedContentQuery = generatedContentQuery.in("agent_id", scopedAgentIds);
+  }
+  if (status !== "all") postsQuery = postsQuery.eq("status", status);
 
   const [
-    { data: agents },
-    { data: posts },
-    { data: accounts },
-    { data: generatedContent },
+    postsResult,
+    accountsResult,
+    generatedContentResult,
     emailProviderResult,
   ] =
-    await Promise.all([
-      supabase.from("marketing_os_writing_agents").select("id, name").order("name"),
-      supabase
-        .from("marketing_os_scheduled_posts")
-        .select(
-          "id, title, platform, content_type, status, scheduled_time, caption, generated_content_id, media_path, best_posting_window, ideal_days, confidence_score, schedule_reason, comment_dm_enabled, comment_auto_reply, dm_sequence, social_account_id, error, writing_agents:marketing_os_writing_agents(name)",
-        )
-        .order("created_at", { ascending: false }),
-      supabase.from("marketing_os_social_accounts").select("platform, status"),
-      supabase
-        .from("marketing_os_generated_content")
-        .select("id, agent_id, title, topic, platform, short_version, organic_version, primary_script")
-        .order("created_at", { ascending: false })
-        .limit(100),
-      opsTable(supabase, "marketing_os_email_provider_settings")
-        .select("provider, provider_label, status")
-        .eq("owner_id", user.id)
-        .maybeSingle(),
-    ]);
+    scopedClientId && scopedAgentIds.length === 0
+      ? await Promise.all([
+          Promise.resolve({ data: [] }),
+          Promise.resolve({ data: [] }),
+          Promise.resolve({ data: [] }),
+          opsTable(supabase, "marketing_os_email_provider_settings")
+            .select("provider, provider_label, status")
+            .eq("owner_id", user.id)
+            .maybeSingle(),
+        ])
+      : await Promise.all([
+          postsQuery,
+          accountsQuery,
+          generatedContentQuery,
+          opsTable(supabase, "marketing_os_email_provider_settings")
+            .select("provider, provider_label, status")
+            .eq("owner_id", user.id)
+            .maybeSingle(),
+        ]);
 
-  const agentList = agents ?? [];
-  const postList =
-    status === "all" ? posts ?? [] : (posts ?? []).filter((post) => post.status === status);
+  const agentList = scopedAgents;
+  const posts = postsResult.data ?? [];
+  const accounts = accountsResult.data ?? [];
+  const generatedContent = generatedContentResult.data ?? [];
+  const postList = posts;
   const emailProviderSettings = isOpsSchemaMissing(emailProviderResult.error)
     ? null
     : asRow<EmailProviderSettingsRow>(emailProviderResult.data);
@@ -119,12 +185,23 @@ export default async function SchedulerPage({
       ? connectedPlatforms.has("mailchimp")
       : emailProviderSettings?.status === "connected";
   if (emailProviderConnected) connectedPlatforms.add("mailchimp");
-  const agentIdForConnections = defaultAgentId || agentList[0]?.id || "";
+  const agentIdForConnections = effectiveDefaultAgentId || agentList[0]?.id || "";
+  const scopedParams = new URLSearchParams();
+  if (scopedClientId) scopedParams.set("client", scopedClientId);
+  if (title) scopedParams.set("title", title);
+  function schedulerHref(nextStatus: string) {
+    const params = new URLSearchParams(scopedParams);
+    params.set("status", nextStatus);
+    return `/scheduler?${params.toString()}`;
+  }
+  const schedulerHomeHref = scopedParams.toString()
+    ? `/scheduler?${scopedParams.toString()}`
+    : "/scheduler";
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Smart Scheduler"
+        title={scopedClient ? `${scopedClient.name} Smart Scheduler` : "Smart Scheduler"}
         description={`Create social posts and ${selectedEmailProviderLabel} email campaigns, bulk import a spreadsheet, and let Jidoka Marketing Team OS recommend timing from follower activity, audience behavior, and competitor windows.`}
       />
 
@@ -220,7 +297,7 @@ export default async function SchedulerPage({
           agents={agentList}
           connectedPlatforms={[...connectedPlatforms]}
           emailProviderLabel={selectedEmailProviderLabel}
-          defaultAgentId={defaultAgentId}
+          defaultAgentId={effectiveDefaultAgentId}
           defaultTitle={title}
           generatedContent={generatedContent ?? []}
         />
@@ -233,7 +310,7 @@ export default async function SchedulerPage({
             {["all", "draft", "scheduled", "failed", "posted"].map((item) => (
               <ButtonLink
                 key={item}
-                href={`/scheduler?status=${item}`}
+                href={schedulerHref(item)}
                 variant={status === item ? "default" : "outline"}
                 size="sm"
               >
@@ -248,7 +325,7 @@ export default async function SchedulerPage({
             title="Nothing scheduled"
             description="Add a post or email campaign above. Tip: give it the same title as a generated piece so the copy attaches automatically."
             actionLabel="Schedule content"
-            actionHref="/scheduler"
+            actionHref={schedulerHomeHref}
           />
         ) : (
           <div className="space-y-3">

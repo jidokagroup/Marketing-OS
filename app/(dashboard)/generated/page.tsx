@@ -131,7 +131,11 @@ export default async function GeneratedPage({
     "all",
     ...Array.from(new Set(enriched.map((item) => item.platform).filter(Boolean))).sort(),
   ];
-  const filtered = enriched.filter((item) => {
+  const visiblePool =
+    client === "all"
+      ? enriched
+      : enriched.filter((item) => item.clientId === client);
+  const filtered = visiblePool.filter((item) => {
     const haystack = [
       item.title,
       item.topic,
@@ -147,15 +151,33 @@ export default async function GeneratedPage({
     return (
       (!query || haystack.includes(query)) &&
       (agent === "all" || item.agent_id === agent) &&
-      (client === "all" || item.clientId === client) &&
       (platform === "all" || item.platform === platform) &&
       (status === "all" || item.derivedStatus === status) &&
       (type === "all" || item.kind === type)
     );
   });
-  const firstAgentHref = agentRows[0]?.id
-    ? `/agents/${agentRows[0].id}?tab=generate`
-    : "/agents";
+  const scopedAgentRows =
+    client === "all"
+      ? agentRows
+      : agentRows.filter((row) => row.client_id === client);
+  const firstAgent =
+    agent !== "all"
+      ? scopedAgentRows.find((row) => row.id === agent)
+      : scopedAgentRows[0];
+  const firstAgentHref = firstAgent?.id
+    ? `/agents/${firstAgent.id}?tab=generate`
+    : client !== "all"
+      ? `/agents/new?client_id=${client}`
+      : "/agents";
+
+  function schedulerHref(item: { agent_id: string; clientId: string; title: string | null; topic: string | null }) {
+    const params = new URLSearchParams({
+      agent_id: item.agent_id,
+      title: item.title || item.topic || "",
+    });
+    if (item.clientId) params.set("client", item.clientId);
+    return `/scheduler?${params.toString()}`;
+  }
 
   return (
     <div>
@@ -164,7 +186,7 @@ export default async function GeneratedPage({
         description="Review, filter, duplicate, export, and send generated pieces to the scheduler."
       />
 
-      {itemList.length === 0 ? (
+      {visiblePool.length === 0 ? (
         <EmptyState
           icon={Sparkles}
           title="Nothing generated yet"
@@ -239,8 +261,8 @@ export default async function GeneratedPage({
           </form>
 
           <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-            {filtered.length} of {itemList.length} generated piece
-            {itemList.length === 1 ? "" : "s"} shown. Status is based on revision
+            {filtered.length} of {visiblePool.length} generated piece
+            {visiblePool.length === 1 ? "" : "s"} shown. Status is based on revision
             score and scheduler activity.
           </div>
 
@@ -297,7 +319,7 @@ export default async function GeneratedPage({
                         Edit
                       </ButtonLink>
                       <ButtonLink
-                        href={`/scheduler?agent_id=${item.agent_id}&title=${encodeURIComponent(item.title || item.topic || "")}`}
+                        href={schedulerHref(item)}
                         variant="outline"
                         size="sm"
                       >

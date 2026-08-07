@@ -156,45 +156,29 @@ function agentGenerateHref(agentId: string, idea: ReportIdea, reportId: string) 
   return `/agents/${agentId}?${params.toString()}`;
 }
 
-function schedulerHref(agentId: string | null | undefined, idea: ReportIdea) {
+function schedulerHref(
+  agentId: string | null | undefined,
+  idea: ReportIdea,
+  clientId: string,
+) {
   const params = new URLSearchParams({
     title: idea.title,
   });
   if (agentId) params.set("agent_id", agentId);
+  if (clientId) params.set("client", clientId);
   return `/scheduler?${params.toString()}`;
 }
 
 export default async function ContentGeneratorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ report?: string }>;
+  searchParams: Promise<{ report?: string; client?: string; agent_id?: string }>;
 }) {
-  const { report: reportId } = await searchParams;
+  const { report: reportId, client = "", agent_id: requestedAgentId = "" } =
+    await searchParams;
   const { user, supabase } = await requireUser();
 
-  const reportQuery = supabase
-    .from("marketing_os_social_intelligence_reports")
-    .select(
-      "id, agent_id, industry, platforms, competitor_accounts, trending_topics, hooks, audios, content_opportunities, summary, scanned_at",
-    )
-    .eq("owner_id", user.id);
-
-  const [
-    reportResult,
-    competitorsResult,
-    { data: clients },
-    { data: agents },
-    ideasResult,
-  ] = await Promise.all([
-    reportId
-      ? reportQuery.eq("id", reportId).maybeSingle()
-      : reportQuery.order("scanned_at", { ascending: false }).limit(1).maybeSingle(),
-    opsTable(supabase, "marketing_os_competitor_accounts")
-      .select("id, client_id, agent_id, platform, handle, profile_url, display_name")
-      .eq("owner_id", user.id)
-      .eq("scan_enabled", true)
-      .order("updated_at", { ascending: false })
-      .limit(10),
+  const [{ data: clients }, { data: agents }] = await Promise.all([
     supabase
       .from("marketing_os_clients")
       .select("id, name, industry")
@@ -205,12 +189,63 @@ export default async function ContentGeneratorPage({
       .select("id, name, client_id")
       .eq("owner_id", user.id)
       .order("updated_at", { ascending: false }),
-    opsTable(supabase, "marketing_os_content_ideas")
-      .select("id, title, description, platform, format, status, created_at")
-      .eq("owner_id", user.id)
-      .eq("source", "content_generator_competitor_scan")
-      .order("created_at", { ascending: false })
-      .limit(6),
+  ]);
+
+  const clientList = (clients ?? []) as ClientOption[];
+  const allAgentList = (agents ?? []) as AgentOption[];
+  const requestedAgent = requestedAgentId
+    ? allAgentList.find((agent) => agent.id === requestedAgentId)
+    : null;
+  const scopedClientId =
+    client && client !== "all" ? client : requestedAgent?.client_id ?? "";
+  const agentList = scopedClientId
+    ? allAgentList.filter((agent) => agent.client_id === scopedClientId)
+    : allAgentList;
+  const scopedAgentIds = agentList.map((agent) => agent.id);
+
+  const reportQuery = supabase
+    .from("marketing_os_social_intelligence_reports")
+    .select(
+      "id, agent_id, industry, platforms, competitor_accounts, trending_topics, hooks, audios, content_opportunities, summary, scanned_at",
+    )
+    .eq("owner_id", user.id);
+  const scopedReportQuery =
+    scopedClientId && scopedAgentIds.length > 0
+      ? reportQuery.in("agent_id", scopedAgentIds)
+      : reportQuery;
+  let competitorsQuery = opsTable(supabase, "marketing_os_competitor_accounts")
+    .select("id, client_id, agent_id, platform, handle, profile_url, display_name")
+    .eq("owner_id", user.id)
+    .eq("scan_enabled", true)
+    .order("updated_at", { ascending: false })
+    .limit(10);
+  let ideasQuery = opsTable(supabase, "marketing_os_content_ideas")
+    .select("id, title, description, platform, format, status, created_at")
+    .eq("owner_id", user.id)
+    .eq("source", "content_generator_competitor_scan")
+    .order("created_at", { ascending: false })
+    .limit(6);
+
+  if (scopedClientId) {
+    competitorsQuery = competitorsQuery.eq("client_id", scopedClientId);
+    ideasQuery = ideasQuery.eq("client_id", scopedClientId);
+  }
+
+  const [
+    reportResult,
+    competitorsResult,
+    ideasResult,
+  ] = await Promise.all([
+    scopedClientId && scopedAgentIds.length === 0
+      ? Promise.resolve({ data: null, error: null })
+      : reportId
+        ? scopedReportQuery.eq("id", reportId).maybeSingle()
+        : scopedReportQuery
+            .order("scanned_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+    competitorsQuery,
+    ideasQuery,
   ]);
 
   const schemaMissing =
@@ -225,9 +260,13 @@ export default async function ContentGeneratorPage({
   const competitors = schemaMissing
     ? []
     : ((competitorsResult.data ?? []) as CompetitorAccount[]);
-  const clientList = (clients ?? []) as ClientOption[];
-  const agentList = (agents ?? []) as AgentOption[];
-  const defaultAgentId = latestReport?.agent_id ?? agentList[0]?.id ?? "";
+  const defaultAgentId =
+    (requestedAgent && agentList.some((agent) => agent.id === requestedAgent.id)
+      ? requestedAgent.id
+      : "") ||
+    latestReport?.agent_id ||
+    agentList[0]?.id ||
+    "";
   const defaultPlatforms =
     latestReport?.platforms?.length ? latestReport.platforms : ["instagram"];
   const savedIdeas = isOpsSchemaMissing(ideasResult.error)
@@ -247,10 +286,19 @@ export default async function ContentGeneratorPage({
         title="Content Generator"
         description="Turn competitor and influencer watchlists into client-agent-ready content ideas, then move the best ones into Smart Scheduler."
       >
-        <ButtonLink href="/generated" variant="outline">
+        <ButtonLink
+          href={scopedClientId ? `/generated?client=${scopedClientId}` : "/generated"}
+          variant="outline"
+        >
           Generated library
         </ButtonLink>
-        <ButtonLink href="/scheduler">
+        <ButtonLink
+          href={
+            scopedClientId
+              ? `/scheduler?client=${scopedClientId}${defaultAgentId ? `&agent_id=${defaultAgentId}` : ""}`
+              : "/scheduler"
+          }
+        >
           Smart Scheduler
           <ArrowRight className="ml-1 h-4 w-4" />
         </ButtonLink>
@@ -293,7 +341,7 @@ export default async function ContentGeneratorPage({
                   id="client_id"
                   name="client_id"
                   className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  defaultValue=""
+                  defaultValue={scopedClientId}
                 >
                   <option value="">General agency content</option>
                   {clientList.map((client) => (
@@ -500,7 +548,11 @@ export default async function ContentGeneratorPage({
                             </ButtonLink>
                           )}
                           <ButtonLink
-                            href={schedulerHref(latestReport.agent_id, idea)}
+                            href={schedulerHref(
+                              latestReport.agent_id,
+                              idea,
+                              scopedClientId,
+                            )}
                             size="sm"
                             variant="outline"
                           >
@@ -543,7 +595,15 @@ export default async function ContentGeneratorPage({
                             .join(" · ")}
                         </p>
                       </div>
-                      <ButtonLink href="/content/ideas" size="sm" variant="outline">
+                      <ButtonLink
+                        href={
+                          scopedClientId
+                            ? `/content/ideas?client=${scopedClientId}`
+                            : "/content/ideas"
+                        }
+                        size="sm"
+                        variant="outline"
+                      >
                         Ideas backlog
                       </ButtonLink>
                     </div>

@@ -35,6 +35,7 @@ export default async function CalendarPage({
     offset?: string;
     view?: string;
     client?: string;
+    agent_id?: string;
     platform?: string;
     status?: string;
     day?: string;
@@ -44,7 +45,8 @@ export default async function CalendarPage({
   const {
     offset,
     view = "month",
-    client = "all",
+    client: rawClient = "all",
+    agent_id: requestedAgentId = "",
     platform = "all",
     status = "all",
     day,
@@ -68,6 +70,9 @@ export default async function CalendarPage({
 
   const agentById = new Map((agents ?? []).map((agent) => [agent.id, agent]));
   const clientById = new Map((clients ?? []).map((item) => [item.id, item.name]));
+  const requestedAgent = requestedAgentId ? agentById.get(requestedAgentId) : null;
+  const client =
+    rawClient !== "all" ? rawClient : requestedAgent?.client_id ?? "all";
   const clientAgentIds =
     client === "all"
       ? []
@@ -142,6 +147,12 @@ export default async function CalendarPage({
     "all",
     ...Array.from(new Set(posts.map((post) => post.platform))).sort(),
   ];
+  const schedulerParams = new URLSearchParams();
+  if (client !== "all") schedulerParams.set("client", client);
+  if (requestedAgentId) schedulerParams.set("agent_id", requestedAgentId);
+  const schedulerHref = schedulerParams.toString()
+    ? `/scheduler?${schedulerParams.toString()}`
+    : "/scheduler";
 
   return (
     <div>
@@ -222,7 +233,7 @@ export default async function CalendarPage({
             title="No posts match this view"
             description="Schedule a post, switch to List view for drafts, or clear a filter to see more content."
             actionLabel="Schedule your first post"
-            actionHref="/scheduler"
+            actionHref={schedulerHref}
           />
         ) : view === "list" || view === "week" ? (
           <div className="space-y-3">
