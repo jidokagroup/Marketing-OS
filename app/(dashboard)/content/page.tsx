@@ -28,7 +28,8 @@ export default async function ContentPage({
   searchParams: Promise<{ client?: string; agent_id?: string }>;
 }) {
   const { user, supabase } = await requireUser();
-  const { client = "", agent_id: requestedAgentId = "" } = await searchParams;
+  const { client: rawClient = "", agent_id: requestedAgentId = "" } =
+    await searchParams;
 
   const [{ data: agents }, { data: clients }] = await Promise.all([
     supabase
@@ -48,7 +49,9 @@ export default async function ContentPage({
     ? agentList.find((agent) => agent.id === requestedAgentId)
     : null;
   const scopedClientId =
-    client && client !== "all" ? client : requestedAgent?.client_id ?? "";
+    rawClient === "all"
+      ? ""
+      : rawClient || requestedAgent?.client_id || agentList[0]?.client_id || "";
   const scopedClient = scopedClientId
     ? (clients ?? []).find((item) => item.id === scopedClientId)
     : null;

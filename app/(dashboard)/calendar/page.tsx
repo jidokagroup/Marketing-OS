@@ -45,7 +45,7 @@ export default async function CalendarPage({
   const {
     offset,
     view = "month",
-    client: rawClient = "all",
+    client: rawClient = "",
     agent_id: requestedAgentId = "",
     platform = "all",
     status = "all",
@@ -64,7 +64,10 @@ export default async function CalendarPage({
       : new Date(year, month + 1, 0, 23, 59, 59);
 
   const [{ data: agents }, { data: clients }] = await Promise.all([
-    supabase.from("marketing_os_writing_agents").select("id, name, client_id").order("name"),
+    supabase
+      .from("marketing_os_writing_agents")
+      .select("id, name, client_id")
+      .order("updated_at", { ascending: false }),
     supabase.from("marketing_os_clients").select("id, name").order("name"),
   ]);
 
@@ -72,7 +75,9 @@ export default async function CalendarPage({
   const clientById = new Map((clients ?? []).map((item) => [item.id, item.name]));
   const requestedAgent = requestedAgentId ? agentById.get(requestedAgentId) : null;
   const client =
-    rawClient !== "all" ? rawClient : requestedAgent?.client_id ?? "all";
+    rawClient === "all"
+      ? "all"
+      : rawClient || requestedAgent?.client_id || agents?.[0]?.client_id || "all";
   const clientAgentIds =
     client === "all"
       ? []

@@ -42,9 +42,21 @@ export default async function ContentIdeasPage({
 }: {
   searchParams: Promise<{ client?: string }>;
 }) {
-  const { client = "" } = await searchParams;
+  const { client: rawClient = "" } = await searchParams;
   const { user, supabase } = await requireUser();
-  const scopedClientId = client && client !== "all" ? client : "";
+  const { data: latestAgent } = rawClient
+    ? { data: null }
+    : await supabase
+        .from("marketing_os_writing_agents")
+        .select("client_id")
+        .eq("owner_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+  const scopedClientId =
+    rawClient === "all"
+      ? ""
+      : rawClient || latestAgent?.client_id || "";
   let ideasQuery = opsTable(supabase, "marketing_os_content_ideas")
     .select("id, campaign_id, client_id, agent_id, title, description, source, format, platform, funnel_stage, status, created_at, updated_at")
     .eq("owner_id", user.id)
