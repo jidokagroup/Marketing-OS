@@ -3,10 +3,12 @@ import {
   BriefcaseBusiness,
   Handshake,
   LineChart,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 
 export type CoreAgentKey =
+  | "orchestrator"
   | "growth-revenue"
   | "client-delivery"
   | "success-intelligence"
@@ -25,6 +27,43 @@ export type CoreAgentDefinition = {
     placeholder: string;
   }[];
   icon: LucideIcon;
+};
+
+export const ORCHESTRATOR_AGENT: CoreAgentDefinition = {
+  key: "orchestrator",
+  label: "Orchestrator",
+  segment: "Command Agent",
+  href: "/core/orchestrator",
+  summary:
+    "Routes questions, searches Core memory, creates handoffs, and escalates refinement requests when the OS needs help.",
+  systems: ["Routing", "Memory", "Handoffs", "Escalations"],
+  icon: Network,
+  trainingFields: [
+    {
+      key: "answer_style",
+      label: "Answer style",
+      placeholder:
+        "How the orchestrator should explain things, how direct it should be, and what tone users should feel.",
+    },
+    {
+      key: "routing_rules",
+      label: "Routing rules",
+      placeholder:
+        "Which questions should go to Growth, Client Delivery, Success & Intelligence, Business Operations, or a specific page.",
+    },
+    {
+      key: "memory_rules",
+      label: "Memory rules",
+      placeholder:
+        "What the orchestrator should remember, ignore, verify, summarize, or route into agent-specific memory.",
+    },
+    {
+      key: "escalation_rules",
+      label: "Escalation rules",
+      placeholder:
+        "When it should create a developer/refinement request, ask for human approval, or avoid taking action.",
+    },
+  ],
 };
 
 export const CORE_AGENTS: CoreAgentDefinition[] = [
@@ -159,7 +198,7 @@ export const CORE_AGENTS: CoreAgentDefinition[] = [
 ];
 
 export const CORE_AGENT_BY_KEY = new Map(
-  CORE_AGENTS.map((agent) => [agent.key, agent]),
+  [ORCHESTRATOR_AGENT, ...CORE_AGENTS].map((agent) => [agent.key, agent]),
 );
 
 export const INBOX_PLATFORM_OPTIONS = [
