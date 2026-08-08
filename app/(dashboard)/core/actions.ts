@@ -47,20 +47,8 @@ export async function saveCoreAgentTrainingAction(formData: FormData) {
     .select("id")
     .maybeSingle();
 
-  await opsTable(supabase, "marketing_os_memory_records").insert({
-    owner_id: user.id,
-    organization_id: user.id,
-    record_type: "Agent Refinement",
-    title: `${agent.label} training updated`,
-    information: `Training context was updated for ${agent.label}.`,
-    source: "Core agent training page",
-    memory_owner: agent.label,
-    confidence_level: "User Confirmed",
-    affected_business_systems: agent.systems,
-    status: "active",
-  });
-
   revalidatePath("/dashboard");
   revalidatePath(agent.href);
+  revalidatePath("/core/orchestrator");
   revalidatePath("/settings");
 }

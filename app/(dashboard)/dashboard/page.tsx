@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, MessageSquare, Target } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
-import { CORE_AGENTS } from "@/lib/core-agents";
+import { CORE_AGENTS, ORCHESTRATOR_AGENT } from "@/lib/core-agents";
 import { CORE_MODULES } from "@/lib/core-modules";
 import {
   asRows,
@@ -130,6 +130,7 @@ async function getCommandData() {
 
 export default async function DashboardPage() {
   const data = await getCommandData();
+  const OrchestratorIcon = ORCHESTRATOR_AGENT.icon;
   const activeCampaigns = data.campaigns.filter((item) =>
     ["planning", "active"].includes(item.status),
   );
@@ -170,6 +171,10 @@ export default async function DashboardPage() {
         title="Core Command"
         description="Executive command watches the four Core agents and keeps the agency operating system moving."
       >
+        <ButtonLink href={ORCHESTRATOR_AGENT.href} variant="outline">
+          <OrchestratorIcon className="mr-1 h-4 w-4" />
+          Train orchestrator
+        </ButtonLink>
         <ButtonLink href="/inbox" variant="outline">
           <MessageSquare className="mr-1 h-4 w-4" />
           Review inbox

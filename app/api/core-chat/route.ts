@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getAuthContext } from "@/lib/auth";
 import {
+  asRow,
   isOpsSchemaMissing,
   opsTable,
 } from "@/lib/marketing-os/operations";
@@ -31,6 +32,14 @@ type MemoryCandidate = {
   systems?: string[];
   href: string;
   actionLabel: string;
+};
+
+type TrainingRow = {
+  training_data: Record<string, unknown> | null;
+  operating_rules: string | null;
+  approval_rules: string | null;
+  handoff_rules: string | null;
+  data_sources: string | null;
 };
 
 function cleanText(value: unknown) {
@@ -102,6 +111,20 @@ function classifyIntent(question: string) {
   return "orchestrator";
 }
 
+function intentLabel(intent: string) {
+  const labels: Record<string, string> = {
+    connections: "Connections",
+    scheduler: "Smart Scheduler",
+    content: "Content",
+    "growth-revenue": "Growth & Revenue",
+    "client-delivery": "Client Delivery",
+    "success-intelligence": "Success & Intelligence",
+    "business-operations": "Business Operations",
+    orchestrator: "Orchestrator",
+  };
+  return labels[intent] ?? intent;
+}
+
 function needsDeveloperRequest(question: string) {
   const q = question.toLowerCase();
   return [
@@ -131,6 +154,49 @@ function formatSteps(value: unknown) {
       return `${index + 1}. ${String(item)}`;
     })
     .join("\n");
+}
+
+function trainingValue(training: TrainingRow | null, key: string) {
+  const value = training?.training_data?.[key];
+  return cleanText(value);
+}
+
+async function getOrchestratorTraining(
+  supabase: unknown,
+  ownerId: string,
+): Promise<TrainingRow | null> {
+  const result = await opsTable(supabase, "marketing_os_core_agent_training")
+    .select(
+      "training_data, operating_rules, approval_rules, handoff_rules, data_sources",
+    )
+    .eq("owner_id", ownerId)
+    .eq("agent_key", "orchestrator")
+    .maybeSingle();
+
+  if (isOpsSchemaMissing(result.error)) return null;
+  return asRow<TrainingRow>(result.data);
+}
+
+function formatOrchestratorTrainingNote(
+  training: TrainingRow | null,
+  intent: string,
+) {
+  if (!training) return "";
+  const notes = [
+    trainingValue(training, "answer_style"),
+    trainingValue(training, "routing_rules"),
+    trainingValue(training, "memory_rules"),
+    trainingValue(training, "escalation_rules"),
+    cleanText(training.operating_rules),
+    cleanText(training.approval_rules),
+    cleanText(training.handoff_rules),
+  ].filter(Boolean);
+
+  if (notes.length === 0) return "";
+
+  return `Orchestrator training applied: routed toward ${intentLabel(
+    intent,
+  )} using saved tone, routing, memory, approval, and escalation rules.`;
 }
 
 async function buildMemoryAnswer(
@@ -254,11 +320,23 @@ export async function POST(request: Request) {
   }
 
   const intent = classifyIntent(question);
-  const memoryAnswer = await buildMemoryAnswer(supabase, user.id, question);
+  const [memoryAnswer, orchestratorTraining] = await Promise.all([
+    buildMemoryAnswer(supabase, user.id, question),
+    getOrchestratorTraining(supabase, user.id),
+  ]);
+  const orchestratorTrainingNote = formatOrchestratorTrainingNote(
+    orchestratorTraining,
+    intent,
+  );
   const finalAnswer =
-    memoryAnswer?.text ??
-    providedAnswer ??
-    "I can route this through JIDOKA Core. Start in Core Command or ask about a specific playbook, workflow, client, campaign, scheduler, or account connection.";
+    memoryAnswer?.text
+      ? [memoryAnswer.text, orchestratorTrainingNote]
+          .filter(Boolean)
+          .join("\n\n")
+      : providedAnswer ??
+        (orchestratorTrainingNote
+          ? `${orchestratorTrainingNote}\n\nI can route this through JIDOKA Core. Ask about a specific playbook, workflow, client, campaign, scheduler, or account connection.`
+          : "I can route this through JIDOKA Core. Start in Core Command or ask about a specific playbook, workflow, client, campaign, scheduler, or account connection.");
   const actionHref = memoryAnswer?.href ?? cleanText(body.action_href);
   const actionLabel = memoryAnswer?.actionLabel ?? cleanText(body.action_label);
   let threadId = cleanText(body.thread_id);

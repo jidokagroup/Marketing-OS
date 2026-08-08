@@ -6,6 +6,8 @@ import { requireUser } from "@/lib/auth";
 import {
   CORE_AGENT_BY_KEY,
   CORE_AGENTS,
+  ORCHESTRATOR_AGENT,
+  type CoreAgentDefinition,
   type CoreAgentKey,
 } from "@/lib/core-agents";
 import {
@@ -30,7 +32,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { saveCoreAgentTrainingAction } from "../actions";
 
 export function generateStaticParams() {
-  return CORE_AGENTS.map((agent) => ({ agent: agent.key }));
+  return [ORCHESTRATOR_AGENT, ...CORE_AGENTS].map((agent) => ({
+    agent: agent.key,
+  }));
 }
 
 export async function generateMetadata({
@@ -82,6 +86,32 @@ function truncate(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
 }
 
+function isUsefulMemory(memory: MemoryRow) {
+  return (
+    memory.record_type !== "Agent Refinement" &&
+    !memory.title.toLowerCase().includes("training updated")
+  );
+}
+
+function isMemoryForAgent(memory: MemoryRow, agent: CoreAgentDefinition) {
+  if (!isUsefulMemory(memory)) return false;
+  const systems = memory.affected_business_systems ?? [];
+
+  if (agent.key === "orchestrator") {
+    return (
+      memory.memory_owner === agent.label ||
+      memory.memory_owner === "JIDOKA Core Orchestrator" ||
+      memory.record_type === "Playbook" ||
+      systems.some((system) =>
+        ["Routing", "Memory", "Handoffs", "Escalations"].includes(system),
+      )
+    );
+  }
+
+  if (memory.memory_owner === agent.label) return true;
+  return systems.some((system) => agent.systems.includes(system));
+}
+
 export default async function CoreAgentTrainingPage({
   params,
 }: {
@@ -117,12 +147,9 @@ export default async function CoreAgentTrainingPage({
   const memorySchemaMissing = isOpsSchemaMissing(memoryResult.error);
   const memories = memorySchemaMissing
     ? []
-    : asRows<MemoryRow>(memoryResult.data).filter((memory) => {
-        if (memory.memory_owner === agent.label) return true;
-        return (memory.affected_business_systems ?? []).some((system) =>
-          agent.systems.includes(system),
-        );
-      });
+    : asRows<MemoryRow>(memoryResult.data).filter((memory) =>
+        isMemoryForAgent(memory, agent),
+      );
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -153,31 +180,26 @@ export default async function CoreAgentTrainingPage({
         ))}
       </div>
 
-      {!memorySchemaMissing && memories.length > 0 && (
+      {agent.key === "orchestrator" && (
         <Card>
           <CardHeader>
-            <CardTitle>Orchestrator memory</CardTitle>
+            <CardTitle>How the orchestrator works</CardTitle>
             <CardDescription>
-              Playbooks and confirmed operating context routed to {agent.label}.
+              The orchestrator is the command router for Jidoka Marketing.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {memories.slice(0, 6).map((memory) => (
-              <div key={memory.id} className="rounded-lg border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium">{memory.title}</p>
-                  <Badge variant="outline">{memory.record_type}</Badge>
-                  <Badge variant="secondary">{memory.confidence_level}</Badge>
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {truncate(memory.information, 520)}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Source: {memory.source} · Last updated{" "}
-                  {new Date(memory.updated_at).toLocaleString()}
-                </p>
-              </div>
-            ))}
+          <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+            <p>
+              It reads the user&apos;s question, identifies the right route
+              (connections, scheduler, content, or one of the Core agents),
+              searches saved playbooks and Core memory, then gives a direct
+              answer with the best next page or action.
+            </p>
+            <p>
+              If the question sounds like a bug, API issue, database issue, or
+              deployment problem, it also queues a developer/refinement request
+              so the issue does not disappear inside chat.
+            </p>
           </CardContent>
         </Card>
       )}
@@ -288,6 +310,43 @@ export default async function CoreAgentTrainingPage({
             )}
           </div>
         </form>
+      )}
+
+      {!memorySchemaMissing && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Orchestrator memory</CardTitle>
+            <CardDescription>
+              Playbooks and confirmed operating context routed to {agent.label}.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {memories.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                No routed memory for this agent yet. Uploaded playbooks,
+                confirmed operating context, and saved decisions will appear
+                here when they match this agent.
+              </div>
+            ) : (
+              memories.slice(0, 6).map((memory) => (
+                <div key={memory.id} className="rounded-lg border p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{memory.title}</p>
+                    <Badge variant="outline">{memory.record_type}</Badge>
+                    <Badge variant="secondary">{memory.confidence_level}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {truncate(memory.information, 520)}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Source: {memory.source} · Last updated{" "}
+                    {new Date(memory.updated_at).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
