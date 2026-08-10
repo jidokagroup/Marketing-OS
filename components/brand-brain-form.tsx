@@ -318,6 +318,7 @@ export function BrandBrainForm({
               <Field
                 name={`faq_a_${i}`}
                 label={`A${i}`}
+                textarea
                 defaultValue={faqs[i - 1]?.a}
               />
             </div>
