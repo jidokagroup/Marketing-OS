@@ -14,8 +14,8 @@ const X_REFRESH_SCOPES = ["offline.access"];
 const X_WRITE_SCOPES = ["tweet.write", "media.write"];
 
 function getXScopes() {
-  const includeRefreshScope = process.env.X_ENABLE_REFRESH === "1";
-  const includeWriteScopes = process.env.X_ENABLE_POSTING === "1";
+  const includeRefreshScope = process.env.X_ENABLE_REFRESH !== "0";
+  const includeWriteScopes = process.env.X_ENABLE_POSTING !== "0";
   return [
     ...X_READ_SCOPES,
     ...(includeRefreshScope ? X_REFRESH_SCOPES : []),
@@ -138,8 +138,8 @@ export async function GET(request: Request) {
       has_x_client_id: Boolean(clientId),
       x_client_id_hint: clientIdHint(clientId),
       has_x_client_secret: Boolean(process.env.X_CLIENT_SECRET?.trim()),
-      x_enable_refresh: process.env.X_ENABLE_REFRESH === "1",
-      x_enable_posting: process.env.X_ENABLE_POSTING === "1",
+      x_enable_refresh: process.env.X_ENABLE_REFRESH !== "0",
+      x_enable_posting: process.env.X_ENABLE_POSTING !== "0",
       authorize_url: authUrl.toString(),
       next_step:
         "In X Developer Portal, OAuth 2.0 Client ID must match this hint, the callback URL must exactly match redirect_uri, and permissions must cover the listed scopes.",

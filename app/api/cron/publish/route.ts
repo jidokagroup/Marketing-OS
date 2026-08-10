@@ -11,6 +11,18 @@ import {
   getPlatformDefinition,
   isAutoPublishableContent,
 } from "@/lib/social/platforms";
+import {
+  encryptedYouTubeTokenUpdate,
+  isYouTubeConfigured,
+  publishToYouTube,
+  refreshYouTubeAccessToken,
+} from "@/lib/social/youtube";
+import {
+  encryptedXTokenUpdate,
+  isXConfigured,
+  publishToX,
+  refreshXAccessToken,
+} from "@/lib/social/x";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -25,9 +37,6 @@ export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isMetaConfigured()) {
-    return NextResponse.json({ ok: true, skipped: "meta_not_configured" });
-  }
 
   const admin = createAdminClient();
   const nowIso = new Date().toISOString();
@@ -37,7 +46,7 @@ export async function GET(request: Request) {
   const { data: due } = await admin
     .from("marketing_os_scheduled_posts")
     .select(
-      "id, agent_id, owner_id, platform, caption, media_path, content_type, social_account_id",
+      "id, agent_id, owner_id, platform, title, caption, media_path, content_type, social_account_id",
     )
     .eq("status", "scheduled")
     .lte("scheduled_time", nowIso)
@@ -59,7 +68,7 @@ export async function GET(request: Request) {
       // Resolve the account to post with.
       let accountQuery = admin
         .from("marketing_os_social_accounts")
-        .select("id, page_token_encrypted, external_account_id, page_id, status")
+        .select("id, access_token_encrypted, page_token_encrypted, external_account_id, page_id, token_expires_at, status")
         .eq("agent_id", post.agent_id)
         .eq("status", "active");
       accountQuery = post.social_account_id
@@ -67,7 +76,7 @@ export async function GET(request: Request) {
         : accountQuery.eq("platform", post.platform);
       const { data: account } = await accountQuery.limit(1).maybeSingle();
 
-      if (!account?.page_token_encrypted || !account.external_account_id) {
+      if (!account) {
         throw new Error("No active connected account for this post");
       }
       if (!post.media_path) throw new Error("No media attached");
@@ -77,23 +86,61 @@ export async function GET(request: Request) {
         .createSignedUrl(post.media_path, 1800);
       if (!signed?.signedUrl) throw new Error("Could not sign media URL");
 
-      const pageToken = decryptToken(account.page_token_encrypted);
-      const mediaId =
-        post.platform === "instagram"
-          ? await publishToInstagram({
-              igUserId: account.external_account_id,
-              pageToken,
-              caption: post.caption ?? "",
-              mediaUrl: signed.signedUrl,
-              contentType: post.content_type,
-            })
-          : await publishToFacebook({
-              pageId: account.page_id ?? account.external_account_id,
-              pageToken,
-              caption: post.caption ?? "",
-              mediaUrl: signed.signedUrl,
-              contentType: post.content_type,
-            });
+      let mediaId: string;
+      if (post.platform === "instagram" || post.platform === "facebook") {
+        if (!isMetaConfigured()) throw new Error("Meta publishing env vars are not configured.");
+        if (!account.page_token_encrypted || !account.external_account_id) {
+          throw new Error("No active connected Meta account for this post");
+        }
+
+        const pageToken = decryptToken(account.page_token_encrypted);
+        mediaId =
+          post.platform === "instagram"
+            ? await publishToInstagram({
+                igUserId: account.external_account_id,
+                pageToken,
+                caption: post.caption ?? "",
+                mediaUrl: signed.signedUrl,
+                contentType: post.content_type,
+              })
+            : await publishToFacebook({
+                pageId: account.page_id ?? account.external_account_id,
+                pageToken,
+                caption: post.caption ?? "",
+                mediaUrl: signed.signedUrl,
+                contentType: post.content_type,
+              });
+      } else if (post.platform === "youtube") {
+        if (!isYouTubeConfigured()) {
+          throw new Error("Google OAuth env vars are not configured for YouTube publishing.");
+        }
+        const tokenUpdate = await refreshYouTubeAccessToken(account);
+        await admin
+          .from("marketing_os_social_accounts")
+          .update(encryptedYouTubeTokenUpdate(tokenUpdate))
+          .eq("id", account.id);
+        mediaId = await publishToYouTube({
+          accessToken: tokenUpdate.accessToken,
+          title: post.title ?? "Scheduled video",
+          description: post.caption ?? "",
+          mediaUrl: signed.signedUrl,
+          privacyStatus: process.env.YOUTUBE_PRIVACY_STATUS ?? "public",
+        });
+      } else if (post.platform === "x") {
+        if (!isXConfigured()) throw new Error("X OAuth env vars are not configured.");
+        const tokenUpdate = await refreshXAccessToken(account);
+        await admin
+          .from("marketing_os_social_accounts")
+          .update(encryptedXTokenUpdate(tokenUpdate))
+          .eq("id", account.id);
+        mediaId = await publishToX({
+          accessToken: tokenUpdate.accessToken,
+          caption: post.caption || post.title || "",
+          mediaUrl: signed.signedUrl,
+        });
+      } else {
+        throw new Error(`${post.platform} auto-publishing is not implemented.`);
+      }
 
       await admin
         .from("marketing_os_scheduled_posts")

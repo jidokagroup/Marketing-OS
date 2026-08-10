@@ -20,18 +20,23 @@ export function MobileNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const agentMatch = pathname.match(/^\/agents\/([^/]+)/);
   const clientMatch = pathname.match(/^\/clients\/([^/]+)/);
+  const activeAgent =
+    searchParams.get("agent_id") ||
+    (agentMatch?.[1] && agentMatch[1] !== "new" ? agentMatch[1] : "");
   const activeClient =
     searchParams.get("client") ||
     (clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : "");
 
   function scopedHref(href: string) {
-    if (!activeClient) return href;
+    if (!activeClient && !activeAgent) return href;
     if (href !== "/content") {
       return href;
     }
     const params = new URLSearchParams();
-    params.set("client", activeClient);
+    if (activeClient) params.set("client", activeClient);
+    if (activeAgent) params.set("agent_id", activeAgent);
     return `${href}?${params.toString()}`;
   }
 

@@ -105,9 +105,14 @@ export default async function SchedulerPage({
     ? allAgentList.filter((agent) => agent.client_id === scopedClientId)
     : allAgentList;
   const scopedAgentIds = scopedAgents.map((agent) => agent.id);
+  const requestedAgentInScope = Boolean(
+    requestedAgent && scopedAgents.some((agent) => agent.id === requestedAgent.id),
+  );
+  const postAgentIds =
+    requestedAgentInScope && requestedAgent ? [requestedAgent.id] : scopedAgentIds;
   const effectiveDefaultAgentId =
-    requestedAgentId && scopedAgents.some((agent) => agent.id === requestedAgentId)
-      ? requestedAgentId
+    requestedAgentInScope && requestedAgent
+      ? requestedAgent.id
       : scopedAgents[0]?.id ?? "";
 
   let postsQuery = supabase
@@ -129,9 +134,9 @@ export default async function SchedulerPage({
     .limit(100);
 
   if (scopedClientId) {
-    postsQuery = postsQuery.in("agent_id", scopedAgentIds);
-    accountsQuery = accountsQuery.in("agent_id", scopedAgentIds);
-    generatedContentQuery = generatedContentQuery.in("agent_id", scopedAgentIds);
+    postsQuery = postsQuery.in("agent_id", postAgentIds);
+    accountsQuery = accountsQuery.in("agent_id", postAgentIds);
+    generatedContentQuery = generatedContentQuery.in("agent_id", postAgentIds);
   }
   if (status !== "all") postsQuery = postsQuery.eq("status", status);
 
@@ -141,7 +146,7 @@ export default async function SchedulerPage({
     generatedContentResult,
     emailProviderResult,
   ] =
-    scopedClientId && scopedAgentIds.length === 0
+    scopedClientId && postAgentIds.length === 0
       ? await Promise.all([
           Promise.resolve({ data: [] }),
           Promise.resolve({ data: [] }),
@@ -190,6 +195,9 @@ export default async function SchedulerPage({
   const agentIdForConnections = effectiveDefaultAgentId || agentList[0]?.id || "";
   const scopedParams = new URLSearchParams();
   if (scopedClientId) scopedParams.set("client", scopedClientId);
+  if (requestedAgentInScope && requestedAgent) {
+    scopedParams.set("agent_id", requestedAgent.id);
+  }
   if (title) scopedParams.set("title", title);
   function schedulerHref(nextStatus: string) {
     const params = new URLSearchParams(scopedParams);
