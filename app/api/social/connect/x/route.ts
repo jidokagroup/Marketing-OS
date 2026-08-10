@@ -14,8 +14,8 @@ const X_REFRESH_SCOPES = ["offline.access"];
 const X_WRITE_SCOPES = ["tweet.write", "media.write"];
 
 function getXScopes() {
-  const includeRefreshScope = process.env.X_ENABLE_REFRESH === "1";
-  const includeWriteScopes = process.env.X_ENABLE_POSTING === "1";
+  const includeRefreshScope = process.env.X_ENABLE_REFRESH !== "0";
+  const includeWriteScopes = process.env.X_ENABLE_POSTING !== "0";
   return [
     ...X_READ_SCOPES,
     ...(includeRefreshScope ? X_REFRESH_SCOPES : []),

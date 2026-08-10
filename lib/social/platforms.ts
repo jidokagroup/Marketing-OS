@@ -55,20 +55,20 @@ export const PLATFORM_DEFINITIONS: PlatformDefinition[] = [
     label: "YouTube",
     icon: PlaySquare,
     scheduler: true,
-    posting: false,
+    posting: true,
     mediaTypes: ["video"],
     connectable: true,
-    note: "Connect through Google. Video-only. Shorts: square/vertical videos up to 3 minutes. Long-form defaults to 15 minutes; verified accounts can upload up to 12 hours or 256 GB, whichever is less.",
+    note: "Connect through Google. Video-only. Auto-publishing uses the YouTube Data API upload flow.",
   },
   {
     key: "x",
     label: "X",
     icon: MessageSquare,
     scheduler: true,
-    posting: false,
+    posting: true,
     mediaTypes: ["photo"],
     connectable: true,
-    note: "Connect through X OAuth. Uploads stay image-only in Jidoka Marketing Team OS.",
+    note: "Connect through X OAuth. Auto-publishing is image-only in Jidoka Marketing Team OS.",
   },
   {
     key: "tiktok",
@@ -140,6 +140,9 @@ export function isAutoPublishableContent(platform: string, contentType: string) 
   if (platform === "instagram" || platform === "facebook") {
     return contentType === "video" || contentType === "photo";
   }
+
+  if (platform === "youtube") return contentType === "video";
+  if (platform === "x") return contentType === "photo";
 
   return false;
 }
