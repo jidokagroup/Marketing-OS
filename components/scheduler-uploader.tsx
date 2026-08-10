@@ -65,6 +65,10 @@ const TEMPLATE_HEADERS = [
   "dm_sequence",
   "use_best_time",
 ];
+const COMMENT_REPLY_EXAMPLE =
+  "Reply 1: On your way!\nReply 2: Check your inbox!\nReply 3: Just sent it over.";
+const DM_SEQUENCE_EXAMPLE =
+  "DM 1: Here it is!\nDM 2: *link*\nDM 3 [2 hours later]: What'd you think about it?";
 const TEMPLATE_EXAMPLE = [
   "Offer Myth Busting",
   "Jidoka Marketing Team OS Demo Client",
@@ -75,8 +79,8 @@ const TEMPLATE_EXAMPLE = [
   "offer-myths.mp4",
   "Optional caption override. Leave blank to match the Writing Agent title.",
   "yes",
-  "Thanks for commenting! Sending the guide now.",
-  "DM 1: send resource link; DM 2: ask if they want a consult.",
+  "Reply 1: On your way! Reply 2: Check your inbox!",
+  "DM 1: Here it is! DM 2: *link* DM 3 [2 hours later]: What'd you think about it?",
   "yes",
 ];
 const TEMPLATE_EMAIL_EXAMPLE = [
@@ -859,41 +863,58 @@ export function SchedulerUploader({
               </label>
               {commentDmEnabled && (
                 <div className="mt-4 space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Thanks for commenting - sending it now.",
-                      "I just sent the guide to your DMs.",
-                      "Great question - sending the next step now.",
-                    ].map((template) => (
-                      <Badge key={template} variant="outline">
-                        {template}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Example public replies
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        "Reply 1: On your way!",
+                        "Reply 2: Check your inbox!",
+                        "Reply 3: Just sent it over.",
+                      ].map((template) => (
+                        <Badge key={template} variant="outline">
+                          {template}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="comment_auto_reply">Comment reply</Label>
-                    <Textarea
-                      id="comment_auto_reply"
-                      name="comment_auto_reply"
-                      rows={3}
-                      placeholder="Thanks for commenting - sending it now."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="dm_sequence">DM sequence</Label>
-                    <Textarea
-                      id="dm_sequence"
-                      name="dm_sequence"
-                      rows={3}
-                      placeholder="DM 1: resource link. DM 2: follow-up question."
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="comment_auto_reply">Comment replies</Label>
+                      <Textarea
+                        id="comment_auto_reply"
+                        name="comment_auto_reply"
+                        rows={4}
+                        placeholder={COMMENT_REPLY_EXAMPLE}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Add multiple reply options so the agent can rotate or choose
+                        the best fit.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dm_sequence">DM sequence</Label>
+                      <Textarea
+                        id="dm_sequence"
+                        name="dm_sequence"
+                        rows={4}
+                        placeholder={DM_SEQUENCE_EXAMPLE}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Timing notes like [2 hours later] are saved with the DM
+                        sequence for review.
+                      </p>
+                    </div>
                   </div>
                   <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
-                    Preview: public comment reply first, then the DM sequence sends
-                    only for Instagram posts after the account is connected.
+                    Preview: the public reply is saved first, then the DM
+                    sequence is held for the Instagram review queue.
                   </div>
+                  <Button type="submit" variant="outline" size="sm">
+                    <MessageCircle className="mr-1 h-4 w-4" />
+                    Save Comment-to-DM flow
+                  </Button>
                 </div>
               )}
             </div>

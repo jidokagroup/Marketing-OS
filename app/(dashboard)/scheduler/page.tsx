@@ -41,6 +41,7 @@ import {
   rematchAction,
   deletePostAction,
   updateCaptionAction,
+  updateCommentDmFlowAction,
   duplicatePostAction,
 } from "./actions";
 
@@ -461,21 +462,68 @@ export default async function SchedulerPage({
                       </div>
                     )}
 
-                    {p.comment_dm_enabled && (
-                      <div className="rounded-md border p-3 text-sm">
-                        <p className="mb-1 flex items-center gap-1 font-medium">
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          Instagram comment to DM flow
+                    {p.platform === "instagram" && (
+                      <form
+                        action={updateCommentDmFlowAction}
+                        className="space-y-3 rounded-md border p-3 text-sm"
+                      >
+                        <input type="hidden" name="id" value={p.id} />
+                        <label className="flex items-start gap-2 font-medium">
+                          <input
+                            type="checkbox"
+                            name="comment_dm_enabled"
+                            defaultChecked={Boolean(p.comment_dm_enabled)}
+                            className="mt-0.5 h-4 w-4"
+                          />
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            Instagram comment to DM flow
+                          </span>
+                        </label>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`comment_auto_reply_${p.id}`}
+                              className="text-xs font-medium text-muted-foreground"
+                            >
+                              Comment replies
+                            </label>
+                            <Textarea
+                              id={`comment_auto_reply_${p.id}`}
+                              name="comment_auto_reply"
+                              rows={3}
+                              defaultValue={p.comment_auto_reply ?? ""}
+                              placeholder={
+                                "Reply 1: On your way!\nReply 2: Check your inbox!\nReply 3: Just sent it over."
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label
+                              htmlFor={`dm_sequence_${p.id}`}
+                              className="text-xs font-medium text-muted-foreground"
+                            >
+                              DM sequence
+                            </label>
+                            <Textarea
+                              id={`dm_sequence_${p.id}`}
+                              name="dm_sequence"
+                              rows={3}
+                              defaultValue={p.dm_sequence ?? ""}
+                              placeholder={
+                                "DM 1: Here it is!\nDM 2: *link*\nDM 3 [2 hours later]: What'd you think about it?"
+                              }
+                            />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Add multiple reply options and DM steps. Timing notes
+                          like [2 hours later] are saved with the sequence.
                         </p>
-                        <p className="text-muted-foreground">
-                          Reply: {p.comment_auto_reply || "Dynamic reply enabled"}
-                        </p>
-                        {p.dm_sequence && (
-                          <p className="mt-1 text-muted-foreground">
-                            DM: {p.dm_sequence}
-                          </p>
-                        )}
-                      </div>
+                        <Button variant="outline" size="sm" type="submit">
+                          Save Comment-to-DM flow
+                        </Button>
+                      </form>
                     )}
 
                     <form action={updateCaptionAction} className="space-y-2">
