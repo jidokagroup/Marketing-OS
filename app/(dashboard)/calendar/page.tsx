@@ -78,15 +78,21 @@ export default async function CalendarPage({
     rawClient === "all"
       ? "all"
       : rawClient || requestedAgent?.client_id || agents?.[0]?.client_id || "all";
+  const requestedAgentInScope = Boolean(
+    requestedAgent && client !== "all" && requestedAgent.client_id === client,
+  );
   const clientAgentIds =
     client === "all"
       ? []
       : (agents ?? [])
           .filter((agent) => agent.client_id === client)
           .map((agent) => agent.id);
+  const activeAgentId =
+    requestedAgentInScope && requestedAgent ? requestedAgent.id : "";
+  const postAgentIds = activeAgentId ? [activeAgentId] : clientAgentIds;
 
   let posts: CalendarPost[] = [];
-  if (client === "all" || clientAgentIds.length > 0) {
+  if (client === "all" || postAgentIds.length > 0) {
     let postsQuery = supabase
       .from("marketing_os_scheduled_posts")
       .select(
@@ -94,7 +100,8 @@ export default async function CalendarPage({
       )
       .order("scheduled_time", { ascending: true, nullsFirst: false });
 
-    if (client !== "all") postsQuery = postsQuery.in("agent_id", clientAgentIds);
+    if (activeAgentId) postsQuery = postsQuery.eq("agent_id", activeAgentId);
+    else if (client !== "all") postsQuery = postsQuery.in("agent_id", postAgentIds);
     if (platform !== "all") postsQuery = postsQuery.eq("platform", platform);
     if (status !== "all") postsQuery = postsQuery.eq("status", status);
 
@@ -154,20 +161,39 @@ export default async function CalendarPage({
   ];
   const schedulerParams = new URLSearchParams();
   if (client !== "all") schedulerParams.set("client", client);
-  if (requestedAgentId) schedulerParams.set("agent_id", requestedAgentId);
+  if (activeAgentId) schedulerParams.set("agent_id", activeAgentId);
   const schedulerHref = schedulerParams.toString()
     ? `/scheduler?${schedulerParams.toString()}`
     : "/scheduler";
+  function calendarHref(
+    next: {
+      offset?: number;
+      view?: string;
+      platform?: string;
+      status?: string;
+      day?: number;
+    } = {},
+  ) {
+    const params = new URLSearchParams();
+    params.set("offset", String(next.offset ?? monthOffset));
+    params.set("view", next.view ?? view);
+    params.set("client", client);
+    if (activeAgentId) params.set("agent_id", activeAgentId);
+    params.set("platform", next.platform ?? platform);
+    params.set("status", next.status ?? status);
+    if (next.day) params.set("day", String(next.day));
+    return `/calendar?${params.toString()}`;
+  }
 
   return (
     <div>
       <PageHeader title="Calendar" description="Review drafts, scheduled posts, approvals, and account issues.">
         <div className="flex items-center gap-2">
-          <ButtonLink href={`/calendar?offset=${Math.max(0, monthOffset - 1)}&view=${view}&client=${client}&platform=${platform}&status=${status}`} variant="outline" size="icon-sm">
+          <ButtonLink href={calendarHref({ offset: Math.max(0, monthOffset - 1) })} variant="outline" size="icon-sm">
             <ChevronLeft className="h-4 w-4" />
           </ButtonLink>
           <span className="min-w-36 text-center text-sm font-medium">{monthLabel}</span>
-          <ButtonLink href={`/calendar?offset=${Math.min(11, monthOffset + 1)}&view=${view}&client=${client}&platform=${platform}&status=${status}`} variant="outline" size="icon-sm">
+          <ButtonLink href={calendarHref({ offset: Math.min(11, monthOffset + 1) })} variant="outline" size="icon-sm">
             <ChevronRight className="h-4 w-4" />
           </ButtonLink>
         </div>
@@ -181,7 +207,7 @@ export default async function CalendarPage({
         ].map(([value, label]) => (
           <ButtonLink
             key={value}
-            href={`/calendar?view=${value}&client=${client}&platform=${platform}&status=${status}`}
+            href={calendarHref({ view: value })}
             variant={view === value ? "default" : "outline"}
             size="sm"
           >
@@ -192,6 +218,7 @@ export default async function CalendarPage({
 
       <form className="mb-4 grid gap-2 rounded-lg border p-3 sm:grid-cols-3 lg:grid-cols-4">
         <input type="hidden" name="view" value={view} />
+        {activeAgentId && <input type="hidden" name="agent_id" value={activeAgentId} />}
         <select
           name="client"
           defaultValue={client}
@@ -278,7 +305,7 @@ export default async function CalendarPage({
                     {day && (
                       <>
                         <Link
-                          href={`/calendar?offset=${monthOffset}&view=month&client=${client}&platform=${platform}&status=${status}&day=${day}`}
+                          href={calendarHref({ view: "month", day })}
                           className={cn(
                             "mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs transition-colors hover:bg-muted",
                             day === todayDate && "bg-primary text-primary-foreground",

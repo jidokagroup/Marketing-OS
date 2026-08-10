@@ -59,17 +59,21 @@ export default async function ContentPage({
     ? agentList.filter((agent) => agent.client_id === scopedClientId)
     : agentList;
   const scopedAgentIds = scopedAgents.map((agent) => agent.id);
+  const requestedAgentInScope = Boolean(
+    requestedAgent && scopedAgents.some((agent) => agent.id === requestedAgent.id),
+  );
   const activeAgent =
-    (requestedAgent && scopedAgents.some((agent) => agent.id === requestedAgent.id)
-      ? requestedAgent
-      : null) ?? scopedAgents[0] ?? null;
+    (requestedAgentInScope ? requestedAgent : null) ?? scopedAgents[0] ?? null;
+  const activeAgentParam =
+    requestedAgentInScope && requestedAgent ? requestedAgent.id : "";
+  const metricAgentIds = activeAgentParam ? [activeAgentParam] : scopedAgentIds;
 
   const scopedQuery = new URLSearchParams();
   if (scopedClientId) scopedQuery.set("client", scopedClientId);
+  if (activeAgentParam) scopedQuery.set("agent_id", activeAgentParam);
   const scopedQueryString = scopedQuery.toString();
   const scopedSuffix = scopedQueryString ? `?${scopedQueryString}` : "";
   const schedulerParams = new URLSearchParams(scopedQuery);
-  if (activeAgent?.id) schedulerParams.set("agent_id", activeAgent.id);
   const schedulerSuffix = schedulerParams.toString()
     ? `?${schedulerParams.toString()}`
     : "";
@@ -91,9 +95,9 @@ export default async function ContentPage({
     .eq("owner_id", user.id);
 
   if (scopedClientId) {
-    generatedQuery = generatedQuery.in("agent_id", scopedAgentIds);
-    scheduledQuery = scheduledQuery.in("agent_id", scopedAgentIds);
-    assetQuery = assetQuery.in("agent_id", scopedAgentIds);
+    generatedQuery = generatedQuery.in("agent_id", metricAgentIds);
+    scheduledQuery = scheduledQuery.in("agent_id", metricAgentIds);
+    assetQuery = assetQuery.in("agent_id", metricAgentIds);
     ideaQuery = ideaQuery.eq("client_id", scopedClientId);
   }
 
@@ -103,7 +107,7 @@ export default async function ContentPage({
     assetResult,
     ideaResult,
   ] =
-    scopedClientId && scopedAgentIds.length === 0
+    scopedClientId && metricAgentIds.length === 0
       ? await Promise.all([
           Promise.resolve({ count: 0 }),
           Promise.resolve({ count: 0 }),
