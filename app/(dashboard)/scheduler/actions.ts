@@ -99,6 +99,37 @@ export async function updateCaptionAction(formData: FormData) {
   revalidatePath("/generated");
 }
 
+export async function updateCommentDmFlowAction(formData: FormData) {
+  const { supabase } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  const commentDmEnabled = formData.get("comment_dm_enabled") === "on";
+  const commentAutoReply = String(formData.get("comment_auto_reply") ?? "").trim();
+  const dmSequence = String(formData.get("dm_sequence") ?? "").trim();
+
+  const { data: post } = await supabase
+    .from("marketing_os_scheduled_posts")
+    .select("platform")
+    .eq("id", id)
+    .maybeSingle();
+  if (post?.platform !== "instagram") return;
+
+  await supabase
+    .from("marketing_os_scheduled_posts")
+    .update({
+      comment_dm_enabled: commentDmEnabled,
+      comment_auto_reply: commentAutoReply || null,
+      dm_sequence: dmSequence || null,
+    })
+    .eq("id", id);
+
+  revalidatePath("/scheduler");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+  revalidatePath("/clients");
+}
+
 export async function duplicatePostAction(formData: FormData) {
   const { user, supabase } = await requireUser();
   const id = String(formData.get("id") ?? "");
