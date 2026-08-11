@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAuthContext } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,41 @@ const MAX_MEDIA_UPLOAD_MB =
     ? configuredMaxMediaMb
     : DEFAULT_MAX_MEDIA_UPLOAD_MB;
 const MAX_MEDIA_BYTES = MAX_MEDIA_UPLOAD_MB * 1024 * 1024;
+const MEDIA_BUCKET = "marketing-os-media";
+let mediaBucketReady: Promise<void> | null = null;
+
+async function ensureMediaBucketLimit() {
+  if (!mediaBucketReady) {
+    mediaBucketReady = (async () => {
+      const admin = createAdminClient();
+      const bucketOptions = {
+        public: false,
+        fileSizeLimit: MAX_MEDIA_BYTES,
+      };
+      const { error } = await admin.storage.updateBucket(MEDIA_BUCKET, bucketOptions);
+      if (!error) return;
+
+      const notFound =
+        error.message.toLowerCase().includes("not found") ||
+        error.message.toLowerCase().includes("does not exist");
+      if (notFound) {
+        const { error: createError } = await admin.storage.createBucket(
+          MEDIA_BUCKET,
+          bucketOptions,
+        );
+        if (createError) throw createError;
+        return;
+      }
+
+      throw error;
+    })().catch((error) => {
+      mediaBucketReady = null;
+      throw error;
+    });
+  }
+
+  return mediaBucketReady;
+}
 
 export async function POST(request: Request) {
   const context = await getAuthContext();
@@ -58,10 +94,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
+  try {
+    await ensureMediaBucketLimit();
+  } catch (error) {
+    console.warn(
+      "Could not verify marketing-os-media bucket limit:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   const mediaPath = `${user.id}/${agentId}/${crypto.randomUUID()}-${safe}`;
   const { data, error } = await supabase.storage
-    .from("marketing-os-media")
+    .from(MEDIA_BUCKET)
     .createSignedUploadUrl(mediaPath);
   if (error || !data?.token) {
     return NextResponse.json(

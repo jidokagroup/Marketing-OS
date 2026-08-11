@@ -305,6 +305,12 @@ async function uploadMedia(file: File, agentId: string) {
       upsert: false,
     });
   if (error) {
+    const message = error.message || "Supabase Storage rejected the media upload.";
+    if (message.toLowerCase().includes("maximum allowed size")) {
+      throw new Error(
+        `This file is larger than the current storage bucket limit. The app supports up to ${MAX_MEDIA_UPLOAD_MB} MB after the bucket setting updates; refresh and try again. If it still fails, compress the video or split it into a shorter post.`,
+      );
+    }
     throw new Error(error.message || "Supabase Storage rejected the media upload.");
   }
   return json.mediaPath;
