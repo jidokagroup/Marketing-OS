@@ -16,7 +16,23 @@ const MAX_MEDIA_UPLOAD_MB =
     : DEFAULT_MAX_MEDIA_UPLOAD_MB;
 const MAX_MEDIA_BYTES = MAX_MEDIA_UPLOAD_MB * 1024 * 1024;
 const MEDIA_BUCKET = "marketing-os-media";
-let mediaBucketReady: Promise<void> | null = null;
+let mediaBucketReady: Promise<unknown> | null = null;
+
+function formatMb(bytes: number) {
+  return Math.round((bytes / 1024 / 1024) * 10) / 10;
+}
+
+function bucketLimitBytes(bucket: unknown) {
+  if (!bucket || typeof bucket !== "object") return null;
+  const record = bucket as Record<string, unknown>;
+  const value = record.file_size_limit ?? record.fileSizeLimit;
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function serviceRoleIsConfigured() {
+  return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+}
 
 async function ensureMediaBucketLimit() {
   if (!mediaBucketReady) {
@@ -42,13 +58,54 @@ async function ensureMediaBucketLimit() {
       }
 
       throw error;
-    })().catch((error) => {
+    })().then(async () => {
+      const admin = createAdminClient();
+      const { data, error } = await admin.storage.getBucket(MEDIA_BUCKET);
+      if (error) throw error;
+      return data;
+    }).catch((error: unknown) => {
       mediaBucketReady = null;
       throw error;
     });
   }
 
   return mediaBucketReady;
+}
+
+export async function GET() {
+  const context = await getAuthContext();
+  if (!context) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const bucket = await ensureMediaBucketLimit();
+    const liveLimitBytes = bucketLimitBytes(bucket);
+
+    return NextResponse.json({
+      bucket: MEDIA_BUCKET,
+      service_role_configured: serviceRoleIsConfigured(),
+      configured_limit_mb: MAX_MEDIA_UPLOAD_MB,
+      configured_limit_bytes: MAX_MEDIA_BYTES,
+      live_bucket_limit_mb: liveLimitBytes ? formatMb(liveLimitBytes) : null,
+      live_bucket_limit_bytes: liveLimitBytes,
+      ready_for_large_uploads:
+        typeof liveLimitBytes === "number" && liveLimitBytes >= MAX_MEDIA_BYTES,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        bucket: MEDIA_BUCKET,
+        service_role_configured: serviceRoleIsConfigured(),
+        configured_limit_mb: MAX_MEDIA_UPLOAD_MB,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Could not inspect media bucket",
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -94,12 +151,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
+  let bucket: unknown;
   try {
-    await ensureMediaBucketLimit();
+    bucket = await ensureMediaBucketLimit();
   } catch (error) {
-    console.warn(
-      "Could not verify marketing-os-media bucket limit:",
-      error instanceof Error ? error.message : error,
+    return NextResponse.json(
+      {
+        error:
+          "Storage bucket is not ready for large video uploads. Confirm SUPABASE_SERVICE_ROLE_KEY is set in Netlify, then refresh and try again.",
+        detail:
+          error instanceof Error
+            ? error.message
+            : "Could not verify marketing-os-media bucket limit",
+        service_role_configured: serviceRoleIsConfigured(),
+      },
+      { status: 500 },
+    );
+  }
+
+  const liveLimitBytes = bucketLimitBytes(bucket);
+  if (liveLimitBytes && fileSize > liveLimitBytes) {
+    return NextResponse.json(
+      {
+        error: `Supabase is still capping this bucket at ${formatMb(liveLimitBytes)} MB. The selected file is ${formatMb(fileSize)} MB. Run the storage bucket limit migration or fix SUPABASE_SERVICE_ROLE_KEY in Netlify, then refresh and try again.`,
+        live_bucket_limit_mb: formatMb(liveLimitBytes),
+        selected_file_mb: formatMb(fileSize),
+      },
+      { status: 413 },
     );
   }
 
