@@ -11,9 +11,10 @@ import { opsTable } from "@/lib/marketing-os/operations";
 import type { BrandBrain } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const MATCH_COUNT = 6;
+const GENERATION_TIMEOUT_MS = 52_000;
 
 type ScriptMatch = {
   id: string;
@@ -33,6 +34,24 @@ function cleanPlatformList(value: unknown) {
 
 function channelLabel(key: string) {
   return CONTENT_CHANNEL_LABELS[key] ?? key.replace(/_/g, " ");
+}
+
+class GenerationTimeoutError extends Error {
+  constructor() {
+    super(
+      "Content generation timed out before it could finish. Try fewer channels or shorter notes, then generate again.",
+    );
+    this.name = "GenerationTimeoutError";
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout>;
+  const timer = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new GenerationTimeoutError()), timeoutMs);
+  });
+
+  return Promise.race([promise, timer]).finally(() => clearTimeout(timeout));
 }
 
 function jsonArray(value: unknown): string[] {
@@ -225,7 +244,10 @@ export async function POST(
       .join("\n");
 
     // 3) Generate + QC (with one auto-rewrite below threshold).
-    const result = await runGeneration(req, dna, exemplars, brandBrief);
+    const result = await withTimeout(
+      runGeneration(req, dna, exemplars, brandBrief),
+      GENERATION_TIMEOUT_MS,
+    );
 
     // 4) Persist.
     const { data: inserted, error: insertError } = await supabase
@@ -286,6 +308,7 @@ export async function POST(
     return NextResponse.json({ id: inserted.id, overall: result.score.overall });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Generation failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = err instanceof GenerationTimeoutError ? 504 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -12,8 +12,9 @@ export async function readJsonResponse<T extends Record<string, unknown>>(
     let error = clean || "Server returned an unreadable response.";
 
     if (lower.startsWith("<!doctype") || lower.startsWith("<html")) {
-      error =
-        "The site returned an HTML page instead of app data. Refresh the page and try again after the latest deploy finishes.";
+      error = [502, 504].includes(response.status)
+        ? "The server timed out while generating content. Try fewer channels or shorter notes, then generate again."
+        : "The site returned a web page instead of app data. Refresh the page and try again after the latest deploy finishes.";
     } else if (response.status === 413 || lower.includes("request entity too large")) {
       error =
         "The file is too large for this upload path. Try a smaller file or split it into smaller pieces.";

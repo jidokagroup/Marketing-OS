@@ -160,8 +160,9 @@ async function generateOnce(
     prompt,
     jsonSchema: generatedContentJsonSchema,
     validator: generatedContent,
-    maxTokens: 6000,
-    timeoutMs: 90_000,
+    maxTokens: 4500,
+    timeoutMs: 45_000,
+    maxRetries: 0,
   });
 }
 
