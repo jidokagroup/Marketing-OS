@@ -3,7 +3,12 @@ import { revalidatePath } from "next/cache";
 
 import { getAuthContext } from "@/lib/auth";
 import { embedQuery, toVectorLiteral } from "@/lib/ai/embeddings";
-import { runGeneration, type GenerationRequest, type DnaInput } from "@/lib/ai/generate";
+import {
+  runFallbackGeneration,
+  runGeneration,
+  type GenerationRequest,
+  type DnaInput,
+} from "@/lib/ai/generate";
 import { CLAUDE_MODEL } from "@/lib/ai/anthropic";
 import { buildBrandBrainBrief } from "@/lib/brand-brain";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/core-agents";
@@ -13,8 +18,9 @@ import type { BrandBrain } from "@/lib/supabase/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MATCH_COUNT = 6;
-const GENERATION_TIMEOUT_MS = 52_000;
+const MATCH_COUNT = 3;
+const RETRIEVAL_TIMEOUT_MS = 4_000;
+const GENERATION_TIMEOUT_MS = 20_000;
 
 type ScriptMatch = {
   id: string;
@@ -180,12 +186,16 @@ export async function POST(
     let matches: ScriptMatch[] = [];
 
     try {
-      const queryEmbedding = await embedQuery(queryText);
-      const { data } = await supabase.rpc("marketing_os_match_scripts", {
-        p_agent_id: agentId,
-        p_query_embedding: toVectorLiteral(queryEmbedding),
-        p_match_count: MATCH_COUNT,
-      });
+      const { data } = await withTimeout(
+        embedQuery(queryText).then((queryEmbedding) =>
+          supabase.rpc("marketing_os_match_scripts", {
+            p_agent_id: agentId,
+            p_query_embedding: toVectorLiteral(queryEmbedding),
+            p_match_count: MATCH_COUNT,
+          }),
+        ),
+        RETRIEVAL_TIMEOUT_MS,
+      );
       matches = ((data ?? []) as ScriptMatch[]).filter((match) =>
         Boolean(match.content?.trim()),
       );
@@ -244,10 +254,16 @@ export async function POST(
       .join("\n");
 
     // 3) Generate + QC (with one auto-rewrite below threshold).
-    const result = await withTimeout(
-      runGeneration(req, dna, exemplars, brandBrief),
-      GENERATION_TIMEOUT_MS,
-    );
+    let result;
+    try {
+      result = await withTimeout(
+        runGeneration(req, dna, exemplars, brandBrief),
+        GENERATION_TIMEOUT_MS,
+      );
+    } catch (error) {
+      if (!(error instanceof GenerationTimeoutError)) throw error;
+      result = runFallbackGeneration(req, dna, exemplars);
+    }
 
     // 4) Persist.
     const { data: inserted, error: insertError } = await supabase

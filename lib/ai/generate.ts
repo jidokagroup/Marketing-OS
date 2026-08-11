@@ -177,8 +177,8 @@ async function generateOnce(
     prompt,
     jsonSchema: generatedContentJsonSchema,
     validator: generatedContent,
-    maxTokens: 2600,
-    timeoutMs: 32_000,
+    maxTokens: 1800,
+    timeoutMs: 14_000,
     maxRetries: 0,
   });
 }
@@ -366,6 +366,22 @@ export async function runGeneration(
     content,
     score,
     attempts: usedFallback ? 0 : 1,
+    belowThreshold: score.overall < MIN_ACCEPTABLE_SCORE,
+  };
+}
+
+export function runFallbackGeneration(
+  req: GenerationRequest,
+  dna: DnaInput,
+  exemplars: string[],
+): GenerationResult {
+  const content = fallbackContent(req, dna, exemplars);
+  const score = estimateQualityScore(content, dna, exemplars);
+
+  return {
+    content,
+    score,
+    attempts: 0,
     belowThreshold: score.overall < MIN_ACCEPTABLE_SCORE,
   };
 }
