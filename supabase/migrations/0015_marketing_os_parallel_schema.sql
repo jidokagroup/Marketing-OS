@@ -739,6 +739,10 @@ values
   ('marketing-os-brand-media', 'marketing-os-brand-media', false)
 on conflict (id) do nothing;
 
+update storage.buckets
+set file_size_limit = 524288000
+where id = 'marketing-os-media';
+
 drop policy if exists "marketing_os_storage_owner_read" on storage.objects;
 drop policy if exists "marketing_os_storage_owner_insert" on storage.objects;
 drop policy if exists "marketing_os_storage_owner_update" on storage.objects;
