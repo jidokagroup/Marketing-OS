@@ -37,6 +37,7 @@ interface StructuredOptions<T> {
   validator: z.ZodType<T>;
   maxTokens?: number;
   timeoutMs?: number;
+  maxRetries?: number;
 }
 
 /**
@@ -61,7 +62,7 @@ export async function generateStructured<T>(
         },
       },
     },
-    { timeout: opts.timeoutMs ?? 90_000, maxRetries: 1 },
+    { timeout: opts.timeoutMs ?? 90_000, maxRetries: opts.maxRetries ?? 1 },
   );
 
   if (response.stop_reason === "refusal") {
@@ -92,6 +93,7 @@ export async function generateText(opts: {
   prompt: string;
   maxTokens?: number;
   timeoutMs?: number;
+  maxRetries?: number;
 }): Promise<string> {
   const client = getAnthropic();
   const response = await client.messages.create(
@@ -101,7 +103,7 @@ export async function generateText(opts: {
       system: opts.system,
       messages: [{ role: "user", content: opts.prompt }],
     },
-    { timeout: opts.timeoutMs ?? 90_000, maxRetries: 1 },
+    { timeout: opts.timeoutMs ?? 90_000, maxRetries: opts.maxRetries ?? 1 },
   );
 
   if (response.stop_reason === "refusal") {

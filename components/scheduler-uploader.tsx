@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { readJsonResponse } from "@/lib/client-response";
+import { createClient } from "@/lib/supabase/client";
 import {
   Tabs,
   TabsContent,
@@ -271,7 +272,7 @@ function validateMedia(platforms: string[], contentType: string, file: File | nu
 
 async function uploadMedia(file: File, agentId: string) {
   // Ask the server for a signed Supabase Storage upload URL, then send the
-  // file straight from the browser so it never hits Vercel's body-size cap.
+  // file straight from the browser so it never hits the app host's body-size cap.
   const res = await fetch("/api/scheduler/media", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -290,16 +291,21 @@ async function uploadMedia(file: File, agentId: string) {
     throw new Error(json.error ?? "Media upload failed");
   }
 
-  const uploadBody = new FormData();
-  uploadBody.append("cacheControl", "3600");
-  uploadBody.append("", file);
-  const uploadRes = await fetch(json.signedUrl, {
-    method: "PUT",
-    body: uploadBody,
-  });
-  if (!uploadRes.ok) {
-    const details = await readJsonResponse(uploadRes);
-    throw new Error(details.error ?? "Supabase Storage rejected the media upload.");
+  const token = json.token;
+  if (!token) {
+    throw new Error("Media upload token was not created.");
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase.storage
+    .from("marketing-os-media")
+    .uploadToSignedUrl(json.mediaPath, token, file, {
+      cacheControl: "3600",
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+  if (error) {
+    throw new Error(error.message || "Supabase Storage rejected the media upload.");
   }
   return json.mediaPath;
 }
@@ -442,6 +448,12 @@ export function SchedulerUploader({
       else if (contentType === "email_campaign") setContentType("video");
       return next;
     });
+  }
+
+  function saveCommentDmDraft() {
+    toast.success(
+      "Comment-to-DM flow saved in this draft. Add to scheduler when you are ready to attach it to the post.",
+    );
   }
 
   async function onSingleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -908,10 +920,15 @@ export function SchedulerUploader({
                     </div>
                   </div>
                   <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
-                    Preview: the public reply is saved first, then the DM
-                    sequence is held for the Instagram review queue.
+                    Preview: the public reply is saved with this draft, then
+                    the DM sequence is held for the Instagram review queue.
                   </div>
-                  <Button type="submit" variant="outline" size="sm">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={saveCommentDmDraft}
+                  >
                     <MessageCircle className="mr-1 h-4 w-4" />
                     Save Comment-to-DM flow
                   </Button>
