@@ -39,46 +39,63 @@ export interface DnaInput {
 }
 
 /** Compact, prompt-ready brief assembled from the agent's DNA profiles. */
+function clip(value: unknown, max = 500): string {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text.length > max ? `${text.slice(0, max).trim()}...` : text;
+}
+
+function list(items: unknown, maxItems: number, mapItem?: (item: unknown) => string) {
+  if (!Array.isArray(items)) return "";
+  return items
+    .slice(0, maxItems)
+    .map((item) => clip(mapItem ? mapItem(item) : item, 180))
+    .filter(Boolean)
+    .join("; ");
+}
+
 export function buildDnaBrief(dna: DnaInput): string {
   const parts: string[] = [];
   if (dna.voice) {
     parts.push(
-      `VOICE: ${dna.voice.summary}`,
-      `Cadence: ${dna.voice.fingerprint.cadence}. Vocabulary: ${dna.voice.fingerprint.vocabulary}.`,
-      `Hook style: ${dna.voice.fingerprint.hook_style}. CTA style: ${dna.voice.fingerprint.cta_style}.`,
-      `Signature language: ${dna.voice.quirks.signature_language.join(", ")}.`,
-      `Repeated phrases: ${dna.voice.quirks.repeated_phrases.join(", ")}.`,
+      `VOICE: ${clip(dna.voice.summary, 700)}`,
+      `Cadence: ${clip(dna.voice.fingerprint.cadence, 180)}. Vocabulary: ${clip(dna.voice.fingerprint.vocabulary, 180)}.`,
+      `Hook style: ${clip(dna.voice.fingerprint.hook_style, 180)}. CTA style: ${clip(dna.voice.fingerprint.cta_style, 180)}.`,
+      `Signature language: ${list(dna.voice.quirks.signature_language, 8)}.`,
+      `Repeated phrases: ${list(dna.voice.quirks.repeated_phrases, 8)}.`,
     );
   }
   if (dna.belief) {
     parts.push(
-      `BELIEFS: ${dna.belief.summary}`,
-      `Core: ${dna.belief.core_beliefs.map((b) => b.belief).join("; ")}.`,
-      `Contrarian: ${dna.belief.contrarian_beliefs.map((b) => b.belief).join("; ")}.`,
+      `BELIEFS: ${clip(dna.belief.summary, 600)}`,
+      `Core: ${list(dna.belief.core_beliefs, 5, (b) => String((b as { belief?: unknown }).belief ?? ""))}.`,
+      `Contrarian: ${list(dna.belief.contrarian_beliefs, 5, (b) => String((b as { belief?: unknown }).belief ?? ""))}.`,
     );
   }
   if (dna.hooks && dna.hooks.hooks.length) {
     parts.push(
-      `HOOK PATTERNS: ${dna.hooks.hooks.map((h) => `${h.type} (e.g. "${h.example}")`).join(" | ")}`,
+      `HOOK PATTERNS: ${list(dna.hooks.hooks, 4, (h) => {
+        const hook = h as { type?: unknown; example?: unknown };
+        return `${String(hook.type ?? "hook")} e.g. ${String(hook.example ?? "")}`;
+      })}`,
     );
   }
   if (dna.story && dna.story.frameworks.length) {
     parts.push(
-      `STORY FRAMEWORKS: ${dna.story.frameworks.map((f) => f.name).join(", ")}.`,
-      `EMOTIONAL ARCS: ${dna.story.emotional_arcs.map((a) => a.arc).join(" | ")}.`,
+      `STORY FRAMEWORKS: ${list(dna.story.frameworks, 4, (f) => String((f as { name?: unknown }).name ?? ""))}.`,
+      `EMOTIONAL ARCS: ${list(dna.story.emotional_arcs, 4, (a) => String((a as { arc?: unknown }).arc ?? ""))}.`,
     );
   }
   if (dna.phrase) {
     parts.push(
-      `FAVOURITE PHRASES: ${dna.phrase.favorite_phrases.join(", ")}.`,
-      `OPENERS: ${dna.phrase.openers.join(" | ")}. CTAS: ${dna.phrase.ctas.join(" | ")}.`,
+      `FAVOURITE PHRASES: ${list(dna.phrase.favorite_phrases, 8)}.`,
+      `OPENERS: ${list(dna.phrase.openers, 5)}. CTAS: ${list(dna.phrase.ctas, 5)}.`,
     );
   }
   if (dna.knowledge) {
     parts.push(
-      `BUSINESS: ${dna.knowledge.summary}`,
-      `Products: ${dna.knowledge.products.map((p) => p.name).join(", ")}.`,
-      `Objections: ${dna.knowledge.objections.map((o) => o.objection).join("; ")}.`,
+      `BUSINESS: ${clip(dna.knowledge.summary, 700)}`,
+      `Products: ${list(dna.knowledge.products, 5, (p) => String((p as { name?: unknown }).name ?? ""))}.`,
+      `Objections: ${list(dna.knowledge.objections, 5, (o) => String((o as { objection?: unknown }).objection ?? ""))}.`,
     );
   }
   return parts.join("\n");
@@ -111,14 +128,14 @@ const GEN_SYSTEM =
   "and CTA styles, signature phrases, and storytelling structures. Reuse their phrasing " +
   "naturally; never force it. The result should be indistinguishable from the original writer.";
 
-const MAX_GENERATION_EXEMPLARS = 5;
-const MAX_EXEMPLAR_CHARS = 1600;
+const MAX_FAST_GENERATION_EXEMPLARS = 3;
+const MAX_EXEMPLAR_CHARS = 700;
 
 function compactExemplars(exemplars: string[]): string[] {
   return exemplars
     .map((item) => item.trim())
     .filter(Boolean)
-    .slice(0, MAX_GENERATION_EXEMPLARS)
+    .slice(0, MAX_FAST_GENERATION_EXEMPLARS)
     .map((item) =>
       item.length > MAX_EXEMPLAR_CHARS
         ? `${item.slice(0, MAX_EXEMPLAR_CHARS).trim()}...`
@@ -141,7 +158,7 @@ async function generateOnce(
   const prompt = [
     "WRITING DNA BRIEF:",
     brief,
-    brandBrief ? `\n${brandBrief}` : "",
+    brandBrief ? `\n${clip(brandBrief, 2200)}` : "",
     "",
     "CLOSEST MATCHING EXAMPLES FROM THE CREATOR (style references — do not copy verbatim):",
     examples,
@@ -152,7 +169,7 @@ async function generateOnce(
       ? `\nThe previous draft scored below the fidelity bar. Fix these issues:\n${feedback}`
       : "",
     "",
-    "Produce the content bundle. Every version must sound like the creator.",
+    "Produce a concise content bundle. Keep each field useful but compact so the draft can be generated quickly.",
   ].join("\n");
 
   return generateStructured<GeneratedContentData>({
@@ -160,10 +177,77 @@ async function generateOnce(
     prompt,
     jsonSchema: generatedContentJsonSchema,
     validator: generatedContent,
-    maxTokens: 4500,
-    timeoutMs: 45_000,
+    maxTokens: 2600,
+    timeoutMs: 32_000,
     maxRetries: 0,
   });
+}
+
+function shouldUseFastFallback(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return (
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("deadline") ||
+    message.includes("overloaded")
+  );
+}
+
+function fallbackVoiceCue(dna: DnaInput) {
+  return [
+    clip(dna.voice?.summary, 240),
+    clip(dna.belief?.summary, 220),
+    clip(dna.knowledge?.summary, 220),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function fallbackContent(req: GenerationRequest, dna: DnaInput, exemplars: string[]): GeneratedContentData {
+  const title = req.title || req.topic;
+  const goal = req.goal || "move the audience to the next step";
+  const audience = req.audience || "the right audience";
+  const cta = req.cta || "comment or send a DM for the next step";
+  const cue = fallbackVoiceCue(dna);
+  const exampleLine = compactExemplars(exemplars)[0]?.split("\n").find(Boolean);
+  const voiceLine = cue
+    ? `Voice cues: ${cue}`
+    : exampleLine
+      ? `Voice reference: ${exampleLine}`
+      : "Keep it direct, specific, and useful.";
+
+  const primary = [
+    `${title}`,
+    "",
+    `Hook: Most people are trying to solve ${req.topic} from the wrong angle.`,
+    "",
+    `1. Name the real problem for ${audience}.`,
+    `2. Show why the usual fix creates more noise instead of progress.`,
+    `3. Give one practical shift they can use today.`,
+    `4. Connect that shift back to ${goal}.`,
+    "",
+    `${voiceLine}`,
+    "",
+    `CTA: ${cta}.`,
+  ].join("\n");
+
+  return {
+    primary_script: primary,
+    alternate_hooks: [
+      `The real reason ${req.topic} keeps getting harder is not what most people think.`,
+      `If ${audience} keeps running into the same problem, start here.`,
+      `This is the part of ${req.topic} most teams skip.`,
+    ],
+    alternate_ctas: [
+      cta,
+      "Save this and use it before the next campaign goes live.",
+      "DM us the word NEXT if you want help applying this.",
+    ],
+    short_version: `Most people overcomplicate ${req.topic}. Start by naming the real constraint, remove one unnecessary step, and make the next action obvious. ${cta}.`,
+    long_version: `${title}\n\n${primary}\n\nThe point is not to add more activity. The point is to make the next decision easier, cleaner, and more useful for the person you are trying to reach.`,
+    organic_version: `A useful way to look at ${req.topic}: the issue is usually not effort. It is clarity. When the message, proof, and next step line up, the content works harder without sounding forced.`,
+    sales_version: `Subject: ${title}\n\nIf ${req.topic} has been harder than expected, the fix may be simpler than adding another tactic.\n\nStart with the real blocker, tighten the message, and give people one clear next step.\n\n${cta}.`,
+  };
 }
 
 const QC_SYSTEM =
@@ -264,7 +348,15 @@ export async function runGeneration(
 ): Promise<GenerationResult> {
   const brief = buildDnaBrief(dna);
 
-  const content = await generateOnce(req, brief, exemplars, undefined, brandBrief);
+  let content: GeneratedContentData;
+  let usedFallback = false;
+  try {
+    content = await generateOnce(req, brief, exemplars, undefined, brandBrief);
+  } catch (error) {
+    if (!shouldUseFastFallback(error)) throw error;
+    usedFallback = true;
+    content = fallbackContent(req, dna, exemplars);
+  }
   const score =
     process.env.JIDOKA_DEEP_QC === "1" || process.env.BRKFREE_DEEP_QC === "1"
       ? await scoreOnce(content.primary_script, brief, exemplars)
@@ -273,7 +365,7 @@ export async function runGeneration(
   return {
     content,
     score,
-    attempts: 1,
+    attempts: usedFallback ? 0 : 1,
     belowThreshold: score.overall < MIN_ACCEPTABLE_SCORE,
   };
 }
