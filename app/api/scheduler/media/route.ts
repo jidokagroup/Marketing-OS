@@ -16,7 +16,13 @@ const MAX_MEDIA_UPLOAD_MB =
     : DEFAULT_MAX_MEDIA_UPLOAD_MB;
 const MAX_MEDIA_BYTES = MAX_MEDIA_UPLOAD_MB * 1024 * 1024;
 const MEDIA_BUCKET = "marketing-os-media";
-let mediaBucketReady: Promise<unknown> | null = null;
+type BucketLimitReport = {
+  bucket: unknown;
+  liveLimitBytes: number | null;
+  ready: boolean;
+  updateError: string | null;
+};
+let mediaBucketReady: Promise<BucketLimitReport> | null = null;
 
 function formatMb(bytes: number) {
   return Math.round((bytes / 1024 / 1024) * 10) / 10;
@@ -38,7 +44,7 @@ function storageLimitErrorMessage(error: unknown) {
   const detail = error instanceof Error ? error.message : "";
   const lower = detail.toLowerCase();
   if (lower.includes("maximum allowed size")) {
-    return "Supabase rejected the 500 MB bucket setting because the project global Storage file size limit is lower. On Free Supabase projects, files over 50 MB are not allowed. Upgrade the Supabase project or set Storage Settings > Global file size limit and this bucket limit to at least 500 MB.";
+    return "Supabase rejected the 500 MB bucket setting because the project global Storage file size limit is lower. On Pro, open Supabase Dashboard > Storage > Settings and set Global file size limit to at least 500 MB, then refresh and try again.";
   }
   if (!serviceRoleIsConfigured()) {
     return "Storage bucket is not ready for large video uploads because SUPABASE_SERVICE_ROLE_KEY is missing in Netlify.";
@@ -46,42 +52,61 @@ function storageLimitErrorMessage(error: unknown) {
   return "Storage bucket is not ready for large video uploads. Check the Supabase Storage global file size limit and bucket file size limit, then refresh and try again.";
 }
 
-async function ensureMediaBucketLimit() {
-  if (!mediaBucketReady) {
-    mediaBucketReady = (async () => {
-      const admin = createAdminClient();
-      const bucketOptions = {
-        public: false,
-        fileSizeLimit: MAX_MEDIA_BYTES,
-      };
-      const { error } = await admin.storage.updateBucket(MEDIA_BUCKET, bucketOptions);
-      if (!error) return;
+async function inspectMediaBucketLimit(): Promise<BucketLimitReport> {
+  const admin = createAdminClient();
+  const bucketOptions = {
+    public: false,
+    fileSizeLimit: MAX_MEDIA_BYTES,
+  };
+  const current = await admin.storage.getBucket(MEDIA_BUCKET);
+  const currentNotFound =
+    current.error?.message.toLowerCase().includes("not found") ||
+    current.error?.message.toLowerCase().includes("does not exist");
+  if (current.error && !currentNotFound) throw current.error;
 
-      const notFound =
-        error.message.toLowerCase().includes("not found") ||
-        error.message.toLowerCase().includes("does not exist");
-      if (notFound) {
-        const { error: createError } = await admin.storage.createBucket(
-          MEDIA_BUCKET,
-          bucketOptions,
-        );
-        if (createError) throw createError;
-        return;
-      }
-
-      throw error;
-    })().then(async () => {
-      const admin = createAdminClient();
-      const { data, error } = await admin.storage.getBucket(MEDIA_BUCKET);
-      if (error) throw error;
-      return data;
-    }).catch((error: unknown) => {
-      mediaBucketReady = null;
-      throw error;
-    });
+  const currentLimitBytes = bucketLimitBytes(current.data);
+  if (currentLimitBytes && currentLimitBytes >= MAX_MEDIA_BYTES) {
+    return {
+      bucket: current.data,
+      liveLimitBytes: currentLimitBytes,
+      ready: true,
+      updateError: null,
+    };
   }
 
-  return mediaBucketReady;
+  const mutation = currentNotFound
+    ? await admin.storage.createBucket(MEDIA_BUCKET, bucketOptions)
+    : await admin.storage.updateBucket(MEDIA_BUCKET, bucketOptions);
+
+  if (mutation.error) {
+    return {
+      bucket: current.data,
+      liveLimitBytes: currentLimitBytes,
+      ready: false,
+      updateError: mutation.error.message,
+    };
+  }
+
+  const updated = await admin.storage.getBucket(MEDIA_BUCKET);
+  if (updated.error) throw updated.error;
+  const updatedLimitBytes = bucketLimitBytes(updated.data);
+
+  return {
+    bucket: updated.data,
+    liveLimitBytes: updatedLimitBytes,
+    ready: Boolean(updatedLimitBytes && updatedLimitBytes >= MAX_MEDIA_BYTES),
+    updateError: null,
+  };
+}
+
+async function ensureMediaBucketLimit() {
+  if (mediaBucketReady) return mediaBucketReady;
+
+  const report = await inspectMediaBucketLimit();
+  if (report.ready) {
+    mediaBucketReady = Promise.resolve(report);
+  }
+  return report;
 }
 
 export async function GET() {
@@ -91,18 +116,23 @@ export async function GET() {
   }
 
   try {
-    const bucket = await ensureMediaBucketLimit();
-    const liveLimitBytes = bucketLimitBytes(bucket);
+    const report = await ensureMediaBucketLimit();
+    const updateError = report.updateError
+      ? new Error(report.updateError)
+      : null;
 
     return NextResponse.json({
       bucket: MEDIA_BUCKET,
       service_role_configured: serviceRoleIsConfigured(),
       configured_limit_mb: MAX_MEDIA_UPLOAD_MB,
       configured_limit_bytes: MAX_MEDIA_BYTES,
-      live_bucket_limit_mb: liveLimitBytes ? formatMb(liveLimitBytes) : null,
-      live_bucket_limit_bytes: liveLimitBytes,
-      ready_for_large_uploads:
-        typeof liveLimitBytes === "number" && liveLimitBytes >= MAX_MEDIA_BYTES,
+      live_bucket_limit_mb: report.liveLimitBytes
+        ? formatMb(report.liveLimitBytes)
+        : null,
+      live_bucket_limit_bytes: report.liveLimitBytes,
+      bucket_update_error: report.updateError,
+      message: updateError ? storageLimitErrorMessage(updateError) : null,
+      ready_for_large_uploads: report.ready,
     });
   } catch (error) {
     return NextResponse.json(
@@ -164,9 +194,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
   }
 
-  let bucket: unknown;
+  let report: BucketLimitReport;
   try {
-    bucket = await ensureMediaBucketLimit();
+    report = await ensureMediaBucketLimit();
   } catch (error) {
     return NextResponse.json(
       {
@@ -181,12 +211,29 @@ export async function POST(request: Request) {
     );
   }
 
-  const liveLimitBytes = bucketLimitBytes(bucket);
-  if (liveLimitBytes && fileSize > liveLimitBytes) {
+  if (!report.ready) {
+    const updateError = report.updateError
+      ? new Error(report.updateError)
+      : new Error("Bucket limit is below the configured media upload limit.");
     return NextResponse.json(
       {
-        error: `Supabase is still capping this bucket at ${formatMb(liveLimitBytes)} MB. The selected file is ${formatMb(fileSize)} MB. Run the storage bucket limit migration or fix SUPABASE_SERVICE_ROLE_KEY in Netlify, then refresh and try again.`,
-        live_bucket_limit_mb: formatMb(liveLimitBytes),
+        error: storageLimitErrorMessage(updateError),
+        bucket_update_error: report.updateError,
+        live_bucket_limit_mb: report.liveLimitBytes
+          ? formatMb(report.liveLimitBytes)
+          : null,
+        selected_file_mb: formatMb(fileSize),
+        service_role_configured: serviceRoleIsConfigured(),
+      },
+      { status: 413 },
+    );
+  }
+
+  if (report.liveLimitBytes && fileSize > report.liveLimitBytes) {
+    return NextResponse.json(
+      {
+        error: `Supabase is still capping this bucket at ${formatMb(report.liveLimitBytes)} MB. The selected file is ${formatMb(fileSize)} MB. In Supabase Dashboard > Storage > Settings, set Global file size limit to at least ${MAX_MEDIA_UPLOAD_MB} MB, then refresh and try again.`,
+        live_bucket_limit_mb: formatMb(report.liveLimitBytes),
         selected_file_mb: formatMb(fileSize),
       },
       { status: 413 },
