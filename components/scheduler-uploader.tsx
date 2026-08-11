@@ -450,6 +450,12 @@ export function SchedulerUploader({
     });
   }
 
+  function saveCommentDmDraft() {
+    toast.success(
+      "Comment-to-DM flow saved in this draft. Add to scheduler when you are ready to attach it to the post.",
+    );
+  }
+
   async function onSingleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formEl = e.currentTarget;
@@ -914,10 +920,15 @@ export function SchedulerUploader({
                     </div>
                   </div>
                   <div className="rounded-md bg-muted/30 p-3 text-xs text-muted-foreground">
-                    Preview: the public reply is saved first, then the DM
-                    sequence is held for the Instagram review queue.
+                    Preview: the public reply is saved with this draft, then
+                    the DM sequence is held for the Instagram review queue.
                   </div>
-                  <Button type="submit" variant="outline" size="sm">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={saveCommentDmDraft}
+                  >
                     <MessageCircle className="mr-1 h-4 w-4" />
                     Save Comment-to-DM flow
                   </Button>
