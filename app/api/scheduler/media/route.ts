@@ -34,6 +34,18 @@ function serviceRoleIsConfigured() {
   return Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
 }
 
+function storageLimitErrorMessage(error: unknown) {
+  const detail = error instanceof Error ? error.message : "";
+  const lower = detail.toLowerCase();
+  if (lower.includes("maximum allowed size")) {
+    return "Supabase rejected the 500 MB bucket setting because the project global Storage file size limit is lower. On Free Supabase projects, files over 50 MB are not allowed. Upgrade the Supabase project or set Storage Settings > Global file size limit and this bucket limit to at least 500 MB.";
+  }
+  if (!serviceRoleIsConfigured()) {
+    return "Storage bucket is not ready for large video uploads because SUPABASE_SERVICE_ROLE_KEY is missing in Netlify.";
+  }
+  return "Storage bucket is not ready for large video uploads. Check the Supabase Storage global file size limit and bucket file size limit, then refresh and try again.";
+}
+
 async function ensureMediaBucketLimit() {
   if (!mediaBucketReady) {
     mediaBucketReady = (async () => {
@@ -98,6 +110,7 @@ export async function GET() {
         bucket: MEDIA_BUCKET,
         service_role_configured: serviceRoleIsConfigured(),
         configured_limit_mb: MAX_MEDIA_UPLOAD_MB,
+        message: storageLimitErrorMessage(error),
         error:
           error instanceof Error
             ? error.message
@@ -157,8 +170,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          "Storage bucket is not ready for large video uploads. Confirm SUPABASE_SERVICE_ROLE_KEY is set in Netlify, then refresh and try again.",
+        error: storageLimitErrorMessage(error),
         detail:
           error instanceof Error
             ? error.message
