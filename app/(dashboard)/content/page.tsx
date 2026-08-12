@@ -4,6 +4,7 @@ import {
   CalendarDays,
   Clapperboard,
   FolderOpen,
+  Globe2,
   Lightbulb,
   Sparkles,
 } from "lucide-react";
@@ -137,11 +138,20 @@ export default async function ContentPage({
     {
       title: "Content Generator",
       description:
-        "Generate channel-ready content using each client agent's Brand Brain, Voice DNA, and the latest Intelligence context.",
+        "Generate channel-ready content using each client agent's Brand Brain, Voice DNA, and the latest Market Intelligence context.",
       href: generatorHref,
       icon: Sparkles,
       metric: generatedCount ?? 0,
       metricLabel: "generated",
+    },
+    {
+      title: "Market + Competitor Analysis",
+      description:
+        "Paste competitor websites and public social URLs to surface top hooks, topics, content patterns, and ideas for the selected client.",
+      href: `/content/generator${scopedSuffix}`,
+      icon: Globe2,
+      metric: ideaCount,
+      metricLabel: "ideas",
     },
     {
       title: "Film Scripts",
@@ -182,7 +192,7 @@ export default async function ContentPage({
     {
       title: "Ideas",
       description:
-        "Turn Intelligence findings and manual notes into campaign-ready content ideas.",
+        "Turn Market Intelligence findings and manual notes into campaign-ready content ideas.",
       href: `/content/ideas${scopedSuffix}`,
       icon: Lightbulb,
       metric: ideaCount,

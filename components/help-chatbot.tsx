@@ -45,9 +45,9 @@ function pageHint(pathname: string, primaryAgentId?: string): Answer {
   }
   if (pathname.startsWith("/intelligence")) {
     return {
-      text: "You are in Intelligence. Save competitor accounts and review weekly topics, hooks, trends, and opportunities once accounts are connected.",
+      text: "You are in Market Intelligence. Save competitor websites and review weekly topics, hooks, trends, and opportunities once accounts are connected.",
       href: "/intelligence",
-      actionLabel: "Open Intelligence",
+      actionLabel: "Open Market Intelligence",
     };
   }
   return {
@@ -127,15 +127,15 @@ function answerQuestion(
   }
   if (q.includes("intelligence") || q.includes("trend")) {
     return {
-      text: "Open Intelligence to review weekly trends, topics, hooks, audios, and content opportunities from connected platforms.",
+      text: "Open Market Intelligence to review weekly trends, topics, hooks, audios, and content opportunities from connected platforms.",
       href: "/intelligence",
-      actionLabel: "Open Intelligence",
+      actionLabel: "Open Market Intelligence",
     };
   }
   const hint = pageHint(pathname, primaryAgentId);
   return {
     ...hint,
-    text: `${hint.text} Ask me about scheduler, voice analysis, connections, spreadsheet upload, TikTok, X, or Intelligence.`,
+    text: `${hint.text} Ask me about scheduler, voice analysis, connections, spreadsheet upload, TikTok, X, or Market Intelligence.`,
   };
 }
 

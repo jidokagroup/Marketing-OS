@@ -284,7 +284,7 @@ export default async function AnalyticsPage({
         href: "/analytics",
       },
       {
-        label: "Use best times in Scheduler and Intelligence",
+        label: "Use best times in Scheduler and Market Intelligence",
         done: false,
         href: "/intelligence",
       },
@@ -423,7 +423,7 @@ export default async function AnalyticsPage({
           Use timing in Scheduler
         </ButtonLink>
         <ButtonLink href="/intelligence" variant="outline">
-          Open Intelligence
+          Open Market Intelligence
         </ButtonLink>
       </PageHeader>
 

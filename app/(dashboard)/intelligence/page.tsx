@@ -31,7 +31,7 @@ import {
   saveInsightForLaterAction,
 } from "./actions";
 
-export const metadata = { title: "Intelligence · Jidoka Marketing Team OS" };
+export const metadata = { title: "Market Intelligence · Jidoka Marketing Team OS" };
 // The save action runs a live competitor scan (site fetch + Claude call).
 export const maxDuration = 60;
 
@@ -187,7 +187,7 @@ export default async function IntelligencePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Intelligence"
+        title="Market Intelligence"
         description="Weekly competitor scan for topics, hooks, audios, and trends across connected marketing platforms."
       >
         <ButtonLink href={generateHref}>

@@ -2,6 +2,7 @@ import {
   BarChart3,
   Inbox,
   LayoutDashboard,
+  Radar,
   Settings,
   Sparkles,
   Target,
@@ -24,6 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Clients", href: "/clients", icon: Users },
   { label: "Paid Ad Campaigns", href: "/campaigns", icon: Target },
   { label: "Content", href: "/content", icon: Sparkles },
+  { label: "Market Intelligence", href: "/intelligence", icon: Radar },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
