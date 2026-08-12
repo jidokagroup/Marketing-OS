@@ -23,6 +23,11 @@ export type CompetitorScanResult = {
   hooks: string[];
   content_opportunities: string[];
   positioning: string[];
+  content_gaps: string[];
+  hook_library: string[];
+  offer_tracker: string[];
+  comment_themes: string[];
+  opportunity_signals: string[];
   summary: string;
 };
 
@@ -31,6 +36,11 @@ const scanValidator = z.object({
   hooks: z.array(z.string()).min(1),
   content_opportunities: z.array(z.string()).min(1),
   positioning: z.array(z.string()).min(1),
+  content_gaps: z.array(z.string()).min(1),
+  hook_library: z.array(z.string()).min(1),
+  offer_tracker: z.array(z.string()).min(1),
+  comment_themes: z.array(z.string()).min(1),
+  opportunity_signals: z.array(z.string()).min(1),
   summary: z.string().min(20),
 });
 
@@ -42,6 +52,11 @@ const scanJsonSchema = {
     "hooks",
     "content_opportunities",
     "positioning",
+    "content_gaps",
+    "hook_library",
+    "offer_tracker",
+    "comment_themes",
+    "opportunity_signals",
     "summary",
   ],
   properties: {
@@ -73,6 +88,41 @@ const scanJsonSchema = {
       items: { type: "string" },
       description:
         "Exactly 3-5 statements on how the client should position against these competitors: unique angles, differentiators, and messaging stances the competitors leave open.",
+    },
+    content_gaps: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "Exactly 4-6 gaps where competitors cover an audience need that the client should address more clearly.",
+    },
+    hook_library: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "Exactly 6-8 reusable hook patterns tagged by likely channel or format.",
+    },
+    offer_tracker: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "Exactly 4-6 offers, lead magnets, CTAs, booking paths, or conversion moves detected or logically inferred from the public websites.",
+    },
+    comment_themes: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "Exactly 4-6 likely buyer questions, objections, complaints, or comment-to-DM triggers based on the competitor material.",
+    },
+    opportunity_signals: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "Exactly 4-6 directional opportunity signals combining likely velocity, save/share value, relevance, and saturation. Do not invent exact performance metrics.",
     },
     summary: {
       type: "string",
@@ -143,8 +193,9 @@ export async function runCompetitorScan({
       "Produce the intelligence report: 5-6 trending topics the client should " +
       "cover, 4-6 hooks to adapt, 4-6 content format opportunities, 3-5 " +
       "positioning statements that differentiate the client from these " +
-      "competitors, and a short summary of what competitors emphasize and " +
-      "where this client can stand out.",
+      "competitors, 4-6 content gaps, 6-8 hook-library entries, 4-6 offer " +
+      "or CTA signals, 4-6 comment themes, 4-6 opportunity signals, and a " +
+      "short summary of what competitors emphasize and where this client can stand out.",
     jsonSchema: scanJsonSchema,
     validator: scanValidator,
     maxTokens: 2500,

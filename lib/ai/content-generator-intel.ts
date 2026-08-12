@@ -38,6 +38,11 @@ export type ContentGeneratorTrendReport = {
   hooks: string[];
   competitor_patterns: string[];
   content_opportunities: string[];
+  content_gaps: string[];
+  hook_library: string[];
+  offer_tracker: string[];
+  comment_themes: string[];
+  opportunity_signals: string[];
   brand_angles: string[];
   generated_ideas: GeneratedIdea[];
   scheduler_suggestions: string[];
@@ -65,6 +70,11 @@ const reportValidator = z.object({
   hooks: z.array(z.string()).min(1),
   competitor_patterns: z.array(z.string()).min(1),
   content_opportunities: z.array(z.string()).min(1),
+  content_gaps: z.array(z.string()).min(1),
+  hook_library: z.array(z.string()).min(1),
+  offer_tracker: z.array(z.string()).min(1),
+  comment_themes: z.array(z.string()).min(1),
+  opportunity_signals: z.array(z.string()).min(1),
   brand_angles: z.array(z.string()).min(1),
   generated_ideas: z.array(generatedIdeaSchema).min(1),
   scheduler_suggestions: z.array(z.string()).min(1),
@@ -106,6 +116,11 @@ const reportJsonSchema = {
     "hooks",
     "competitor_patterns",
     "content_opportunities",
+    "content_gaps",
+    "hook_library",
+    "offer_tracker",
+    "comment_themes",
+    "opportunity_signals",
     "brand_angles",
     "generated_ideas",
     "scheduler_suggestions",
@@ -137,6 +152,41 @@ const reportJsonSchema = {
       minItems: 1,
       items: { type: "string" },
       description: "4-6 useful content opportunities for the selected client.",
+    },
+    content_gaps: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "4-6 gaps where competitors talk about something the client is not yet covering clearly enough.",
+    },
+    hook_library: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "6-10 reusable hook patterns grouped by platform or niche when possible.",
+    },
+    offer_tracker: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "4-6 lead magnets, CTAs, offers, booking flows, or conversion moves seen or inferred from public competitor signals.",
+    },
+    comment_themes: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "4-6 recurring audience questions, objections, complaints, or DM trigger opportunities likely to appear in comments.",
+    },
+    opportunity_signals: {
+      type: "array",
+      minItems: 1,
+      items: { type: "string" },
+      description:
+        "4-6 scored opportunity signals that combine likely velocity, save/share strength, topic relevance, and competitor saturation. Do not invent exact metrics.",
     },
     brand_angles: {
       type: "array",
@@ -227,6 +277,38 @@ function fallbackReport({
       "Turn one common objection into a carousel, short video, and comment-to-DM resource.",
       "Use a before-and-after process story to show why the client's approach is easier to trust.",
       "Build a 3-part sequence: problem, mistake, next step.",
+    ],
+    content_gaps: [
+      "Competitors explain symptoms, but not the decision framework buyers can use next.",
+      "Competitors mention outcomes, but rarely show the process or tradeoffs behind them.",
+      "The client needs more proof-led posts that answer buying objections before a call.",
+      "The watchlist suggests room for simpler educational content with clearer next steps.",
+    ],
+    hook_library: [
+      "Instagram/Reels: Most people are solving the visible problem, not the real one.",
+      "Carousel: Save this before you choose the next step.",
+      "YouTube: The mistake that makes this problem more expensive than it needs to be.",
+      "Email: If this keeps coming up with your team, it is probably not a people problem.",
+      "Blog: A practical guide to deciding what to fix first.",
+    ],
+    offer_tracker: [
+      "Free assessment or diagnostic that turns awareness into a qualified conversation.",
+      "Comment keyword resource for high-intent posts.",
+      "Audit call framed around one specific problem instead of a broad consultation.",
+      "Checklist or framework that helps buyers self-identify the next step.",
+    ],
+    comment_themes: [
+      "How do I know if this problem is happening in my business?",
+      "What should I fix first?",
+      "How long does this take?",
+      "What does this cost?",
+      "Can you send me the resource or checklist?",
+    ],
+    opportunity_signals: [
+      "High relevance, medium saturation: turn the core objection into a weekly content series.",
+      "High save/share potential: package the decision framework as a carousel and PDF lead magnet.",
+      "Medium velocity: use a short video hook, then expand the idea in email and blog.",
+      "High conversion intent: connect comment keywords to a DM sequence and booking CTA.",
     ],
     brand_angles: [
       `Make every idea sound like ${clientName}, not like a trend recap.`,
@@ -344,6 +426,7 @@ export async function runContentGeneratorTrendReport({
         `Watchlist:\n${sourceList || "No sources submitted."}\n\n` +
         `Fetched public evidence:\n${fetchedBlock}\n\n` +
         "Create a weekly trend report and 5-8 on-brand content ideas. " +
+        "Include a competitor watchlist readout, content gap score inputs, a hook library, offer tracker, comment themes, and opportunity signals. " +
         "Each idea must be ready for a client agent to generate final copy, and each must include a Smart Scheduler suggestion.",
       jsonSchema: reportJsonSchema,
       validator: reportValidator,

@@ -21,6 +21,7 @@ const SUPPORTED_SOURCE_PLATFORMS = new Set([
   "linkedin",
   "website",
   "podcast",
+  "newsletter",
   "other",
 ]);
 
@@ -39,6 +40,9 @@ const PLATFORM_ALIASES: Record<string, string> = {
   website: "website",
   site: "website",
   podcast: "podcast",
+  newsletter: "newsletter",
+  substack: "newsletter",
+  email: "newsletter",
 };
 
 function textValue(formData: FormData, key: string) {
@@ -63,6 +67,14 @@ function platformFromHost(hostname: string) {
   if (host.includes("linkedin.com")) return "linkedin";
   if (host.includes("podcasts.apple.com") || host.includes("spotify.com")) {
     return "podcast";
+  }
+  if (
+    host.includes("substack.com") ||
+    host.includes("beehiiv.com") ||
+    host.includes("convertkit.com") ||
+    host.includes("mailchi.mp")
+  ) {
+    return "newsletter";
   }
   return "website";
 }
@@ -250,6 +262,11 @@ export async function generateCompetitorIdeasAction(formData: FormData) {
         items: report.content_opportunities,
         positioning: report.brand_angles,
         competitor_patterns: report.competitor_patterns,
+        content_gaps: report.content_gaps,
+        hook_library: report.hook_library,
+        offer_tracker: report.offer_tracker,
+        comment_themes: report.comment_themes,
+        opportunity_signals: report.opportunity_signals,
         generated_ideas: report.generated_ideas,
         scheduler_suggestions: report.scheduler_suggestions,
         limitations: report.limitations,

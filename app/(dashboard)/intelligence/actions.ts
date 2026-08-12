@@ -35,6 +35,43 @@ const BASELINE_POSITIONING = [
   "Use education-first proof to build trust where competitors overpromise.",
 ];
 
+const BASELINE_CONTENT_GAPS = [
+  "Competitors explain the problem, but not the practical decision framework buyers can use next.",
+  "Competitors mention outcomes, but rarely show the process, tradeoffs, or proof behind them.",
+  "The client should answer buying objections earlier with education-first content.",
+  "There is room for simpler next-step content that turns attention into a qualified conversation.",
+];
+
+const BASELINE_HOOK_LIBRARY = [
+  "Reel: Most people are solving the visible problem, not the real one.",
+  "Carousel: Save this before you choose your next step.",
+  "YouTube: The mistake that makes this problem more expensive than it needs to be.",
+  "Email: If this keeps coming up, it is probably not a people problem.",
+  "Blog: A practical guide to deciding what to fix first.",
+];
+
+const BASELINE_OFFER_TRACKER = [
+  "Diagnostic or assessment that clarifies whether the buyer has the problem.",
+  "Comment keyword resource connected to a DM sequence.",
+  "Audit call framed around one specific pain point.",
+  "Checklist or framework that helps the buyer choose the next step.",
+];
+
+const BASELINE_COMMENT_THEMES = [
+  "How do I know if this applies to me?",
+  "What should I fix first?",
+  "How long does this take?",
+  "What does this cost?",
+  "Can you send me the resource?",
+];
+
+const BASELINE_OPPORTUNITY_SIGNALS = [
+  "High relevance, medium saturation: turn the main objection into a weekly series.",
+  "High save/share potential: package the decision framework as a carousel or lead magnet.",
+  "Medium velocity: start with short video, then expand into email and blog.",
+  "High conversion intent: pair comment keywords with a DM sequence and booking CTA.",
+];
+
 export async function saveCompetitorsAction(formData: FormData) {
   const { user, supabase } = await requireUser();
   const competitorWebsites = String(formData.get("competitor_websites") ?? "")
@@ -68,6 +105,11 @@ export async function saveCompetitorsAction(formData: FormData) {
   let hooks: string[] = BASELINE_HOOKS;
   let opportunities: string[] = BASELINE_TRENDS;
   let positioning: string[] = BASELINE_POSITIONING;
+  let contentGaps: string[] = BASELINE_CONTENT_GAPS;
+  let hookLibrary: string[] = BASELINE_HOOK_LIBRARY;
+  let offerTracker: string[] = BASELINE_OFFER_TRACKER;
+  let commentThemes: string[] = BASELINE_COMMENT_THEMES;
+  let opportunitySignals: string[] = BASELINE_OPPORTUNITY_SIGNALS;
   let summary: string;
 
   if (competitorWebsites.length) {
@@ -77,6 +119,11 @@ export async function saveCompetitorsAction(formData: FormData) {
       hooks = scan.hooks;
       opportunities = scan.content_opportunities;
       positioning = scan.positioning;
+      contentGaps = scan.content_gaps;
+      hookLibrary = scan.hook_library;
+      offerTracker = scan.offer_tracker;
+      commentThemes = scan.comment_themes;
+      opportunitySignals = scan.opportunity_signals;
       summary = scan.summary;
     } catch (error) {
       const reason = error instanceof Error ? error.message : "scan failed";
@@ -102,7 +149,16 @@ export async function saveCompetitorsAction(formData: FormData) {
     ],
     // Stored as an object so positioning rides along without a schema change;
     // the Intelligence page reads both this shape and the legacy plain array.
-    content_opportunities: { items: opportunities, positioning },
+    content_opportunities: {
+      items: opportunities,
+      positioning,
+      content_gaps: contentGaps,
+      hook_library: hookLibrary,
+      offer_tracker: offerTracker,
+      comment_themes: commentThemes,
+      opportunity_signals: opportunitySignals,
+      source: "website_competitor_scan",
+    },
     summary,
     scanned_at: new Date().toISOString(),
   });

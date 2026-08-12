@@ -3,8 +3,11 @@ import {
   CalendarClock,
   Globe2,
   Lightbulb,
+  MessageSquareText,
   Radar,
   Sparkles,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 
 import { CONTENT_CHANNEL_OPTIONS } from "@/lib/core-agents";
@@ -33,7 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { generateCompetitorIdeasAction } from "./actions";
 
 export const metadata = {
-  title: "Content Generator · Jidoka Marketing Team OS",
+  title: "Market + Competitor Analysis · Jidoka Marketing Team OS",
 };
 export const maxDuration = 60;
 
@@ -97,6 +100,11 @@ function reportPayload(value: unknown) {
       items: jsonArray(value),
       positioning: [],
       competitor_patterns: [],
+      content_gaps: [],
+      hook_library: [],
+      offer_tracker: [],
+      comment_themes: [],
+      opportunity_signals: [],
       generated_ideas: [],
       scheduler_suggestions: [],
       limitations: [],
@@ -108,6 +116,11 @@ function reportPayload(value: unknown) {
     items: jsonArray(record.items),
     positioning: jsonArray(record.positioning),
     competitor_patterns: jsonArray(record.competitor_patterns),
+    content_gaps: jsonArray(record.content_gaps),
+    hook_library: jsonArray(record.hook_library),
+    offer_tracker: jsonArray(record.offer_tracker),
+    comment_themes: jsonArray(record.comment_themes),
+    opportunity_signals: jsonArray(record.opportunity_signals),
     generated_ideas: Array.isArray(record.generated_ideas)
       ? (record.generated_ideas.filter(
           (item) => item && typeof item === "object",
@@ -167,6 +180,67 @@ function schedulerHref(
   if (agentId) params.set("agent_id", agentId);
   if (clientId) params.set("client", clientId);
   return `/scheduler?${params.toString()}`;
+}
+
+function signalGenerateHref({
+  agentId,
+  reportId,
+  title,
+  signal,
+  channel,
+}: {
+  agentId: string | null | undefined;
+  reportId: string;
+  title: string;
+  signal: string;
+  channel?: string;
+}) {
+  if (!agentId) return "/agents";
+  const params = new URLSearchParams({
+    tab: "generate",
+    title: title.slice(0, 90),
+    topic: signal,
+    goal: "Turn this market signal into an original content package",
+    notes: `Source report ${reportId}. Use this as inspiration only; do not copy competitors.`,
+  });
+  if (channel) params.set("platforms", channel);
+  return `/agents/${agentId}?${params.toString()}`;
+}
+
+function directionalScore({
+  trendCount,
+  hookCount,
+  gapCount,
+  offerCount,
+  commentCount,
+  opportunityCount,
+  watchlistCount,
+}: {
+  trendCount: number;
+  hookCount: number;
+  gapCount: number;
+  offerCount: number;
+  commentCount: number;
+  opportunityCount: number;
+  watchlistCount: number;
+}) {
+  const raw =
+    34 +
+    Math.min(trendCount, 6) * 5 +
+    Math.min(hookCount, 8) * 3 +
+    Math.min(gapCount, 6) * 4 +
+    Math.min(offerCount, 6) * 3 +
+    Math.min(commentCount, 6) * 3 +
+    Math.min(opportunityCount, 6) * 4 +
+    Math.min(watchlistCount, 10) * 2;
+  return Math.min(96, raw);
+}
+
+function scoreLabel(score: number) {
+  if (score >= 82) return "strong";
+  if (score >= 68) return "promising";
+  if (score >= 50) return "needs more data";
+  return "early signal";
 }
 
 export default async function ContentGeneratorPage({
@@ -258,6 +332,13 @@ export default async function ContentGeneratorPage({
   const payload = reportPayload(latestReport?.content_opportunities);
   const trendItems = jsonArray(latestReport?.trending_topics);
   const hooks = jsonArray(latestReport?.hooks);
+  const contentGaps = payload.content_gaps;
+  const hookLibrary = payload.hook_library.length ? payload.hook_library : hooks;
+  const offerTracker = payload.offer_tracker;
+  const commentThemes = payload.comment_themes;
+  const opportunitySignals = payload.opportunity_signals.length
+    ? payload.opportunity_signals
+    : payload.items;
   const ideas = payload.generated_ideas;
   const competitors = schemaMissing
     ? []
@@ -271,6 +352,21 @@ export default async function ContentGeneratorPage({
     "";
   const defaultPlatforms =
     latestReport?.platforms?.length ? latestReport.platforms : ["instagram"];
+  const watchlistCount =
+    competitors.length || latestReport?.competitor_accounts?.length || 0;
+  const marketScore = directionalScore({
+    trendCount: trendItems.length,
+    hookCount: hookLibrary.length,
+    gapCount: contentGaps.length,
+    offerCount: offerTracker.length,
+    commentCount: commentThemes.length,
+    opportunityCount: opportunitySignals.length,
+    watchlistCount,
+  });
+  const contentGapScore = Math.min(
+    95,
+    45 + Math.min(contentGaps.length, 6) * 7 + Math.min(watchlistCount, 10) * 1.5,
+  );
   const savedIdeas = isOpsSchemaMissing(ideasResult.error)
     ? []
     : asRows<{
@@ -285,7 +381,7 @@ export default async function ContentGeneratorPage({
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Content Generator"
+        title="Market + Competitor Analysis"
         description="Turn competitor and influencer watchlists into client-agent-ready content ideas, then move the best ones into Smart Scheduler."
       >
         <ButtonLink
@@ -309,7 +405,7 @@ export default async function ContentGeneratorPage({
       {schemaMissing && (
         <Card className="border-amber-300 bg-amber-50/60 text-amber-950">
           <CardHeader>
-            <CardTitle>Content Generator needs Marketing OS tables</CardTitle>
+            <CardTitle>Market + Competitor Analysis needs Marketing OS tables</CardTitle>
             <CardDescription className="text-amber-900/80">
               Apply the Marketing OS Supabase migrations through 0016 so
               competitor accounts, intelligence reports, and content ideas can
@@ -402,13 +498,15 @@ export default async function ContentGeneratorPage({
                 name="competitor_accounts"
                 rows={7}
                 placeholder={
-                  "Instagram: @competitor\nTikTok: @industrycreator\nhttps://www.linkedin.com/company/example\nhttps://www.youtube.com/@example"
+                  "Instagram: @competitor\nTikTok: @industrycreator\nhttps://www.linkedin.com/company/example\nhttps://www.youtube.com/@example\nNewsletter: https://example.substack.com\nPodcast: https://open.spotify.com/show/example"
                 }
                 defaultValue={defaultWatchlist(competitors, latestReport)}
               />
               <p className="text-xs text-muted-foreground">
-                Uses public pages and connected sources available to the app.
-                Logged-in Chrome session scans need a browser connector.
+                Supports websites, Instagram, TikTok, YouTube, X, LinkedIn,
+                Facebook, podcasts, and newsletters. Uses public pages and
+                connected sources available to the app; logged-in session scans
+                need a browser connector.
               </p>
             </div>
 
@@ -453,7 +551,7 @@ export default async function ContentGeneratorPage({
             <CardHeader>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <CardTitle>Latest trend report</CardTitle>
+                  <CardTitle>Weekly Market Intelligence Brief</CardTitle>
                   <CardDescription>
                     {formatDateTime(latestReport.scanned_at)} ·{" "}
                     {latestReport.industry}
@@ -482,18 +580,141 @@ export default async function ContentGeneratorPage({
             </CardContent>
           </Card>
 
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  Opportunity Score
+                </CardTitle>
+                <CardDescription>
+                  Directional score from watchlist depth, topics, hooks, gaps,
+                  offers, and comment signals.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-semibold">{marketScore}</span>
+                  <Badge variant="secondary">{scoreLabel(marketScore)}</Badge>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Use this to decide whether the signal is ready to become a
+                  content package or needs more source data first.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-muted-foreground" />
+                  Content Gap Score
+                </CardTitle>
+                <CardDescription>
+                  How much white space the scan found for the selected client.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-semibold">
+                    {Math.round(contentGapScore)}
+                  </span>
+                  <Badge variant="secondary">{scoreLabel(contentGapScore)}</Badge>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Higher means competitors are creating useful context, but the
+                  client still has room to own a clearer angle.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe2 className="h-4 w-4 text-muted-foreground" />
+                  Competitor Watchlist
+                </CardTitle>
+                <CardDescription>
+                  Sources currently feeding the market scan.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-4xl font-semibold">{watchlistCount}</div>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Websites, social profiles, podcasts, and newsletters can all
+                  feed this scan when public or connected data is available.
+                </p>
+                <ButtonLink href="#competitor_accounts" size="sm" variant="outline" className="mt-4">
+                  Update watchlist
+                </ButtonLink>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid gap-4 lg:grid-cols-2">
-            <ReportList title="Trend signals" icon={Radar} items={trendItems} />
-            <ReportList title="Hooks to adapt" icon={Sparkles} items={hooks} />
+            <ReportList
+              title="Trend signals"
+              icon={Radar}
+              items={trendItems}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
+            />
+            <ReportList
+              title="Hook Library"
+              icon={Sparkles}
+              items={hookLibrary}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
+            />
             <ReportList
               title="Competitor patterns"
               icon={Globe2}
               items={payload.competitor_patterns}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
+            />
+            <ReportList
+              title="Content Gaps"
+              icon={Target}
+              items={contentGaps}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
+            />
+            <ReportList
+              title="Offer Tracker"
+              icon={Target}
+              items={offerTracker}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
+            />
+            <ReportList
+              title="Comment Themes"
+              icon={MessageSquareText}
+              items={commentThemes}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
+            />
+            <ReportList
+              title="Opportunity Signals"
+              icon={TrendingUp}
+              items={opportunitySignals}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
             />
             <ReportList
               title="Brand Brain angles"
               icon={Lightbulb}
               items={payload.positioning}
+              reportId={latestReport.id}
+              agentId={latestReport.agent_id}
+              channel={defaultPlatforms[0]}
             />
           </div>
 
@@ -624,10 +845,16 @@ function ReportList({
   title,
   items,
   icon: Icon,
+  reportId,
+  agentId,
+  channel,
 }: {
   title: string;
   items: string[];
   icon: React.ComponentType<{ className?: string }>;
+  reportId: string;
+  agentId: string | null;
+  channel?: string;
 }) {
   return (
     <Card>
@@ -644,7 +871,21 @@ function ReportList({
           <ul className="space-y-2 text-sm text-muted-foreground">
             {items.map((item, index) => (
               <li key={`${title}-${index}`} className="rounded-md border p-3">
-                {item}
+                <p>{item}</p>
+                <ButtonLink
+                  href={signalGenerateHref({
+                    agentId,
+                    reportId,
+                    title,
+                    signal: item,
+                    channel,
+                  })}
+                  size="xs"
+                  variant="outline"
+                  className="mt-3"
+                >
+                  Turn into content package
+                </ButtonLink>
               </li>
             ))}
           </ul>

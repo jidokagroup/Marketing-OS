@@ -4,7 +4,6 @@ import {
   CalendarDays,
   Clapperboard,
   FolderOpen,
-  Globe2,
   Lightbulb,
   Sparkles,
 } from "lucide-react";
@@ -143,15 +142,6 @@ export default async function ContentPage({
       icon: Sparkles,
       metric: generatedCount ?? 0,
       metricLabel: "generated",
-    },
-    {
-      title: "Market + Competitor Analysis",
-      description:
-        "Paste competitor websites and public social URLs to surface top hooks, topics, content patterns, and ideas for the selected client.",
-      href: `/content/generator${scopedSuffix}`,
-      icon: Globe2,
-      metric: ideaCount,
-      metricLabel: "ideas",
     },
     {
       title: "Film Scripts",

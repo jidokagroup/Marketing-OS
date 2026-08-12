@@ -1,4 +1,11 @@
-import { ArrowRight, Radar, RefreshCw } from "lucide-react";
+import {
+  ArrowRight,
+  Globe2,
+  Radar,
+  RefreshCw,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
 import {
@@ -83,6 +90,43 @@ const BASELINE_POSITIONING = [
   "Use education-first proof to build trust where competitors overpromise.",
 ];
 
+const BASELINE_CONTENT_GAPS = [
+  "Competitors explain the problem, but not the practical decision framework buyers can use next.",
+  "Competitors mention outcomes, but rarely show the process, tradeoffs, or proof behind them.",
+  "The client should answer buying objections earlier with education-first content.",
+  "There is room for simpler next-step content that turns attention into a qualified conversation.",
+];
+
+const BASELINE_HOOK_LIBRARY = [
+  "Reel: Most people are solving the visible problem, not the real one.",
+  "Carousel: Save this before you choose your next step.",
+  "YouTube: The mistake that makes this problem more expensive than it needs to be.",
+  "Email: If this keeps coming up, it is probably not a people problem.",
+  "Blog: A practical guide to deciding what to fix first.",
+];
+
+const BASELINE_OFFER_TRACKER = [
+  "Diagnostic or assessment that clarifies whether the buyer has the problem.",
+  "Comment keyword resource connected to a DM sequence.",
+  "Audit call framed around one specific pain point.",
+  "Checklist or framework that helps the buyer choose the next step.",
+];
+
+const BASELINE_COMMENT_THEMES = [
+  "How do I know if this applies to me?",
+  "What should I fix first?",
+  "How long does this take?",
+  "What does this cost?",
+  "Can you send me the resource?",
+];
+
+const BASELINE_OPPORTUNITY_SIGNALS = [
+  "High relevance, medium saturation: turn the main objection into a weekly series.",
+  "High save/share potential: package the decision framework as a carousel or lead magnet.",
+  "Medium velocity: start with short video, then expand into email and blog.",
+  "High conversion intent: pair comment keywords with a DM sequence and booking CTA.",
+];
+
 function jsonArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.map((item) =>
@@ -93,16 +137,75 @@ function jsonArray(value: unknown): string[] {
 
 // content_opportunities is either a legacy plain array or, for newer scans,
 // an object shaped { items, positioning }.
-function readOpportunities(value: unknown): { items: string[]; positioning: string[] } {
-  if (Array.isArray(value)) return { items: jsonArray(value), positioning: [] };
+function readOpportunities(value: unknown) {
+  if (Array.isArray(value)) {
+    return {
+      items: jsonArray(value),
+      positioning: [],
+      content_gaps: [],
+      hook_library: [],
+      offer_tracker: [],
+      comment_themes: [],
+      opportunity_signals: [],
+    };
+  }
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     return {
       items: jsonArray(record.items),
       positioning: jsonArray(record.positioning),
+      content_gaps: jsonArray(record.content_gaps),
+      hook_library: jsonArray(record.hook_library),
+      offer_tracker: jsonArray(record.offer_tracker),
+      comment_themes: jsonArray(record.comment_themes),
+      opportunity_signals: jsonArray(record.opportunity_signals),
     };
   }
-  return { items: [], positioning: [] };
+  return {
+    items: [],
+    positioning: [],
+    content_gaps: [],
+    hook_library: [],
+    offer_tracker: [],
+    comment_themes: [],
+    opportunity_signals: [],
+  };
+}
+
+function directionalScore({
+  trendCount,
+  hookCount,
+  gapCount,
+  offerCount,
+  commentCount,
+  opportunityCount,
+  watchlistCount,
+}: {
+  trendCount: number;
+  hookCount: number;
+  gapCount: number;
+  offerCount: number;
+  commentCount: number;
+  opportunityCount: number;
+  watchlistCount: number;
+}) {
+  const raw =
+    34 +
+    Math.min(trendCount, 6) * 5 +
+    Math.min(hookCount, 8) * 3 +
+    Math.min(gapCount, 6) * 4 +
+    Math.min(offerCount, 6) * 3 +
+    Math.min(commentCount, 6) * 3 +
+    Math.min(opportunityCount, 6) * 4 +
+    Math.min(watchlistCount, 10) * 2;
+  return Math.min(96, raw);
+}
+
+function scoreLabel(score: number) {
+  if (score >= 82) return "strong";
+  if (score >= 68) return "promising";
+  if (score >= 50) return "needs more data";
+  return "early signal";
 }
 
 export default async function IntelligencePage() {
@@ -162,6 +265,23 @@ export default async function IntelligencePage() {
   const positioning = opportunities.positioning.length
     ? opportunities.positioning
     : BASELINE_POSITIONING;
+  const contentGaps = opportunities.content_gaps.length
+    ? opportunities.content_gaps
+    : BASELINE_CONTENT_GAPS;
+  const hookLibrary = opportunities.hook_library.length
+    ? opportunities.hook_library
+    : hooks.length
+      ? hooks
+      : BASELINE_HOOK_LIBRARY;
+  const offerTracker = opportunities.offer_tracker.length
+    ? opportunities.offer_tracker
+    : BASELINE_OFFER_TRACKER;
+  const commentThemes = opportunities.comment_themes.length
+    ? opportunities.comment_themes
+    : BASELINE_COMMENT_THEMES;
+  const opportunitySignals = opportunities.opportunity_signals.length
+    ? opportunities.opportunity_signals
+    : BASELINE_OPPORTUNITY_SIGNALS;
   const positioningSource = opportunities.positioning.length
     ? "Latest saved scan"
     : "Marketing baseline";
@@ -170,12 +290,28 @@ export default async function IntelligencePage() {
   const competitorWins = BASELINE_COMPETITOR_WINS;
   const reportSource = latestReport ? "Latest saved scan" : "Baseline guidance";
   const competitorAccounts = latestReport?.competitor_accounts ?? [];
+  const marketScore = directionalScore({
+    trendCount: topics.length,
+    hookCount: hookLibrary.length,
+    gapCount: contentGaps.length,
+    offerCount: offerTracker.length,
+    commentCount: commentThemes.length,
+    opportunityCount: opportunitySignals.length,
+    watchlistCount: competitorAccounts.length,
+  });
+  const contentGapScore = Math.min(
+    95,
+    45 + Math.min(contentGaps.length, 6) * 7 + Math.min(competitorAccounts.length, 10) * 1.5,
+  );
   const generateHref = latestAgent?.id
     ? `/agents/${latestAgent.id}?tab=generate`
     : "/agents";
   const allClients = clients ?? [];
   const focusedClient =
     allClients.find((client) => client.name === latestReport?.industry) ?? null;
+  const analysisHref = focusedClient?.id
+    ? `/content/generator?client=${focusedClient.id}`
+    : "/content/generator";
   const opsReady = !isOpsSchemaMissing(campaignsResult.error);
   const campaigns = opsReady
     ? asRows<InsightCampaign>(campaignsResult.data)
@@ -308,6 +444,69 @@ export default async function IntelligencePage() {
         </CardContent>
       </Card>
 
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              Opportunity Score
+            </CardTitle>
+            <CardDescription>
+              Directional read from topics, hooks, gaps, offers, comments, and
+              the competitor watchlist.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-semibold">{marketScore}</span>
+              <Badge variant="secondary">{scoreLabel(marketScore)}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              Content Gap Score
+            </CardTitle>
+            <CardDescription>
+              How much white space competitors leave open for this client.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-2">
+              <span className="text-4xl font-semibold">
+                {Math.round(contentGapScore)}
+              </span>
+              <Badge variant="secondary">{scoreLabel(contentGapScore)}</Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe2 className="h-4 w-4 text-muted-foreground" />
+              Competitor Watchlist
+            </CardTitle>
+            <CardDescription>
+              Public websites currently feeding the weekly brief.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-semibold">{competitorAccounts.length}</div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Add social URLs, newsletters, podcasts, and broader watchlist
+              sources from Market + Competitor Analysis.
+            </p>
+            <ButtonLink href={analysisHref} size="sm" variant="outline" className="mt-4">
+              Open Market + Competitor Analysis
+            </ButtonLink>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <InsightCard
           title="Trending topics"
@@ -321,7 +520,47 @@ export default async function IntelligencePage() {
         />
         <InsightCard
           title="Hooks to adapt"
-          items={hooks}
+          items={hookLibrary}
+          source={reportSource}
+          href={generateHref}
+          opsReady={opsReady}
+          reportId={latestReport?.id}
+          clientId={focusedClient?.id}
+          campaignId={latestCampaign?.id}
+        />
+        <InsightCard
+          title="Content gaps"
+          items={contentGaps}
+          source={reportSource}
+          href={generateHref}
+          opsReady={opsReady}
+          reportId={latestReport?.id}
+          clientId={focusedClient?.id}
+          campaignId={latestCampaign?.id}
+        />
+        <InsightCard
+          title="Offer tracker"
+          items={offerTracker}
+          source={reportSource}
+          href={generateHref}
+          opsReady={opsReady}
+          reportId={latestReport?.id}
+          clientId={focusedClient?.id}
+          campaignId={latestCampaign?.id}
+        />
+        <InsightCard
+          title="Comment themes"
+          items={commentThemes}
+          source={reportSource}
+          href={generateHref}
+          opsReady={opsReady}
+          reportId={latestReport?.id}
+          clientId={focusedClient?.id}
+          campaignId={latestCampaign?.id}
+        />
+        <InsightCard
+          title="Opportunity signals"
+          items={opportunitySignals}
           source={reportSource}
           href={generateHref}
           opsReady={opsReady}
@@ -497,7 +736,7 @@ function InsightActions({
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       <ButtonLink href={generateHref} size="xs" variant="outline">
-        Generate content
+        Turn into content package
       </ButtonLink>
       {actions.map((action) =>
         opsReady ? (
