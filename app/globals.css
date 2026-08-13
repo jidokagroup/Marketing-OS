@@ -550,11 +550,11 @@
 .marketing-mini-chart {
   display: flex;
   align-items: stretch;
-  gap: 10px;
-  min-height: 132px;
+  gap: 7px;
+  height: 144px;
   border-radius: 18px;
   background: #ffffff;
-  padding: 14px 14px 10px;
+  padding: 14px 12px 10px;
 }
 
 .marketing-mini-bar {
@@ -570,6 +570,8 @@
 .marketing-mini-bar span {
   display: block;
   width: 100%;
+  height: var(--bar-height, 44%);
+  min-height: 10px;
   border-radius: 0;
   background: linear-gradient(180deg, rgba(var(--step-accent-rgb), 0.95), rgba(var(--step-secondary-rgb), 0.88));
   animation: marketing-card-lift 3.8s ease-in-out infinite;
@@ -583,12 +585,17 @@
   white-space: nowrap;
 }
 
-.marketing-mini-bar:nth-child(1) span { height: 34%; }
-.marketing-mini-bar:nth-child(2) span { height: 58%; animation-delay: 120ms; }
-.marketing-mini-bar:nth-child(3) span { height: 82%; animation-delay: 240ms; }
-.marketing-mini-bar:nth-child(4) span { height: 52%; animation-delay: 360ms; }
-.marketing-mini-bar:nth-child(5) span { height: 70%; animation-delay: 480ms; }
-.marketing-mini-bar:nth-child(6) span { height: 46%; animation-delay: 600ms; }
+.marketing-mini-bar:nth-child(2) span { animation-delay: 120ms; }
+.marketing-mini-bar:nth-child(3) span { animation-delay: 240ms; }
+.marketing-mini-bar:nth-child(4) span { animation-delay: 360ms; }
+.marketing-mini-bar:nth-child(5) span { animation-delay: 480ms; }
+.marketing-mini-bar:nth-child(6) span { animation-delay: 600ms; }
+.marketing-mini-bar:nth-child(7) span { animation-delay: 720ms; }
+.marketing-mini-bar:nth-child(8) span { animation-delay: 840ms; }
+.marketing-mini-bar:nth-child(9) span { animation-delay: 960ms; }
+.marketing-mini-bar:nth-child(10) span { animation-delay: 1080ms; }
+.marketing-mini-bar:nth-child(11) span { animation-delay: 1200ms; }
+.marketing-mini-bar:nth-child(12) span { animation-delay: 1320ms; }
 
 .marketing-platform-strip span,
 .marketing-signal-cloud span {

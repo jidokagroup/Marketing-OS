@@ -107,6 +107,21 @@ const HIGH_PERFORMERS = [
   "Blog post: From content chaos to campaign loop",
 ];
 
+const SCHEDULER_TIME_WINDOWS = [
+  ["12 AM", "24%"],
+  ["2 AM", "18%"],
+  ["4 AM", "14%"],
+  ["6 AM", "32%"],
+  ["8 AM", "48%"],
+  ["10 AM", "72%"],
+  ["12 PM", "58%"],
+  ["2 PM", "84%"],
+  ["4 PM", "66%"],
+  ["6 PM", "76%"],
+  ["8 PM", "52%"],
+  ["10 PM", "38%"],
+];
+
 const PROCESS_TITLE_STYLE: CSSProperties = {
   color: INK,
   fontFamily: "var(--font-heading), system-ui, sans-serif",
@@ -398,7 +413,7 @@ function HowItWorksPreview() {
                   </>
                 ) : index === 2 ? (
                   <>
-                    {["Video clip", "Instagram caption", "Email", "Blog post"].map((asset) => (
+                    {["Video clip", "Platform dynamic captions", "Email", "Blog post"].map((asset) => (
                       <div key={asset} className="marketing-content-row">
                         <span>{asset}</span>
                         <strong>ready</strong>
@@ -408,9 +423,9 @@ function HowItWorksPreview() {
                 ) : index === 3 ? (
                   <>
                     <div className="marketing-mini-chart">
-                      {["8 AM", "10 AM", "12 PM", "2 PM", "4 PM", "6 PM"].map((time) => (
+                      {SCHEDULER_TIME_WINDOWS.map(([time, height]) => (
                         <div key={time} className="marketing-mini-bar">
-                          <span />
+                          <span style={{ "--bar-height": height } as CSSProperties} />
                           <small>{time}</small>
                         </div>
                       ))}
