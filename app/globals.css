@@ -549,26 +549,46 @@
 
 .marketing-mini-chart {
   display: flex;
-  align-items: end;
-  gap: 12px;
-  min-height: 110px;
+  align-items: stretch;
+  gap: 10px;
+  min-height: 132px;
   border-radius: 18px;
   background: #ffffff;
-  padding: 14px;
+  padding: 14px 14px 10px;
 }
 
-.marketing-mini-chart span {
+.marketing-mini-bar {
   flex: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.marketing-mini-bar span {
+  display: block;
+  width: 100%;
   border-radius: 0;
   background: linear-gradient(180deg, rgba(var(--step-accent-rgb), 0.95), rgba(var(--step-secondary-rgb), 0.88));
   animation: marketing-card-lift 3.8s ease-in-out infinite;
 }
 
-.marketing-mini-chart span:nth-child(1) { height: 34%; }
-.marketing-mini-chart span:nth-child(2) { height: 58%; animation-delay: 120ms; }
-.marketing-mini-chart span:nth-child(3) { height: 82%; animation-delay: 240ms; }
-.marketing-mini-chart span:nth-child(4) { height: 52%; animation-delay: 360ms; }
-.marketing-mini-chart span:nth-child(5) { height: 70%; animation-delay: 480ms; }
+.marketing-mini-bar small {
+  color: #4a5565;
+  font-size: clamp(0.58rem, 1.45vw, 0.72rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.marketing-mini-bar:nth-child(1) span { height: 34%; }
+.marketing-mini-bar:nth-child(2) span { height: 58%; animation-delay: 120ms; }
+.marketing-mini-bar:nth-child(3) span { height: 82%; animation-delay: 240ms; }
+.marketing-mini-bar:nth-child(4) span { height: 52%; animation-delay: 360ms; }
+.marketing-mini-bar:nth-child(5) span { height: 70%; animation-delay: 480ms; }
+.marketing-mini-bar:nth-child(6) span { height: 46%; animation-delay: 600ms; }
 
 .marketing-platform-strip span,
 .marketing-signal-cloud span {

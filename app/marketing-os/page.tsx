@@ -408,20 +408,23 @@ function HowItWorksPreview() {
                 ) : index === 3 ? (
                   <>
                     <div className="marketing-mini-chart">
-                      <span />
-                      <span />
-                      <span />
-                      <span />
-                      <span />
+                      {["8 AM", "10 AM", "12 PM", "2 PM", "4 PM", "6 PM"].map((time) => (
+                        <div key={time} className="marketing-mini-bar">
+                          <span />
+                          <small>{time}</small>
+                        </div>
+                      ))}
                     </div>
-                    <div className="marketing-schedule-row">Smart Scheduler - AI chooses peak follower activity times</div>
+                    <div className="marketing-schedule-row">Smart Scheduler - AI chooses peak follower activity times to publish</div>
                     <div className="marketing-platform-strip">
                       <span>Instagram</span>
+                      <span>TikTok</span>
+                      <span>Facebook</span>
                       <span>YouTube</span>
                       <span>Email</span>
+                      <span>X</span>
                       <span>LinkedIn</span>
                     </div>
-                    <div className="marketing-schedule-row">Posts queued across platforms at the highest-probability windows</div>
                   </>
                 ) : index === 4 ? (
                   <>
