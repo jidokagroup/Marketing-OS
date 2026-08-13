@@ -75,15 +75,15 @@ export default function MarketingRoiCalculator() {
   }, [hoursPerClient, hourlyValue, clientCount, monthlyClientValue, referrals, referralValue]);
 
   return (
-    <div className="marketing-roi-calculator rounded-[1.5rem] border bg-white p-5 shadow-[0_24px_70px_rgba(13,15,46,0.08)] sm:p-6" style={{ borderColor: "rgba(86,89,240,0.16)" }}>
-      <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+    <div className="marketing-roi-calculator rounded-[1.5rem] border bg-white p-5 shadow-[0_24px_70px_rgba(13,15,46,0.08)] sm:p-6 lg:p-8" style={{ borderColor: "rgba(86,89,240,0.16)" }}>
+      <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5659F0]">ROI calculator</p>
           <h3 className="mt-3 text-3xl font-bold leading-tight text-[#101828]">Lock in $297/month or $3,267/year.</h3>
           <p className="mt-3 text-sm leading-relaxed text-[#4A5565]">
             Start with a 7-day free trial. Prefer annual? Get 1 month free.
           </p>
-          <div className="mt-5 grid gap-3">
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
             <SliderField label="Hours spent per client on average (monthly)" value={hoursPerClient} min={1} max={100} suffix="h" onChange={setHoursPerClient} />
             <SliderField label="Hourly value of team time" value={hourlyValue} min={12} max={200} step={1} suffix="/h" onChange={setHourlyValue} />
             <SliderField label="Number of clients" value={clientCount} min={1} max={300} suffix="" onChange={setClientCount} />
