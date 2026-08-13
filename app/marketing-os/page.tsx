@@ -24,14 +24,14 @@ const MUTED = "#4A5565";
 const PAPER = "#F8FAFC";
 
 const WORKFLOW_STAGES = [
-  "Long-form source",
-  "Extract signal",
-  "Build assets",
-  "Distribute",
-  "Compare analytics",
-  "Generate signals",
-  "Choose topics",
-  "Add-ons",
+  "01 Source content",
+  "02 Extract signal",
+  "03 Build campaign",
+  "04 Distribute",
+  "05 Compare analytics",
+  "06 Market signals",
+  "07 Choose next move",
+  "08 Feed back in",
 ];
 
 const HOW_IT_WORKS = [
@@ -332,13 +332,6 @@ function WorkflowLoopVisual() {
           <p className="mt-4 max-w-lg text-base leading-relaxed" style={{ color: MUTED }}>
             Convia Pro x Jidoka creates the loop agencies need: turn long form content into campaigns, compare performance to the market, find the next signal, and feed it back into production.
           </p>
-          <div className="mt-6 grid gap-2 sm:grid-cols-2">
-            {["Long form content", "Competitor signals", "Campaign analytics", "Next topics"].map((item) => (
-              <div key={item} className="rounded-xl border bg-[#F8FAFC] px-4 py-3 text-sm font-semibold" style={{ borderColor: BORDER }}>
-                {item}
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="relative mx-auto aspect-square w-full max-w-[520px]">
