@@ -544,7 +544,7 @@ function HowItWorksPreview() {
 
 export default function MarketingOsPage() {
   return (
-    <div className="min-h-screen font-sans" style={{ background: "#ffffff", color: INK }}>
+    <div className="marketing-page-shell min-h-screen font-sans" style={{ background: "#ffffff", color: INK }}>
       <MarketingLandingNav />
 
       <main>

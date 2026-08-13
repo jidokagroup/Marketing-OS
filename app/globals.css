@@ -186,6 +186,13 @@
   50% { transform: translateY(-5px); }
 }
 
+.marketing-page-shell {
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
 .marketing-hero-machine::before {
   content: "";
   position: absolute;
@@ -301,17 +308,18 @@
   left: 50%;
   top: 50%;
   z-index: 2;
-  min-width: 112px;
+  min-width: max-content;
   border: 1px solid rgba(86, 89, 240, 0.12);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 32px rgba(13, 15, 46, 0.10);
   color: #101828;
-  font-size: 12px;
+  font-size: clamp(0.62rem, 1vw, 0.75rem);
   font-weight: 800;
   line-height: 1.1;
-  padding: 10px 12px;
+  padding: 9px 12px;
   text-align: center;
+  white-space: nowrap;
   animation: marketing-node-float 4.8s ease-in-out infinite;
 }
 
@@ -715,6 +723,10 @@
 }
 
 @media (max-width: 900px) {
+  .marketing-page-shell {
+    overflow-x: clip;
+  }
+
   .marketing-process-step {
     grid-template-columns: 1fr;
   }
@@ -724,9 +736,77 @@
   }
 
   .marketing-loop-node {
-    min-width: 90px;
-    font-size: 11px;
-    padding: 8px 10px;
+    font-size: clamp(0.58rem, 2.45vw, 0.68rem);
+    padding: 7px 9px;
+  }
+
+  .marketing-loop-node-2 { left: 80%; }
+  .marketing-loop-node-3 { left: 88%; }
+  .marketing-loop-node-4 { left: 80%; }
+  .marketing-loop-node-6 { left: 20%; }
+  .marketing-loop-node-7 { left: 12%; }
+  .marketing-loop-node-8 { left: 20%; }
+}
+
+@media (max-width: 640px) {
+  .marketing-page-shell section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .marketing-loop-visual {
+    border-radius: 1.25rem;
+  }
+
+  .marketing-loop-node {
+    font-size: clamp(0.5rem, 2.35vw, 0.58rem);
+    padding: 6px 7px;
+  }
+
+  .marketing-loop-node-1 { top: 9%; }
+  .marketing-loop-node-2 { top: 23%; left: 78%; }
+  .marketing-loop-node-3 { left: 84%; }
+  .marketing-loop-node-4 { top: 77%; left: 78%; }
+  .marketing-loop-node-5 { top: 91%; }
+  .marketing-loop-node-6 { top: 77%; left: 22%; }
+  .marketing-loop-node-7 { left: 16%; }
+  .marketing-loop-node-8 { top: 23%; left: 22%; }
+
+  .marketing-process-visual {
+    min-height: 230px;
+    padding: 16px;
+  }
+
+  .marketing-window {
+    min-height: 200px;
+  }
+
+  .marketing-window-body {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .marketing-addon-grid,
+  .marketing-competitor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (max-width: 900px) {
+    @keyframes marketing-mobile-parallax {
+      from { opacity: 0.72; transform: translateY(26px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .marketing-process-step,
+    .marketing-roi-calculator,
+    .marketing-loop-visual {
+      animation: marketing-mobile-parallax both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 34%;
+      will-change: transform, opacity;
+    }
   }
 }
 
@@ -741,7 +821,9 @@
   .marketing-window-body::after,
   .marketing-progress span,
   .marketing-mini-chart span,
-  .marketing-signal-cloud span {
+  .marketing-signal-cloud span,
+  .marketing-roi-calculator,
+  .marketing-loop-visual {
     animation: none;
   }
 }
