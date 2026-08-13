@@ -682,19 +682,19 @@ export default function MarketingOsPage() {
           </div>
         </section>
 
-        <section id="pricing" className="px-6 py-20" style={{ background: PAPER }}>
+        <section id="pricing" className="px-6 py-20 lg:min-h-screen lg:py-24" style={{ background: PAPER }}>
           <div className="mx-auto max-w-6xl">
             <SectionLabel>Limited offer</SectionLabel>
-            <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-              <div>
-                <h2 className="text-4xl font-bold leading-tight">See what the platform could put back into your agency every month.</h2>
-                <p className="mt-4 text-lg leading-relaxed" style={{ color: MUTED }}>
-                  Saved production time, faster delivery, stronger retention, and eligible referral opportunities can add up quickly. Move the sliders to estimate the monthly upside.
-                </p>
-                <p className="mt-4 text-base leading-relaxed" style={{ color: MUTED }}>
-                  Start with a 7-day trial, then $297/month or $3,267/year with 1 month free.
-                </p>
-              </div>
+            <div className="max-w-4xl">
+              <h2 className="text-4xl font-bold leading-tight sm:text-5xl">See what the platform could put back into your agency every month.</h2>
+              <p className="mt-4 text-lg leading-relaxed" style={{ color: MUTED }}>
+                Saved production time, faster delivery, stronger retention, and eligible referral opportunities can add up quickly. Move the sliders to estimate the monthly upside.
+              </p>
+              <p className="mt-4 text-base leading-relaxed" style={{ color: MUTED }}>
+                Start with a 7-day trial, then $297/month or $3,267/year with 1 month free.
+              </p>
+            </div>
+            <div className="mt-10">
               <MarketingRoiCalculator />
             </div>
           </div>

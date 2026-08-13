@@ -439,7 +439,6 @@
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 24px 60px rgba(13, 15, 46, 0.12), 0 12px 42px rgba(var(--step-accent-rgb), 0.08);
   overflow: hidden;
-  animation: marketing-card-lift 5.2s ease-in-out infinite;
 }
 
 .marketing-window-top {
@@ -464,7 +463,7 @@
 }
 
 .marketing-window-body::after {
-  content: "";
+  content: none;
   position: absolute;
   left: 12px;
   right: 12px;
@@ -472,7 +471,6 @@
   height: 48px;
   border-radius: 999px;
   background: linear-gradient(90deg, transparent, rgba(var(--step-accent-rgb), 0.14), transparent);
-  animation: marketing-glow-scan 4s ease-in-out infinite;
   pointer-events: none;
 }
 
@@ -574,7 +572,6 @@
   min-height: 10px;
   border-radius: 0;
   background: linear-gradient(180deg, rgba(var(--step-accent-rgb), 0.95), rgba(var(--step-secondary-rgb), 0.88));
-  animation: marketing-card-lift 3.8s ease-in-out infinite;
 }
 
 .marketing-mini-bar small {
@@ -612,7 +609,6 @@
   border-color: rgba(var(--step-accent-rgb), 0.18);
   font-size: 0.8rem;
   padding: 9px 12px;
-  animation: marketing-card-lift 4.6s ease-in-out infinite;
 }
 
 .marketing-signal-cloud span:nth-child(2) { animation-delay: 140ms; }
