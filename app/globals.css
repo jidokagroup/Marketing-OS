@@ -139,3 +139,718 @@
     transform: translateX(400%);
   }
 }
+
+.font-data {
+  font-family: var(--font-jidoka-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.blueprint-grid-soft {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(rgba(16, 24, 40, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 24, 40, 0.04) 1px, transparent 1px);
+  background-position: center top;
+  background-repeat: repeat;
+  background-size: 48px 48px;
+}
+
+/* Convia Pro x Jidoka landing page */
+@keyframes marketing-loop-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes marketing-node-float {
+  0%, 100% { transform: translate(-50%, -50%) translateY(-2px); }
+  50% { transform: translate(-50%, -50%) translateY(5px); }
+}
+
+@keyframes marketing-process-rise {
+  0% { opacity: 0; transform: translateY(18px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes marketing-upload-fill {
+  0% { transform: scaleX(0.12); }
+  55% { transform: scaleX(0.82); }
+  100% { transform: scaleX(1); }
+}
+
+@keyframes marketing-glow-scan {
+  0%, 100% { opacity: 0.22; transform: translateY(-36%); }
+  50% { opacity: 0.72; transform: translateY(36%); }
+}
+
+@keyframes marketing-card-lift {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.marketing-page-shell {
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+}
+
+.marketing-hero-machine::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background:
+    linear-gradient(135deg, rgba(86, 89, 240, 0.08), rgba(255, 255, 255, 0) 42%),
+    radial-gradient(circle at 22% 18%, rgba(172, 75, 255, 0.1), transparent 30%),
+    radial-gradient(circle at 80% 72%, rgba(0, 187, 127, 0.08), transparent 34%);
+  animation: marketing-loop-spin 36s linear infinite;
+}
+
+.marketing-hero-machine::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(86, 89, 240, 0.11);
+  border-radius: 26px;
+  pointer-events: none;
+}
+
+.marketing-hero-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(86, 89, 240, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 14px 16px;
+  box-shadow: 0 14px 34px rgba(13, 15, 46, 0.06);
+  animation: marketing-card-lift 5.2s ease-in-out infinite;
+}
+
+.marketing-hero-step:nth-child(2) { animation-delay: 140ms; }
+.marketing-hero-step:nth-child(3) { animation-delay: 280ms; }
+.marketing-hero-step:nth-child(4) { animation-delay: 420ms; }
+.marketing-hero-step:nth-child(5) { animation-delay: 560ms; }
+.marketing-hero-step:nth-child(6) { animation-delay: 700ms; }
+
+.marketing-hero-step span {
+  color: #5659f0;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.marketing-hero-step strong {
+  color: #101828;
+  font-size: 0.98rem;
+}
+
+.marketing-loop-visual::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.65)),
+    radial-gradient(circle at 28% 22%, rgba(86, 89, 240, 0.12), transparent 32%),
+    radial-gradient(circle at 80% 72%, rgba(0, 187, 127, 0.08), transparent 34%);
+  pointer-events: none;
+}
+
+.marketing-loop-visual > * {
+  position: relative;
+  z-index: 1;
+}
+
+.marketing-loop-visual h3,
+.marketing-loop-visual .text-2xl {
+  color: #101828;
+}
+
+.marketing-loop-visual p {
+  color: #4a5565;
+}
+
+.marketing-loop-ring {
+  border: 1px solid rgba(86, 89, 240, 0.14);
+  background:
+    conic-gradient(from 0deg, rgba(86, 89, 240, 0.05), rgba(86, 89, 240, 0.24), rgba(172, 75, 255, 0.18), rgba(0, 187, 127, 0.12), rgba(86, 89, 240, 0.05));
+  animation: marketing-loop-spin 28s linear infinite;
+  will-change: transform;
+}
+
+.marketing-loop-ring::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: inherit;
+  background: #ffffff;
+}
+
+.marketing-loop-sweep {
+  border: 1px dashed rgba(86, 89, 240, 0.24);
+  animation: marketing-loop-spin 18s linear infinite;
+  will-change: transform;
+}
+
+.marketing-loop-sweep::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  background: #5659f0;
+  box-shadow: 0 0 0 10px rgba(86, 89, 240, 0.1);
+}
+
+.marketing-loop-node {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  min-width: max-content;
+  border: 1px solid rgba(86, 89, 240, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 32px rgba(13, 15, 46, 0.10);
+  color: #101828;
+  font-size: clamp(0.62rem, 1vw, 0.75rem);
+  font-weight: 800;
+  line-height: 1.1;
+  padding: 9px 12px;
+  text-align: center;
+  white-space: nowrap;
+  animation: marketing-node-float 4.8s ease-in-out infinite;
+}
+
+.marketing-loop-node-1 { top: 8%; left: 50%; animation-delay: 0ms; }
+.marketing-loop-node-2 { top: 20%; left: 82%; animation-delay: 120ms; }
+.marketing-loop-node-3 { top: 50%; left: 94%; animation-delay: 240ms; }
+.marketing-loop-node-4 { top: 80%; left: 82%; animation-delay: 360ms; }
+.marketing-loop-node-5 { top: 92%; left: 50%; animation-delay: 480ms; }
+.marketing-loop-node-6 { top: 80%; left: 18%; animation-delay: 600ms; }
+.marketing-loop-node-7 { top: 50%; left: 6%; animation-delay: 720ms; }
+.marketing-loop-node-8 { top: 20%; left: 18%; animation-delay: 840ms; }
+
+.marketing-process-step {
+  --step-accent-rgb: 86, 89, 240;
+  --step-secondary-rgb: 0, 187, 127;
+  --step-accent-color: #5659f0;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  align-items: stretch;
+  border: 1px solid rgba(var(--step-accent-rgb), 0.13);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(var(--step-accent-rgb), 0.045), rgba(255, 255, 255, 0.96) 28%, rgba(var(--step-secondary-rgb), 0.035)),
+    #ffffff;
+  box-shadow: 0 18px 50px rgba(13, 15, 46, 0.07), 0 14px 40px rgba(var(--step-accent-rgb), 0.055);
+  overflow: hidden;
+  animation: marketing-process-rise 700ms ease both;
+}
+
+.marketing-process-step-1,
+.marketing-process-step-2,
+.marketing-process-step-5,
+.marketing-process-step-7 {
+  --step-accent-rgb: 86, 89, 240;
+  --step-secondary-rgb: 0, 187, 127;
+  --step-accent-color: #5659f0;
+}
+
+.marketing-process-step-3 {
+  --step-accent-rgb: 172, 75, 255;
+  --step-secondary-rgb: 86, 89, 240;
+  --step-accent-color: #7c3aed;
+}
+
+.marketing-process-step-4,
+.marketing-process-step-6 {
+  --step-accent-rgb: 0, 187, 127;
+  --step-secondary-rgb: 86, 89, 240;
+  --step-accent-color: #008d62;
+}
+
+.marketing-process-step-8 {
+  --step-accent-rgb: 15, 23, 43;
+  --step-secondary-rgb: 86, 89, 240;
+  --step-accent-color: #101828;
+}
+
+.marketing-process-copy {
+  padding: 28px;
+}
+
+.marketing-process-copy h3 {
+  margin-top: 14px;
+  color: #101828;
+  font-family: var(--font-heading), system-ui, sans-serif;
+  font-size: clamp(2rem, 3.8vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.marketing-process-copy p {
+  margin-top: 12px;
+  color: #4a5565;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.marketing-process-chip {
+  display: inline-flex;
+  margin-top: 22px;
+  border-radius: 999px;
+  background: rgba(var(--step-accent-rgb), 0.1);
+  color: var(--step-accent-color);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.marketing-process-visual {
+  position: relative;
+  min-height: 270px;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.88)),
+    radial-gradient(circle at 22% 20%, rgba(var(--step-accent-rgb), 0.18), transparent 34%),
+    radial-gradient(circle at 80% 76%, rgba(var(--step-secondary-rgb), 0.12), transparent 34%),
+    linear-gradient(160deg, rgba(var(--step-accent-rgb), 0.06), transparent 46%, rgba(var(--step-secondary-rgb), 0.055));
+  padding: 26px;
+}
+
+.marketing-process-visual::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0));
+  pointer-events: none;
+}
+
+.marketing-window {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  min-height: 220px;
+  border: 1px solid rgba(var(--step-accent-rgb), 0.14);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 60px rgba(13, 15, 46, 0.12), 0 12px 42px rgba(var(--step-accent-rgb), 0.08);
+  overflow: hidden;
+  animation: marketing-card-lift 5.2s ease-in-out infinite;
+}
+
+.marketing-window-top {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid rgba(var(--step-accent-rgb), 0.1);
+  padding: 14px 16px;
+}
+
+.marketing-window-top span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(var(--step-accent-rgb), 0.22);
+}
+
+.marketing-window-body {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.marketing-window-body::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 50%;
+  height: 48px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(var(--step-accent-rgb), 0.14), transparent);
+  animation: marketing-glow-scan 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.marketing-upload-drop {
+  display: grid;
+  min-height: 86px;
+  place-items: center;
+  border: 1px dashed rgba(var(--step-accent-rgb), 0.34);
+  border-radius: 18px;
+  background: #ffffff;
+  color: var(--step-accent-color);
+  font-weight: 800;
+}
+
+.marketing-progress {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(var(--step-accent-rgb), 0.1);
+  overflow: hidden;
+}
+
+.marketing-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(var(--step-accent-rgb), 0.95), rgba(var(--step-secondary-rgb), 0.88));
+  transform-origin: left;
+  animation: marketing-upload-fill 4s ease-in-out infinite;
+}
+
+.marketing-insight-tags,
+.marketing-platform-strip,
+.marketing-signal-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.marketing-insight-tags span,
+.marketing-score,
+.marketing-schedule-row,
+.marketing-content-row {
+  border: 1px solid rgba(var(--step-accent-rgb), 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #101828;
+  font-size: 0.83rem;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.marketing-window blockquote {
+  border-left: 4px solid var(--step-accent-color);
+  margin: 0;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #101828;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.45;
+  padding: 14px 16px;
+}
+
+.marketing-content-row {
+  display: flex;
+  justify-content: space-between;
+  border-radius: 16px;
+}
+
+.marketing-content-row strong {
+  color: #079455;
+  font-size: 0.78rem;
+}
+
+.marketing-mini-chart {
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+  height: 144px;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 14px 12px 10px;
+}
+
+.marketing-mini-bar {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.marketing-mini-bar span {
+  display: block;
+  width: 100%;
+  height: var(--bar-height, 44%);
+  min-height: 10px;
+  border-radius: 0;
+  background: linear-gradient(180deg, rgba(var(--step-accent-rgb), 0.95), rgba(var(--step-secondary-rgb), 0.88));
+  animation: marketing-card-lift 3.8s ease-in-out infinite;
+}
+
+.marketing-mini-bar small {
+  color: #4a5565;
+  font-size: clamp(0.58rem, 1.45vw, 0.72rem);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.marketing-mini-bar:nth-child(2) span { animation-delay: 120ms; }
+.marketing-mini-bar:nth-child(3) span { animation-delay: 240ms; }
+.marketing-mini-bar:nth-child(4) span { animation-delay: 360ms; }
+.marketing-mini-bar:nth-child(5) span { animation-delay: 480ms; }
+.marketing-mini-bar:nth-child(6) span { animation-delay: 600ms; }
+.marketing-mini-bar:nth-child(7) span { animation-delay: 720ms; }
+.marketing-mini-bar:nth-child(8) span { animation-delay: 840ms; }
+.marketing-mini-bar:nth-child(9) span { animation-delay: 960ms; }
+.marketing-mini-bar:nth-child(10) span { animation-delay: 1080ms; }
+.marketing-mini-bar:nth-child(11) span { animation-delay: 1200ms; }
+.marketing-mini-bar:nth-child(12) span { animation-delay: 1320ms; }
+
+.marketing-platform-strip span,
+.marketing-signal-cloud span {
+  border: 1px solid rgba(var(--step-accent-rgb), 0.12);
+  border-radius: 999px;
+  background: rgba(var(--step-accent-rgb), 0.08);
+  color: var(--step-accent-color);
+  font-size: 0.76rem;
+  font-weight: 900;
+  padding: 7px 10px;
+}
+
+.marketing-signal-cloud span {
+  border-color: rgba(var(--step-accent-rgb), 0.18);
+  font-size: 0.8rem;
+  padding: 9px 12px;
+  animation: marketing-card-lift 4.6s ease-in-out infinite;
+}
+
+.marketing-signal-cloud span:nth-child(2) { animation-delay: 140ms; }
+.marketing-signal-cloud span:nth-child(3) { animation-delay: 280ms; }
+.marketing-signal-cloud span:nth-child(4) { animation-delay: 420ms; }
+.marketing-signal-cloud span:nth-child(5) { animation-delay: 560ms; }
+
+.marketing-competitor-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.marketing-competitor-grid div,
+.marketing-suggestion-card {
+  border: 1px solid rgba(var(--step-accent-rgb), 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #101828;
+  padding: 14px;
+  box-shadow: 0 12px 28px rgba(13, 15, 46, 0.06);
+}
+
+.marketing-competitor-grid span {
+  display: block;
+  color: #4a5565;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.marketing-competitor-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--step-accent-color);
+  font-family: var(--font-jidoka-mono), ui-monospace, monospace;
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.marketing-suggestion-card {
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.marketing-decision-flow,
+.marketing-addon-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.marketing-addon-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.marketing-addon-grid span {
+  border: 1px solid rgba(86, 89, 240, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #101828;
+  font-size: 0.88rem;
+  font-weight: 900;
+  padding: 11px 12px;
+  box-shadow: 0 12px 28px rgba(13, 15, 46, 0.06);
+}
+
+.marketing-roi-calculator {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(255, 255, 255, 0.9)),
+    radial-gradient(circle at 14% 16%, rgba(86, 89, 240, 0.13), transparent 34%),
+    radial-gradient(circle at 82% 18%, rgba(172, 75, 255, 0.1), transparent 30%),
+    radial-gradient(circle at 76% 84%, rgba(0, 187, 127, 0.1), transparent 34%);
+}
+
+.marketing-roi-calculator::before {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(86, 89, 240, 0.1);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.marketing-roi-calculator > * {
+  position: relative;
+  z-index: 1;
+}
+
+.marketing-roi-slider-card {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.86)),
+    radial-gradient(circle at 12% 18%, rgba(86, 89, 240, 0.08), transparent 34%);
+  box-shadow: 0 12px 26px rgba(13, 15, 46, 0.045);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.marketing-roi-slider-card:focus-within,
+.marketing-roi-slider-card:hover {
+  border-color: rgba(86, 89, 240, 0.26);
+  box-shadow: 0 16px 34px rgba(13, 15, 46, 0.07), 0 8px 26px rgba(86, 89, 240, 0.08);
+  transform: translateY(-1px);
+}
+
+.marketing-roi-value-pill {
+  background:
+    linear-gradient(135deg, rgba(86, 89, 240, 0.12), rgba(172, 75, 255, 0.1)),
+    #f4f3ff;
+}
+
+.marketing-roi-summary {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, #0f172b, #11123a 50%, #10243a),
+    radial-gradient(circle at 18% 12%, rgba(86, 89, 240, 0.42), transparent 32%),
+    radial-gradient(circle at 86% 84%, rgba(0, 187, 127, 0.28), transparent 34%);
+  box-shadow: 0 24px 70px rgba(15, 23, 43, 0.18);
+}
+
+.marketing-roi-summary::before {
+  content: "";
+  position: absolute;
+  inset: -28%;
+  background:
+    radial-gradient(circle at 22% 20%, rgba(172, 75, 255, 0.2), transparent 28%),
+    radial-gradient(circle at 76% 70%, rgba(0, 187, 127, 0.16), transparent 32%);
+  pointer-events: none;
+}
+
+.marketing-roi-summary > * {
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .marketing-page-shell {
+    overflow-x: clip;
+  }
+
+  .marketing-process-step {
+    grid-template-columns: 1fr;
+  }
+
+  .marketing-process-copy {
+    padding: 22px;
+  }
+
+  .marketing-loop-node {
+    font-size: clamp(0.58rem, 2.45vw, 0.68rem);
+    padding: 7px 9px;
+  }
+
+  .marketing-loop-node-2 { left: 80%; }
+  .marketing-loop-node-3 { left: 88%; }
+  .marketing-loop-node-4 { left: 80%; }
+  .marketing-loop-node-6 { left: 20%; }
+  .marketing-loop-node-7 { left: 12%; }
+  .marketing-loop-node-8 { left: 20%; }
+}
+
+@media (max-width: 640px) {
+  .marketing-page-shell section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .marketing-loop-visual {
+    border-radius: 1.25rem;
+  }
+
+  .marketing-loop-node {
+    font-size: clamp(0.5rem, 2.35vw, 0.58rem);
+    padding: 6px 7px;
+  }
+
+  .marketing-loop-node-1 { top: 9%; }
+  .marketing-loop-node-2 { top: 23%; left: 78%; }
+  .marketing-loop-node-3 { left: 84%; }
+  .marketing-loop-node-4 { top: 77%; left: 78%; }
+  .marketing-loop-node-5 { top: 91%; }
+  .marketing-loop-node-6 { top: 77%; left: 22%; }
+  .marketing-loop-node-7 { left: 16%; }
+  .marketing-loop-node-8 { top: 23%; left: 22%; }
+
+  .marketing-process-visual {
+    min-height: 230px;
+    padding: 16px;
+  }
+
+  .marketing-window {
+    min-height: 200px;
+  }
+
+  .marketing-window-body {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .marketing-addon-grid,
+  .marketing-competitor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (max-width: 900px) {
+    @keyframes marketing-mobile-parallax {
+      from { opacity: 0.72; transform: translateY(26px) scale(0.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .marketing-process-step,
+    .marketing-roi-calculator,
+    .marketing-loop-visual {
+      animation: marketing-mobile-parallax both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 34%;
+      will-change: transform, opacity;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-loop-ring,
+  .marketing-loop-sweep,
+  .marketing-loop-node,
+  .marketing-hero-machine::before,
+  .marketing-hero-step,
+  .marketing-process-step,
+  .marketing-window,
+  .marketing-window-body::after,
+  .marketing-progress span,
+  .marketing-mini-chart span,
+  .marketing-signal-cloud span,
+  .marketing-roi-calculator,
+  .marketing-loop-visual {
+    animation: none;
+  }
+}
