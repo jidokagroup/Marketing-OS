@@ -561,7 +561,7 @@ export default function MarketingOsPage() {
                   <span className="block">Turn authority into a marketing machine.</span>
                 </h1>
                 <p className="mt-6 max-w-2xl text-lg leading-relaxed sm:text-xl" style={{ color: MUTED }}>
-                  Convia Pro turns long form content into cohesive multi-channel campaigns. Jidoka sharpens the competitive edge through market intelligence, social signals, and integrated workflow layers. Convia Pro x Jidoka gives you the ultimate marketing machine.
+                  Convia Pro turns long form content into cohesive multi-channel campaigns. Jidoka sharpens the competitive edge through market intelligence, social signals, and integrated workflow layers. Together, they turn every signal into your next campaign.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <CtaButton href="#workflow">See How It Works</CtaButton>
