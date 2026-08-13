@@ -280,7 +280,7 @@
 
 .marketing-loop-sweep {
   border: 1px dashed rgba(86, 89, 240, 0.24);
-  animation: marketing-loop-spin 18s linear infinite reverse;
+  animation: marketing-loop-spin 18s linear infinite;
   will-change: transform;
 }
 

@@ -24,14 +24,14 @@ const MUTED = "#4A5565";
 const PAPER = "#F8FAFC";
 
 const WORKFLOW_STAGES = [
-  "01 Source content",
-  "02 Extract signal",
-  "03 Build campaign",
-  "04 Distribute",
-  "05 Compare analytics",
-  "06 Market signals",
-  "07 Choose next move",
-  "08 Feed back in",
+  "Source content",
+  "Extract signal",
+  "Build campaign",
+  "Distribute",
+  "Compare analytics",
+  "Market signals",
+  "Choose next move",
+  "Feed back in",
 ];
 
 const HOW_IT_WORKS = [
