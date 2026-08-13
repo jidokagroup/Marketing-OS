@@ -22,6 +22,7 @@ const BORDER = "#E2E8F0";
 const INK = "#101828";
 const MUTED = "#4A5565";
 const PAPER = "#F8FAFC";
+const CALENDAR_URL = "https://cal.read.ai/crystal-8mhiy/30-min";
 
 const WORKFLOW_STAGES = [
   "Source content",
@@ -580,7 +581,7 @@ export default function MarketingOsPage() {
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <CtaButton href="#workflow">See How It Works</CtaButton>
-                  <CtaButton href="https://jidokagroup.com/book/schedule" variant="secondary">
+                  <CtaButton href={CALENDAR_URL} variant="secondary">
                     Schedule a Call
                   </CtaButton>
                 </div>
@@ -627,7 +628,7 @@ export default function MarketingOsPage() {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <CtaButton href="#pricing" variant="dark">Lock Founder Pricing</CtaButton>
-                <CtaButton href="https://jidokagroup.com/book/schedule" variant="secondary">Schedule a Call</CtaButton>
+                <CtaButton href={CALENDAR_URL} variant="secondary">Schedule a Call</CtaButton>
               </div>
             </div>
             <HowItWorksPreview />
