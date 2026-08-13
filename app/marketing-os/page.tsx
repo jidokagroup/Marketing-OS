@@ -5,7 +5,7 @@ import MarketingRoiCalculator from "./MarketingRoiCalculator";
 
 export const metadata: Metadata = {
   title: "Convia Pro x Jidoka | Conversation Intelligence for Marketing Machines",
-  alternates: { canonical: "/marketing-os" },
+  alternates: { canonical: "/ConviaproxJidoka" },
   description:
     "Convia Pro x Jidoka turns long form content into cohesive multi-channel campaigns connected to market intelligence, social signals, analytics, and agency workflow layers.",
   openGraph: {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     description:
       "Turn long form content into authority campaigns with market intelligence, social signals, analytics, and integrated workflow layers.",
     type: "website",
-    url: "https://jidoka-marketing-os.netlify.app/marketing-os",
+    url: "https://jidoka-marketing-os.netlify.app/ConviaproxJidoka",
   },
 };
 
@@ -286,7 +286,7 @@ function MarketingLandingNav() {
   return (
     <header className="sticky top-0 z-40 border-b border-[#E2E8F0] bg-white/90 px-6 py-4 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4">
-        <Link href="/marketing-os" className="text-sm font-bold tracking-tight text-[#101828] sm:text-base">
+        <Link href="/ConviaproxJidoka" className="text-sm font-bold tracking-tight text-[#101828] sm:text-base">
           Convia Pro x Jidoka
         </Link>
         <div className="hidden items-center gap-5 text-sm font-semibold text-[#4A5565] md:flex">
