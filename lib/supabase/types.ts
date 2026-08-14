@@ -17,6 +17,8 @@ export type Json =
 
 export type AgentStatus = "draft" | "analyzing" | "ready" | "error";
 export type AssetStatus = "pending" | "extracted" | "error";
+/** Lifecycle of a competitor scan report (see migration 0022). */
+export type ScanStatus = "queued" | "running" | "complete" | "failed";
 
 type Timestamps = { created_at: string };
 type Mutable = Timestamps & { updated_at: string };
@@ -726,6 +728,10 @@ export interface Database {
           content_opportunities: Json;
           summary: string | null;
           scanned_at: string;
+          status: ScanStatus;
+          error_message: string | null;
+          requested_at: string;
+          client_id: string | null;
         };
         Insert: {
           id?: string;
@@ -740,6 +746,10 @@ export interface Database {
           content_opportunities?: Json;
           summary?: string | null;
           scanned_at?: string;
+          status?: ScanStatus;
+          error_message?: string | null;
+          requested_at?: string;
+          client_id?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["social_intelligence_reports"]["Insert"]

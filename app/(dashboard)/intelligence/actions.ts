@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
-import { runCompetitorScan, type ScanClient } from "@/lib/ai/competitor-scan";
+import { type ScanClient } from "@/lib/ai/competitor-scan";
 import { asRow, opsTable, type CampaignRow } from "@/lib/marketing-os/operations";
 
 const BASELINE_TOPICS = [
@@ -72,6 +72,47 @@ const BASELINE_OPPORTUNITY_SIGNALS = [
   "High conversion intent: pair comment keywords with a DM sequence and booking CTA.",
 ];
 
+/**
+ * Resolve the deployed origin so the action can hand work to the background
+ * worker. Netlify sets URL/DEPLOY_PRIME_URL; NEXT_PUBLIC_SITE_URL wins locally.
+ */
+function siteOrigin() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.URL ||
+    process.env.DEPLOY_PRIME_URL ||
+    ""
+  ).replace(/\/$/, "");
+}
+
+/**
+ * Hand the scan to the Netlify background function. Background functions ack
+ * with 202 straight away and then run with a multi-minute budget, so awaiting
+ * this trigger stays fast — it is the scan itself we must not wait for.
+ *
+ * Returns false when the worker could not be reached; the caller leaves the
+ * report queued so the scheduled sweep can pick it up instead.
+ */
+async function triggerScanWorker(reportId: string): Promise<boolean> {
+  const origin = siteOrigin();
+  const secret = process.env.CRON_SECRET;
+  if (!origin || !secret) return false;
+
+  try {
+    const res = await fetch(`${origin}/.netlify/functions/competitor-scan-background`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ reportId }),
+    });
+    return res.ok || res.status === 202;
+  } catch {
+    return false;
+  }
+}
+
 export async function saveCompetitorsAction(formData: FormData) {
   const { user, supabase } = await requireUser();
   const competitorWebsites = String(formData.get("competitor_websites") ?? "")
@@ -101,67 +142,51 @@ export async function saveCompetitorsAction(formData: FormData) {
     .eq("status", "active");
   const platforms = [...new Set((accounts ?? []).map((account) => account.platform))];
 
-  let topics: string[] = BASELINE_TOPICS;
-  let hooks: string[] = BASELINE_HOOKS;
-  let opportunities: string[] = BASELINE_TRENDS;
-  let positioning: string[] = BASELINE_POSITIONING;
-  let contentGaps: string[] = BASELINE_CONTENT_GAPS;
-  let hookLibrary: string[] = BASELINE_HOOK_LIBRARY;
-  let offerTracker: string[] = BASELINE_OFFER_TRACKER;
-  let commentThemes: string[] = BASELINE_COMMENT_THEMES;
-  let opportunitySignals: string[] = BASELINE_OPPORTUNITY_SIGNALS;
-  let summary: string;
+  const hasWatchlist = competitorWebsites.length > 0;
 
-  if (competitorWebsites.length) {
-    try {
-      const scan = await runCompetitorScan({ client, websites: competitorWebsites });
-      topics = scan.trending_topics;
-      hooks = scan.hooks;
-      opportunities = scan.content_opportunities;
-      positioning = scan.positioning;
-      contentGaps = scan.content_gaps;
-      hookLibrary = scan.hook_library;
-      offerTracker = scan.offer_tracker;
-      commentThemes = scan.comment_themes;
-      opportunitySignals = scan.opportunity_signals;
-      summary = scan.summary;
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : "scan failed";
-      summary =
-        `Competitor website watchlist saved, but the live scan could not run (${reason}). ` +
-        "Baseline guidance is shown below — save again to retry.";
-    }
-  } else {
-    summary =
-      "Watchlist cleared. Add competitor websites and save to generate a fresh scan.";
+  // The scan itself runs out-of-band: fetching several competitor sites and
+  // generating a structured report takes far longer than a request may live.
+  // Save the watchlist with baseline guidance now, then let the worker fill it
+  // in. The page renders the baseline immediately and swaps in real results
+  // once the row flips to `complete`.
+  const { data: inserted, error: insertError } = await supabase
+    .from("marketing_os_social_intelligence_reports")
+    .insert({
+      owner_id: user.id,
+      // The industry column doubles as the client-focus label for the report.
+      industry: client?.name ?? "general marketing",
+      client_id: clientId || null,
+      platforms,
+      competitor_accounts: competitorWebsites,
+      trending_topics: BASELINE_TOPICS,
+      hooks: BASELINE_HOOKS,
+      audios: [
+        "Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress.",
+      ],
+      // Stored as an object so positioning rides along without a schema change;
+      // the Intelligence page reads both this shape and the legacy plain array.
+      content_opportunities: {
+        items: BASELINE_TRENDS,
+        positioning: BASELINE_POSITIONING,
+        content_gaps: BASELINE_CONTENT_GAPS,
+        hook_library: BASELINE_HOOK_LIBRARY,
+        offer_tracker: BASELINE_OFFER_TRACKER,
+        comment_themes: BASELINE_COMMENT_THEMES,
+        opportunity_signals: BASELINE_OPPORTUNITY_SIGNALS,
+        source: "baseline",
+      },
+      status: hasWatchlist ? "queued" : "complete",
+      summary: hasWatchlist
+        ? "Watchlist saved. The competitor scan is running now — baseline guidance is shown below and will be replaced when the scan finishes."
+        : "Watchlist cleared. Add competitor websites and save to generate a fresh scan.",
+      scanned_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (hasWatchlist && !insertError && inserted) {
+    await triggerScanWorker(inserted.id);
   }
-
-  await supabase.from("marketing_os_social_intelligence_reports").insert({
-    owner_id: user.id,
-    // The industry column doubles as the client-focus label for the report.
-    industry: client?.name ?? "general marketing",
-    platforms,
-    competitor_accounts: competitorWebsites,
-    trending_topics: topics,
-    hooks,
-    audios: [
-      "Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress.",
-    ],
-    // Stored as an object so positioning rides along without a schema change;
-    // the Intelligence page reads both this shape and the legacy plain array.
-    content_opportunities: {
-      items: opportunities,
-      positioning,
-      content_gaps: contentGaps,
-      hook_library: hookLibrary,
-      offer_tracker: offerTracker,
-      comment_themes: commentThemes,
-      opportunity_signals: opportunitySignals,
-      source: "website_competitor_scan",
-    },
-    summary,
-    scanned_at: new Date().toISOString(),
-  });
 
   revalidatePath("/intelligence");
 }

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { generateStructured } from "@/lib/ai/anthropic";
-import { extractFromUrl } from "@/lib/extract";
+import { generateStructured } from "./anthropic";
+import { fetchPageText } from "../extract/html";
 
 /**
  * Competitor scan agent: reads competitor websites and produces a
@@ -131,22 +131,13 @@ const scanJsonSchema = {
   },
 };
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Timed out")), ms),
-    ),
-  ]);
-}
-
 async function fetchSiteExcerpts(websites: string[]) {
   const urls = websites
     .filter((site) => site.startsWith("http://") || site.startsWith("https://"))
     .slice(0, MAX_SITES);
 
   const settled = await Promise.allSettled(
-    urls.map((url) => withTimeout(extractFromUrl(url), SITE_FETCH_TIMEOUT_MS)),
+    urls.map((url) => fetchPageText(url, SITE_FETCH_TIMEOUT_MS)),
   );
 
   return urls.map((url, index) => {
