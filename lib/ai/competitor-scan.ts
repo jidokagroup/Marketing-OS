@@ -8,9 +8,18 @@ import { fetchPageText } from "../extract/html";
  * client-specific intelligence report (topics, hooks, content formats).
  */
 
-const MAX_SITES = 4;
-const MAX_SITE_CHARS = 6000;
+// Sites are fetched in parallel, so raising this costs one extra prompt's worth
+// of input tokens rather than extra wall-clock time. Kept well under the
+// watchlist sizes people actually paste so the prompt stays focused.
+const MAX_SITES = 12;
+const MAX_SITE_CHARS = 3500;
 const SITE_FETCH_TIMEOUT_MS = 8000;
+
+// The scan runs in a Netlify background function (~15 min budget), not in a
+// request handler. Generating ten populated arrays takes well over a minute, so
+// this is sized for the model finishing rather than for a request deadline.
+// The SDK retries once on timeout, so worst case is roughly double this.
+const SCAN_TIMEOUT_MS = 240_000;
 
 export type ScanClient = {
   name: string;
@@ -190,6 +199,6 @@ export async function runCompetitorScan({
     jsonSchema: scanJsonSchema,
     validator: scanValidator,
     maxTokens: 2500,
-    timeoutMs: 45_000,
+    timeoutMs: SCAN_TIMEOUT_MS,
   });
 }
