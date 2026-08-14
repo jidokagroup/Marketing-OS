@@ -58,8 +58,8 @@ export function ScanStatusBanner({
         <span className="font-medium text-foreground">
           {status === "running" ? "Scanning competitors…" : "Scan queued…"}
         </span>{" "}
-        Reading each site and writing the report. This usually takes under a minute
-        {waited >= 90 ? " — still working, it will appear here when it lands" : ""}. You can
+        Reading each site and writing the report. This usually takes a minute or two
+        {waited >= 150 ? " — still working, it will appear here when it lands" : ""}. You can
         leave this page; results appear automatically.
       </span>
     </div>
