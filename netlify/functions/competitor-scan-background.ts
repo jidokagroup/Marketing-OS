@@ -155,21 +155,52 @@ export default async function handler(request: Request) {
 
   let reports: ReportRow[] = [];
   if (reportId) {
-    const { data } = await db
+    const { data, error } = await db
       .from("marketing_os_social_intelligence_reports")
       .select(columns)
       .eq("id", reportId)
       .maybeSingle();
+    if (error) {
+      return new Response(JSON.stringify({ ok: false, error: `lookup failed: ${error.message}` }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
     if (data) reports = [data as ReportRow];
   } else {
+    // Two plain queries rather than a nested `or(...)` filter: the combined
+    // form is easy to get subtly wrong, and a rejected filter would return no
+    // rows, which is indistinguishable from an empty queue.
     const staleBefore = new Date(Date.now() - STALE_RUNNING_MS).toISOString();
-    const { data } = await db
-      .from("marketing_os_social_intelligence_reports")
-      .select(columns)
-      .or(`status.eq.queued,and(status.eq.running,requested_at.lt."${staleBefore}")`)
-      .order("requested_at", { ascending: true })
-      .limit(SWEEP_LIMIT);
-    reports = (data ?? []) as ReportRow[];
+
+    const [queued, stale] = await Promise.all([
+      db
+        .from("marketing_os_social_intelligence_reports")
+        .select(columns)
+        .eq("status", "queued")
+        .order("requested_at", { ascending: true })
+        .limit(SWEEP_LIMIT),
+      db
+        .from("marketing_os_social_intelligence_reports")
+        .select(columns)
+        .eq("status", "running")
+        .lt("requested_at", staleBefore)
+        .order("requested_at", { ascending: true })
+        .limit(SWEEP_LIMIT),
+    ]);
+
+    if (queued.error || stale.error) {
+      const reason = queued.error?.message ?? stale.error?.message ?? "query failed";
+      return new Response(JSON.stringify({ ok: false, error: `sweep query failed: ${reason}` }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    reports = [...(queued.data ?? []), ...(stale.data ?? [])].slice(
+      0,
+      SWEEP_LIMIT,
+    ) as ReportRow[];
   }
 
   const results = [];
