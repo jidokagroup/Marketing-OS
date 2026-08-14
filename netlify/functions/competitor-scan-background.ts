@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-import { runCompetitorScan, type ScanClient } from "../../lib/ai/competitor-scan";
+import type { ScanClient } from "../../lib/ai/competitor-scan";
 
 /**
  * Competitor scan worker.
@@ -73,6 +73,11 @@ async function runOne(db: ReturnType<typeof admin>, report: ReportRow) {
 
   try {
     const client = await loadClient(db, report);
+    // Imported lazily: if the scan module fails to load in the bundled function
+    // (a missing transitive dep, a bad env var at module scope) that surfaces
+    // here as a catchable error we can write to the row, instead of killing the
+    // invocation with nothing but a platform log entry.
+    const { runCompetitorScan } = await import("../../lib/ai/competitor-scan");
     const scan = await runCompetitorScan({ client, websites });
 
     await db
@@ -134,31 +139,85 @@ export default async function handler(request: Request) {
     // No body: this is the scheduled sweep.
   }
 
-  const db = admin();
+  let db: ReturnType<typeof admin>;
+  try {
+    db = admin();
+  } catch (error) {
+    // Nothing can be written to the row without a client, so report it here.
+    const reason = error instanceof Error ? error.message : "worker startup failed";
+    return new Response(JSON.stringify({ ok: false, error: reason }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
   const columns = "id, owner_id, client_id, industry, competitor_accounts";
 
   let reports: ReportRow[] = [];
   if (reportId) {
-    const { data } = await db
+    const { data, error } = await db
       .from("marketing_os_social_intelligence_reports")
       .select(columns)
       .eq("id", reportId)
       .maybeSingle();
+    if (error) {
+      return new Response(JSON.stringify({ ok: false, error: `lookup failed: ${error.message}` }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
     if (data) reports = [data as ReportRow];
   } else {
+    // Two plain queries rather than a nested `or(...)` filter: the combined
+    // form is easy to get subtly wrong, and a rejected filter would return no
+    // rows, which is indistinguishable from an empty queue.
     const staleBefore = new Date(Date.now() - STALE_RUNNING_MS).toISOString();
-    const { data } = await db
-      .from("marketing_os_social_intelligence_reports")
-      .select(columns)
-      .or(`status.eq.queued,and(status.eq.running,requested_at.lt."${staleBefore}")`)
-      .order("requested_at", { ascending: true })
-      .limit(SWEEP_LIMIT);
-    reports = (data ?? []) as ReportRow[];
+
+    const [queued, stale] = await Promise.all([
+      db
+        .from("marketing_os_social_intelligence_reports")
+        .select(columns)
+        .eq("status", "queued")
+        .order("requested_at", { ascending: true })
+        .limit(SWEEP_LIMIT),
+      db
+        .from("marketing_os_social_intelligence_reports")
+        .select(columns)
+        .eq("status", "running")
+        .lt("requested_at", staleBefore)
+        .order("requested_at", { ascending: true })
+        .limit(SWEEP_LIMIT),
+    ]);
+
+    if (queued.error || stale.error) {
+      const reason = queued.error?.message ?? stale.error?.message ?? "query failed";
+      return new Response(JSON.stringify({ ok: false, error: `sweep query failed: ${reason}` }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    reports = [...(queued.data ?? []), ...(stale.data ?? [])].slice(
+      0,
+      SWEEP_LIMIT,
+    ) as ReportRow[];
   }
 
   const results = [];
   for (const report of reports) {
-    results.push(await runOne(db, report));
+    try {
+      results.push(await runOne(db, report));
+    } catch (error) {
+      // runOne handles scan failures itself; this catches anything outside it
+      // (a Supabase write rejected, for instance) so one bad row cannot take
+      // down the rest of the sweep silently.
+      const reason = error instanceof Error ? error.message : "worker error";
+      await db
+        .from("marketing_os_social_intelligence_reports")
+        .update({ status: "failed", error_message: `Worker error: ${reason}` })
+        .eq("id", report.id);
+      results.push({ id: report.id, ok: false, error: reason });
+    }
   }
 
   return new Response(JSON.stringify({ ok: true, processed: results.length, results }), {
