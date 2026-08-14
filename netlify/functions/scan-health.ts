@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "../../lib/supabase/service-client";
 
 /**
  * Diagnostics for the competitor scan worker.
@@ -55,17 +55,12 @@ export default async function handler(request: Request) {
   }
 
   // 2. Can we build the service-role client and reach the table?
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
   let queued: number | null = null;
   let statuses: Record<string, number> = {};
 
-  if (!url || !key) {
-    checks.supabase = { ok: false, detail: "missing url or service-role key" };
-  } else {
+  {
     try {
-      const db = createClient(url, key, { auth: { persistSession: false } });
+      const db = createServiceClient();
       const { data, error } = await db
         .from("marketing_os_social_intelligence_reports")
         .select("status")

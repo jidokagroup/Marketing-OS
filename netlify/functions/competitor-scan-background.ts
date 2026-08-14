@@ -1,6 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
-
 import type { ScanClient } from "../../lib/ai/competitor-scan";
+import { createServiceClient } from "../../lib/supabase/service-client";
 
 /**
  * Competitor scan worker.
@@ -29,17 +28,8 @@ type ReportRow = {
   competitor_accounts: string[] | null;
 };
 
-function admin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Supabase service-role credentials are not configured");
-  }
-  return createClient(url, key, { auth: { persistSession: false } });
-}
-
 async function loadClient(
-  db: ReturnType<typeof admin>,
+  db: ReturnType<typeof createServiceClient>,
   report: ReportRow,
 ): Promise<ScanClient> {
   if (!report.client_id) {
@@ -53,7 +43,7 @@ async function loadClient(
   return (data as ScanClient) ?? null;
 }
 
-async function runOne(db: ReturnType<typeof admin>, report: ReportRow) {
+async function runOne(db: ReturnType<typeof createServiceClient>, report: ReportRow) {
   const websites = report.competitor_accounts ?? [];
   if (!websites.length) {
     await db
@@ -139,9 +129,9 @@ export default async function handler(request: Request) {
     // No body: this is the scheduled sweep.
   }
 
-  let db: ReturnType<typeof admin>;
+  let db: ReturnType<typeof createServiceClient>;
   try {
-    db = admin();
+    db = createServiceClient();
   } catch (error) {
     // Nothing can be written to the row without a client, so report it here.
     const reason = error instanceof Error ? error.message : "worker startup failed";
