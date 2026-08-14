@@ -185,7 +185,25 @@ export async function saveCompetitorsAction(formData: FormData) {
     .single();
 
   if (hasWatchlist && !insertError && inserted) {
-    await triggerScanWorker(inserted.id);
+    const triggered = await triggerScanWorker(inserted.id);
+
+    // A failed trigger is invisible otherwise: the row just sits at `queued`
+    // looking identical to a slow scan. Record why so the page (and anyone
+    // reading the table) can tell "never started" from "still running". The
+    // status stays `queued` so the scheduled sweep can still claim it.
+    if (!triggered) {
+      const reason = !siteOrigin()
+        ? "no site URL configured"
+        : !process.env.CRON_SECRET
+          ? "CRON_SECRET is not set"
+          : "the background worker could not be reached";
+      await supabase
+        .from("marketing_os_social_intelligence_reports")
+        .update({
+          error_message: `Scan worker was not triggered directly (${reason}). Waiting for the scheduled sweep.`,
+        })
+        .eq("id", inserted.id);
+    }
   }
 
   revalidatePath("/intelligence");
