@@ -140,6 +140,61 @@ const scanJsonSchema = {
   },
 };
 
+/**
+ * Upper bound per list, matching the counts in each schema description.
+ * The model treats those as guidance, not limits, so they are enforced here.
+ */
+const MAX_ITEMS: Record<string, number> = {
+  trending_topics: 6,
+  hooks: 6,
+  content_opportunities: 6,
+  positioning: 5,
+  content_gaps: 6,
+  hook_library: 8,
+  offer_tracker: 6,
+  comment_themes: 6,
+  opportunity_signals: 6,
+};
+
+const FIELD_LABELS = new Set(
+  Object.keys(MAX_ITEMS).flatMap((field) => [field, field.replace(/_/g, " ")]),
+);
+
+/**
+ * Clean one list from the model.
+ *
+ * Observed failure: instead of closing `trending_topics` and opening the next
+ * field, the model kept writing into the first array — emitting a bare section
+ * label (" hooks") followed by that section's content, every element carrying
+ * the leading space of a comma-separated continuation. Each string is a valid
+ * string, so the JSON Schema and zod both accept it and the label renders as a
+ * one-word card in the UI.
+ *
+ * Dropping bare labels removes the marker, and capping the list drops the
+ * spilled content after it, since the overflow always lands past the documented
+ * count.
+ */
+function cleanList(field: string, items: string[]): string[] {
+  const cleaned = items
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .filter((item) => !FIELD_LABELS.has(item.toLowerCase()));
+
+  return cleaned.slice(0, MAX_ITEMS[field] ?? cleaned.length);
+}
+
+function cleanScan(scan: CompetitorScanResult): CompetitorScanResult {
+  const cleaned = { ...scan };
+  for (const field of Object.keys(MAX_ITEMS)) {
+    const key = field as keyof CompetitorScanResult;
+    const value = cleaned[key];
+    if (Array.isArray(value)) {
+      (cleaned[key] as string[]) = cleanList(field, value);
+    }
+  }
+  return cleaned;
+}
+
 async function fetchSiteExcerpts(websites: string[]) {
   const urls = websites
     .filter((site) => site.startsWith("http://") || site.startsWith("https://"))
@@ -179,7 +234,7 @@ export async function runCompetitorScan({
         .join("\n\n")
     : `No competitor site content could be fetched. Watchlist entries:\n${websites.join("\n")}`;
 
-  return generateStructured({
+  const scan = await generateStructured<CompetitorScanResult>({
     system:
       "You are a social media competitor analyst for a marketing agency. " +
       "You study competitor websites and produce concrete, education-first content " +
@@ -190,15 +245,24 @@ export async function runCompetitorScan({
     prompt:
       `${clientBlock}\n\n` +
       `COMPETITOR RESEARCH MATERIAL:\n${competitorBlock}\n\n` +
-      "Produce the intelligence report: 5-6 trending topics the client should " +
-      "cover, 4-6 hooks to adapt, 4-6 content format opportunities, 3-5 " +
-      "positioning statements that differentiate the client from these " +
-      "competitors, 4-6 content gaps, 6-8 hook-library entries, 4-6 offer " +
-      "or CTA signals, 4-6 comment themes, 4-6 opportunity signals, and a " +
-      "short summary of what competitors emphasize and where this client can stand out.",
+      "Produce the intelligence report. Fill every field separately and keep " +
+      "each one's content inside its own array — never continue one section's " +
+      "list into the next field, and never emit a section name as a list item:\n" +
+      "- trending_topics: 5-6 topics the client should cover\n" +
+      "- hooks: 4-6 hooks to adapt\n" +
+      "- content_opportunities: 4-6 content format opportunities\n" +
+      "- positioning: 3-5 statements differentiating the client from these competitors\n" +
+      "- content_gaps: 4-6 gaps\n" +
+      "- hook_library: 6-8 reusable hook patterns\n" +
+      "- offer_tracker: 4-6 offer or CTA signals\n" +
+      "- comment_themes: 4-6 comment themes\n" +
+      "- opportunity_signals: 4-6 opportunity signals\n" +
+      "- summary: what competitors emphasize and where this client can stand out",
     jsonSchema: scanJsonSchema,
     validator: scanValidator,
     maxTokens: 2500,
     timeoutMs: SCAN_TIMEOUT_MS,
   });
+
+  return cleanScan(scan);
 }

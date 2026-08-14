@@ -614,7 +614,7 @@ export default async function IntelligencePage() {
         <InsightCard
           title="Recommended posts"
           items={recommendedPosts}
-          source={reportSource}
+          source="Marketing baseline"
           href={generateHref}
           opsReady={opsReady}
           reportId={latestReport?.id}
