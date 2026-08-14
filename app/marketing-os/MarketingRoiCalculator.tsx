@@ -53,12 +53,12 @@ function SliderField({
 }
 
 export default function MarketingRoiCalculator() {
-  const [hoursPerClient, setHoursPerClient] = useState(10);
-  const [hourlyValue, setHourlyValue] = useState(65);
-  const [clientCount, setClientCount] = useState(12);
-  const [monthlyClientValue, setMonthlyClientValue] = useState(2500);
-  const [referrals, setReferrals] = useState(1);
-  const [referralValue, setReferralValue] = useState(700);
+  const [hoursPerClient, setHoursPerClient] = useState(5);
+  const [hourlyValue, setHourlyValue] = useState(20);
+  const [clientCount, setClientCount] = useState(10);
+  const [monthlyClientValue, setMonthlyClientValue] = useState(2000);
+  const [referrals, setReferrals] = useState(0);
+  const [referralValue, setReferralValue] = useState(100);
 
   const totals = useMemo(() => {
     const timeValue = hoursPerClient * clientCount * hourlyValue;
