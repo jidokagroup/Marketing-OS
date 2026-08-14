@@ -19,6 +19,7 @@ import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { ScanStatusBanner } from "./ScanStatusBanner";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -368,9 +369,11 @@ export default async function IntelligencePage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4" />
-            {latestReport?.scanned_at
-              ? `Last scan ${new Date(latestReport.scanned_at).toLocaleString()}`
-              : "Live scan starts after platform APIs are connected"}
+            {latestReport?.status === "queued" || latestReport?.status === "running"
+              ? "Competitor scan in progress…"
+              : latestReport?.scanned_at
+                ? `Last scan ${new Date(latestReport.scanned_at).toLocaleString()}`
+                : "Live scan starts after platform APIs are connected"}
           </div>
         </CardContent>
       </Card>
@@ -380,9 +383,9 @@ export default async function IntelligencePage() {
           <CardTitle>Competitor websites to monitor</CardTitle>
           <CardDescription>
             Add competitor websites, one per line, and pick which client the
-            ideas are for. Saving runs a fresh scan: Jidoka Marketing Team OS reads each site
-            and generates new topics, hooks, and content opportunities below.
-            This can take up to a minute.
+            ideas are for. Saving queues a fresh scan: Jidoka Marketing Team OS reads each
+            site and generates new topics, hooks, and content opportunities below.
+            The scan runs in the background and appears here when it finishes.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -398,12 +401,18 @@ export default async function IntelligencePage() {
               placeholder={"https://www.clevelandclinic.org\nhttps://drhyman.com\nhttps://www.mindbodygreen.com"}
             />
             <PendingSubmitButton
-              pendingLabel="Scanning competitors…"
-              pendingHint="The competitor scan agent is reading each website and writing the report. This can take up to a minute — keep this page open."
+              pendingLabel="Saving watchlist…"
+              pendingHint="Queueing the competitor scan."
             >
               Save & scan competitors
             </PendingSubmitButton>
           </form>
+          <div className="mt-3">
+            <ScanStatusBanner
+              status={latestReport?.status}
+              errorMessage={latestReport?.error_message}
+            />
+          </div>
           {latestReport?.summary && (
             <p className="mt-3 text-xs text-muted-foreground">
               Latest scan
