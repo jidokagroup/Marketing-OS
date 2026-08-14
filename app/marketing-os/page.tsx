@@ -350,10 +350,10 @@ function WorkflowLoopVisual() {
           </p>
         </div>
 
-        <div className="relative mx-auto aspect-square w-full max-w-[520px]">
+        <div className="marketing-loop-orbit relative mx-auto aspect-square w-full max-w-[520px]">
           <div className="marketing-loop-ring absolute inset-0 rounded-full" />
           <div className="marketing-loop-sweep absolute inset-[7%] rounded-full" />
-          <div className="absolute inset-[20%] flex flex-col items-center justify-center rounded-full border bg-white p-8 text-center shadow-[0_18px_50px_rgba(13,15,46,0.10)]" style={{ borderColor: BORDER }}>
+          <div className="marketing-loop-center absolute inset-[20%] flex flex-col items-center justify-center rounded-full border bg-white p-8 text-center shadow-[0_18px_50px_rgba(13,15,46,0.10)]" style={{ borderColor: BORDER }}>
             <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{ color: ACCENT }}>
               Aha moment
             </p>
