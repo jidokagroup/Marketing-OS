@@ -364,10 +364,20 @@ function WorkflowLoopVisual() {
           </div>
           {WORKFLOW_STAGES.map((stage, index) => (
             <div key={stage} className={`marketing-loop-node marketing-loop-node-${index + 1}`}>
-              <span>{stage}</span>
+              <span className="marketing-loop-node-index" aria-hidden="true">{index + 1}</span>
+              <span className="marketing-loop-node-label">{stage}</span>
             </div>
           ))}
         </div>
+
+        <ol className="marketing-loop-rail">
+          {WORKFLOW_STAGES.map((stage, index) => (
+            <li key={stage} className="marketing-loop-rail-chip">
+              <span aria-hidden="true">{index + 1}</span>
+              {stage}
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   );
