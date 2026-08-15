@@ -269,6 +269,10 @@ export interface Database {
           long_version: string | null;
           organic_version: string | null;
           sales_version: string | null;
+          blog_cta: string | null;
+          email_cta: string | null;
+          blog_keywords: JsonArray;
+          blog_link_suggestions: JsonArray;
           retrieved_script_ids: string[];
           overall_score: number | null;
           below_threshold: boolean;
@@ -295,6 +299,10 @@ export interface Database {
           long_version?: string | null;
           organic_version?: string | null;
           sales_version?: string | null;
+          blog_cta?: string | null;
+          email_cta?: string | null;
+          blog_keywords?: Json;
+          blog_link_suggestions?: Json;
           retrieved_script_ids?: string[];
           overall_score?: number | null;
           below_threshold?: boolean;
