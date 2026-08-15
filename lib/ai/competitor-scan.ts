@@ -27,6 +27,12 @@ export type ScanClient = {
   notes: string | null;
 } | null;
 
+export type ScanRecommendation = {
+  focus: string;
+  move: string;
+  why: string;
+};
+
 export type CompetitorScanResult = {
   trending_topics: string[];
   hooks: string[];
@@ -37,8 +43,15 @@ export type CompetitorScanResult = {
   offer_tracker: string[];
   comment_themes: string[];
   opportunity_signals: string[];
+  recommendations: ScanRecommendation[];
   summary: string;
 };
+
+const recommendationValidator = z.object({
+  focus: z.string().min(2),
+  move: z.string().min(10),
+  why: z.string().min(10),
+});
 
 const scanValidator = z.object({
   trending_topics: z.array(z.string()).min(1),
@@ -50,8 +63,30 @@ const scanValidator = z.object({
   offer_tracker: z.array(z.string()).min(1),
   comment_themes: z.array(z.string()).min(1),
   opportunity_signals: z.array(z.string()).min(1),
+  recommendations: z.array(recommendationValidator).min(1),
   summary: z.string().min(20),
 });
+
+const recommendationJsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["focus", "move", "why"],
+  properties: {
+    focus: {
+      type: "string",
+      description: "Which category this recommendation draws on, e.g. 'Content gaps' or 'Offer tracker'.",
+    },
+    move: {
+      type: "string",
+      description:
+        "The decision or next step for the team to make this week. A direction to brief, not finished copy for any platform.",
+    },
+    why: {
+      type: "string",
+      description: "One-sentence reasoning tying the move back to the scan data.",
+    },
+  },
+};
 
 const scanJsonSchema = {
   type: "object",
@@ -66,6 +101,7 @@ const scanJsonSchema = {
     "offer_tracker",
     "comment_themes",
     "opportunity_signals",
+    "recommendations",
     "summary",
   ],
   properties: {
@@ -133,6 +169,16 @@ const scanJsonSchema = {
       description:
         "Exactly 4-6 directional opportunity signals combining likely velocity, save/share value, relevance, and saturation. Do not invent exact performance metrics.",
     },
+    recommendations: {
+      type: "array",
+      minItems: 1,
+      items: recommendationJsonSchema,
+      description:
+        "Exactly 3 recommended moves for the team to brief this week, ranked by impact. " +
+        "Each is a decision (what to prioritize, what to test, what to fix) drawn from the " +
+        "categories above — never a finished post, caption, or platform-specific copy, and " +
+        "never a publishing or scheduling instruction.",
+    },
     summary: {
       type: "string",
       description: "2-3 sentence brief on what competitors emphasize and where the client can win.",
@@ -183,15 +229,29 @@ function cleanList(field: string, items: string[]): string[] {
   return cleaned.slice(0, MAX_ITEMS[field] ?? cleaned.length);
 }
 
+const MAX_RECOMMENDATIONS = 3;
+
+function cleanRecommendations(items: ScanRecommendation[]): ScanRecommendation[] {
+  return items
+    .map((item) => ({
+      focus: item.focus.trim(),
+      move: item.move.trim(),
+      why: item.why.trim(),
+    }))
+    .filter((item) => item.focus && item.move && item.why)
+    .slice(0, MAX_RECOMMENDATIONS);
+}
+
 function cleanScan(scan: CompetitorScanResult): CompetitorScanResult {
   const cleaned = { ...scan };
   for (const field of Object.keys(MAX_ITEMS)) {
     const key = field as keyof CompetitorScanResult;
     const value = cleaned[key];
     if (Array.isArray(value)) {
-      (cleaned[key] as string[]) = cleanList(field, value);
+      (cleaned[key] as string[]) = cleanList(field, value as string[]);
     }
   }
+  cleaned.recommendations = cleanRecommendations(cleaned.recommendations);
   return cleaned;
 }
 
@@ -257,6 +317,10 @@ export async function runCompetitorScan({
       "- offer_tracker: 4-6 offer or CTA signals\n" +
       "- comment_themes: 4-6 comment themes\n" +
       "- opportunity_signals: 4-6 opportunity signals\n" +
+      "- recommendations: exactly 3 moves, ranked by impact, synthesized across the fields " +
+      "above. Each is a decision to brief the team on this week (what to prioritize, test, " +
+      "or fix) — never finished copy, a caption, or a publishing/scheduling instruction. " +
+      "Content generation and distribution are handled downstream by a separate system.\n" +
       "- summary: what competitors emphasize and where this client can stand out",
     jsonSchema: scanJsonSchema,
     validator: scanValidator,

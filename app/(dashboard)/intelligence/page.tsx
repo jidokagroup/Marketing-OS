@@ -3,6 +3,7 @@ import {
   Globe2,
   Radar,
   RefreshCw,
+  Sparkles,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -129,6 +130,41 @@ const BASELINE_OPPORTUNITY_SIGNALS = [
   "Medium velocity: start with short video, then expand into email and blog.",
   "High conversion intent: pair comment keywords with a DM sequence and booking CTA.",
 ];
+
+type ScanRecommendation = { focus: string; move: string; why: string };
+
+const BASELINE_RECOMMENDATIONS: ScanRecommendation[] = [
+  {
+    focus: "Content gaps",
+    move: "Brief the team to close the clearest gap competitors leave open first.",
+    why: "Content gaps are the fastest way to stand out before adding anything new.",
+  },
+  {
+    focus: "Offer tracker",
+    move: "Check the current offer against what competitors are actively promoting.",
+    why: "An offer that already matches demand converts faster than a new one.",
+  },
+  {
+    focus: "Comment themes",
+    move: "Turn the most common objection into next week's education topic.",
+    why: "Objections repeated in comments are proof of what the audience needs answered.",
+  },
+];
+
+function readRecommendations(value: unknown): ScanRecommendation[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
+    )
+    .map((item) => ({
+      focus: String(item.focus ?? "").trim(),
+      move: String(item.move ?? "").trim(),
+      why: String(item.why ?? "").trim(),
+    }))
+    .filter((item) => item.focus && item.move && item.why);
+}
 
 function jsonArray(value: unknown): string[] {
   return Array.isArray(value)
@@ -291,6 +327,15 @@ export default async function IntelligencePage() {
   const audios = latestReport ? jsonArray(latestReport.audios) : [];
   const recommendedPosts = BASELINE_RECOMMENDED_POSTS;
   const competitorWins = BASELINE_COMPETITOR_WINS;
+  const recommendations = latestReport
+    ? readRecommendations(latestReport.recommendations)
+    : [];
+  const recommendationsToShow = recommendations.length
+    ? recommendations
+    : BASELINE_RECOMMENDATIONS;
+  const recommendationsSource = recommendations.length
+    ? "Latest saved scan"
+    : "Marketing baseline";
   const reportSource = latestReport ? "Latest saved scan" : "Baseline guidance";
   const competitorAccounts = latestReport?.competitor_accounts ?? [];
   const marketScore = directionalScore({
@@ -312,9 +357,6 @@ export default async function IntelligencePage() {
   const allClients = clients ?? [];
   const focusedClient =
     allClients.find((client) => client.name === latestReport?.industry) ?? null;
-  const analysisHref = focusedClient?.id
-    ? `/content/generator?client=${focusedClient.id}`
-    : "/content/generator";
   const opsReady = !isOpsSchemaMissing(campaignsResult.error);
   const campaigns = opsReady
     ? asRows<InsightCampaign>(campaignsResult.data)
@@ -605,14 +647,46 @@ export default async function IntelligencePage() {
             <div className="text-4xl font-semibold">{competitorAccounts.length}</div>
             <p className="mt-3 text-sm text-muted-foreground">
               Add social URLs, newsletters, podcasts, and broader watchlist
-              sources from Market + Competitor Analysis.
+              sources above, then Save &amp; scan competitors.
             </p>
-            <ButtonLink href={analysisHref} size="sm" variant="outline" className="mt-4">
-              Open Market + Competitor Analysis
-            </ButtonLink>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Recommended next moves
+            </CardTitle>
+            <Badge variant="outline">{recommendationsSource}</Badge>
+          </div>
+          <CardDescription>
+            The top {recommendationsToShow.length} decisions to brief this week, synthesized
+            across every category below. These are directions to hand off, not finished posts.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="grid gap-3 lg:grid-cols-3">
+            {recommendationsToShow.map((item, index) => (
+              <li key={`rec-${index}`} className="rounded-lg border p-4">
+                <Badge variant="secondary" className="mb-2">
+                  {item.focus}
+                </Badge>
+                <p className="text-sm font-medium">{item.move}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{item.why}</p>
+                <InsightActions
+                  title={`Recommendation: ${item.focus}`}
+                  item={item.move}
+                  source={recommendationsSource}
+                  {...insightContext}
+                />
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
