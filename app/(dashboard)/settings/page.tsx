@@ -24,15 +24,22 @@ import {
   asRow,
   asRows,
   currentWeekStart,
+  formatDate,
   isOpsSchemaMissing,
   opsTable,
   titleCase,
 } from "@/lib/marketing-os/operations";
 import { saveEmailProviderSettingsAction } from "@/app/(dashboard)/settings/actions";
+import {
+  manageBillingAction,
+  startCheckoutAction,
+} from "@/app/(dashboard)/settings/billing-actions";
 import { createPlaybookAction, updatePlaybookAction } from "@/app/(dashboard)/playbooks/actions";
 import { saveTeamCapacityAction } from "@/app/(dashboard)/team/actions";
+import { isBillingConfigured } from "@/lib/stripe";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PlaybookUploadForm } from "@/components/playbook-upload-form";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -94,6 +101,14 @@ type EmailProviderSettingsRow = {
   notes: string | null;
 };
 
+type SubscriptionRow = {
+  plan: "monthly" | "annual" | null;
+  status: string;
+  current_period_end: string | null;
+  trial_end: string | null;
+  cancel_at_period_end: boolean;
+};
+
 function readSteps(value: unknown) {
   if (!Array.isArray(value)) return "";
   return value
@@ -128,6 +143,7 @@ export default async function SettingsPage() {
     emailProviderResult,
     capacityResult,
     playbooksResult,
+    billingResult,
   ] = await Promise.all([
     supabase
       .from("marketing_os_social_accounts")
@@ -153,12 +169,21 @@ export default async function SettingsPage() {
       .select("id, title, category, status, summary, steps, owner_name, last_reviewed_at")
       .eq("owner_id", user.id)
       .order("updated_at", { ascending: false }),
+    opsTable(supabase, "marketing_os_billing_subscriptions")
+      .select("plan, status, current_period_end, trial_end, cancel_at_period_end")
+      .eq("owner_id", user.id)
+      .maybeSingle(),
   ]);
 
   const emailProviderSchemaMissing = isOpsSchemaMissing(emailProviderResult.error);
   const schemaMissing =
     isOpsSchemaMissing(capacityResult.error) ||
     isOpsSchemaMissing(playbooksResult.error);
+  const billingSchemaMissing = isOpsSchemaMissing(billingResult.error);
+  const subscription = billingSchemaMissing
+    ? null
+    : asRow<SubscriptionRow>(billingResult.data);
+  const billingConfigured = isBillingConfigured();
   const emailProviderSettings = emailProviderSchemaMissing
     ? null
     : asRow<EmailProviderSettingsRow>(emailProviderResult.data);
@@ -424,6 +449,9 @@ export default async function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="billing" className="space-y-6">
+      {billingSchemaMissing && (
+        <OpsSchemaNotice title="Billing needs migration 0023" />
+      )}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -434,19 +462,95 @@ export default async function SettingsPage() {
             Subscription details for Jidoka Marketing Team OS.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Plan</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Marketing Team OS
-            </p>
-          </div>
-          <div className="rounded-lg border p-4">
-            <p className="text-sm font-medium">Status</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Stripe checkout pending
-            </p>
-          </div>
+        <CardContent className="space-y-4">
+          {!billingConfigured ? (
+            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+              Stripe checkout pending. Set STRIPE_SECRET_KEY, STRIPE_PRICE_MONTHLY,
+              STRIPE_PRICE_ANNUAL, and STRIPE_WEBHOOK_SECRET to turn on checkout
+              and the customer billing portal.
+            </div>
+          ) : subscription && subscription.status !== "none" ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium">Plan</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {subscription.plan === "annual"
+                      ? "Annual · $3,267/yr"
+                      : "Monthly · $297/mo"}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium">Status</p>
+                  <Badge
+                    className="mt-1"
+                    variant={
+                      subscription.status === "active" ||
+                      subscription.status === "trialing"
+                        ? "default"
+                        : "destructive"
+                    }
+                  >
+                    {titleCase(subscription.status)}
+                  </Badge>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium">
+                    {subscription.status === "trialing"
+                      ? "Trial ends"
+                      : subscription.cancel_at_period_end
+                        ? "Cancels"
+                        : "Renews"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatDate(
+                      subscription.status === "trialing"
+                        ? subscription.trial_end
+                        : subscription.current_period_end,
+                    )}
+                  </p>
+                </div>
+              </div>
+              <form action={manageBillingAction}>
+                <PendingSubmitButton pendingLabel="Opening billing portal…">
+                  Manage billing
+                </PendingSubmitButton>
+              </form>
+            </>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              <form
+                action={startCheckoutAction}
+                className="space-y-3 rounded-lg border p-4"
+              >
+                <div>
+                  <p className="font-medium">Monthly</p>
+                  <p className="text-sm text-muted-foreground">
+                    $297/month, 7-day free trial
+                  </p>
+                </div>
+                <input type="hidden" name="plan" value="monthly" />
+                <PendingSubmitButton pendingLabel="Redirecting to Stripe…">
+                  Start free trial
+                </PendingSubmitButton>
+              </form>
+              <form
+                action={startCheckoutAction}
+                className="space-y-3 rounded-lg border p-4"
+              >
+                <div>
+                  <p className="font-medium">Annual</p>
+                  <p className="text-sm text-muted-foreground">
+                    $3,267/year — 1 month free, 7-day free trial
+                  </p>
+                </div>
+                <input type="hidden" name="plan" value="annual" />
+                <PendingSubmitButton pendingLabel="Redirecting to Stripe…">
+                  Start free trial
+                </PendingSubmitButton>
+              </form>
+            </div>
+          )}
         </CardContent>
       </Card>
         </TabsContent>
