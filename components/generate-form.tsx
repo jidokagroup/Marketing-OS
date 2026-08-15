@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
 
@@ -14,8 +14,16 @@ import { readJsonResponse } from "@/lib/client-response";
 
 export function GenerateForm({ agentId }: { agentId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+
+  const prefillTitle = searchParams.get("title") ?? "";
+  const prefillTopic = searchParams.get("topic") ?? "";
+  const prefillGoal = searchParams.get("goal") ?? "";
+  const prefillNotes = searchParams.get("notes") ?? "";
+  const prefillPlatforms = searchParams.getAll("platforms");
+  const defaultPlatforms = prefillPlatforms.length ? prefillPlatforms : ["instagram"];
 
   useEffect(() => {
     if (!busy) {
@@ -81,6 +89,7 @@ export function GenerateForm({ agentId }: { agentId: string }) {
         <Input
           id="title"
           name="title"
+          defaultValue={prefillTitle}
           placeholder="e.g. Morning Routine Myth — Reel 01"
         />
         <p className="text-xs text-muted-foreground">
@@ -94,13 +103,19 @@ export function GenerateForm({ agentId }: { agentId: string }) {
           id="topic"
           name="topic"
           required
+          defaultValue={prefillTopic}
           placeholder="e.g. Why most morning routines fail"
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="goal">Goal</Label>
-          <Input id="goal" name="goal" placeholder="Drive DMs / book calls" />
+          <Input
+            id="goal"
+            name="goal"
+            defaultValue={prefillGoal}
+            placeholder="Drive DMs / book calls"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="audience">Audience</Label>
@@ -131,7 +146,7 @@ export function GenerateForm({ agentId }: { agentId: string }) {
                 type="checkbox"
                 name="platforms"
                 value={channel.key}
-                defaultChecked={channel.key === "instagram"}
+                defaultChecked={defaultPlatforms.includes(channel.key)}
                 className="h-4 w-4"
               />
               <span>{channel.label}</span>
@@ -144,7 +159,13 @@ export function GenerateForm({ agentId }: { agentId: string }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" name="notes" rows={3} placeholder="Anything specific to include…" />
+        <Textarea
+          id="notes"
+          name="notes"
+          rows={3}
+          defaultValue={prefillNotes}
+          placeholder="Anything specific to include…"
+        />
       </div>
       <Button type="submit" disabled={busy}>
         <Sparkles className="mr-1 h-4 w-4" />

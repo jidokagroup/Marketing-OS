@@ -672,7 +672,7 @@ export default async function IntelligencePage() {
             {recommendationsToShow.map((item, index) => (
               <li key={`rec-${index}`} className="rounded-lg border p-4">
                 <Badge variant="secondary" className="mb-2">
-                  {item.focus}
+                  {index + 1}. {item.focus}
                 </Badge>
                 <p className="text-sm font-medium">{item.move}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{item.why}</p>
@@ -729,13 +729,18 @@ export default async function IntelligencePage() {
                     {category.source}
                   </Badge>
                 </div>
-                <ul className="mt-3 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                <ul className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                   {category.items.map((item, index) => (
                     <li
                       key={`${category.key}-${index}`}
                       className="rounded-md border p-3"
                     >
-                      <p>{item}</p>
+                      <div className="flex gap-2">
+                        <span className="shrink-0 font-medium text-muted-foreground">
+                          {index + 1}.
+                        </span>
+                        <p className="text-foreground">{item}</p>
+                      </div>
                       <InsightActions
                         title={category.label}
                         item={item}
@@ -774,7 +779,16 @@ function InsightActions({
   campaignId?: string;
 }) {
   const insightTitle = `${title}: ${item.slice(0, 72)}`;
-  const generateHref = `${href}${href.includes("?") ? "&" : "?"}topic=${encodeURIComponent(item)}`;
+  const [hrefBase, hrefQuery] = href.split("?");
+  const generateParams = new URLSearchParams(hrefQuery);
+  generateParams.set("title", insightTitle.slice(0, 90));
+  generateParams.set("topic", item);
+  generateParams.set("goal", "Turn this market signal into an original content package");
+  generateParams.set(
+    "notes",
+    `Source: ${title} (${source})${reportId ? `, report ${reportId}` : ""}. Use as inspiration only — do not copy competitors.`,
+  );
+  const generateHref = `${hrefBase}?${generateParams.toString()}`;
   const actions = [
     { label: "Create campaign", action: createCampaignFromInsightAction },
     { label: "Create idea", action: createContentIdeaFromInsightAction },
