@@ -3,6 +3,7 @@ import {
   Globe2,
   Radar,
   RefreshCw,
+  Sparkles,
   Target,
   TrendingUp,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   addInsightToBriefAction,
   assignInsightToTeamAction,
@@ -128,6 +130,41 @@ const BASELINE_OPPORTUNITY_SIGNALS = [
   "Medium velocity: start with short video, then expand into email and blog.",
   "High conversion intent: pair comment keywords with a DM sequence and booking CTA.",
 ];
+
+type ScanRecommendation = { focus: string; move: string; why: string };
+
+const BASELINE_RECOMMENDATIONS: ScanRecommendation[] = [
+  {
+    focus: "Content gaps",
+    move: "Brief the team to close the clearest gap competitors leave open first.",
+    why: "Content gaps are the fastest way to stand out before adding anything new.",
+  },
+  {
+    focus: "Offer tracker",
+    move: "Check the current offer against what competitors are actively promoting.",
+    why: "An offer that already matches demand converts faster than a new one.",
+  },
+  {
+    focus: "Comment themes",
+    move: "Turn the most common objection into next week's education topic.",
+    why: "Objections repeated in comments are proof of what the audience needs answered.",
+  },
+];
+
+function readRecommendations(value: unknown): ScanRecommendation[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
+    )
+    .map((item) => ({
+      focus: String(item.focus ?? "").trim(),
+      move: String(item.move ?? "").trim(),
+      why: String(item.why ?? "").trim(),
+    }))
+    .filter((item) => item.focus && item.move && item.why);
+}
 
 function jsonArray(value: unknown): string[] {
   return Array.isArray(value)
@@ -290,6 +327,15 @@ export default async function IntelligencePage() {
   const audios = latestReport ? jsonArray(latestReport.audios) : [];
   const recommendedPosts = BASELINE_RECOMMENDED_POSTS;
   const competitorWins = BASELINE_COMPETITOR_WINS;
+  const recommendations = latestReport
+    ? readRecommendations(latestReport.recommendations)
+    : [];
+  const recommendationsToShow = recommendations.length
+    ? recommendations
+    : BASELINE_RECOMMENDATIONS;
+  const recommendationsSource = recommendations.length
+    ? "Latest saved scan"
+    : "Marketing baseline";
   const reportSource = latestReport ? "Latest saved scan" : "Baseline guidance";
   const competitorAccounts = latestReport?.competitor_accounts ?? [];
   const marketScore = directionalScore({
@@ -311,9 +357,6 @@ export default async function IntelligencePage() {
   const allClients = clients ?? [];
   const focusedClient =
     allClients.find((client) => client.name === latestReport?.industry) ?? null;
-  const analysisHref = focusedClient?.id
-    ? `/content/generator?client=${focusedClient.id}`
-    : "/content/generator";
   const opsReady = !isOpsSchemaMissing(campaignsResult.error);
   const campaigns = opsReady
     ? asRows<InsightCampaign>(campaignsResult.data)
@@ -321,6 +364,102 @@ export default async function IntelligencePage() {
   const latestCampaign = campaigns.find((campaign) =>
     focusedClient ? campaign.client_id === focusedClient.id : true,
   );
+
+  const insightContext = {
+    href: generateHref,
+    opsReady,
+    reportId: latestReport?.id,
+    clientId: focusedClient?.id,
+    campaignId: latestCampaign?.id,
+  };
+
+  const categories: {
+    key: string;
+    label: string;
+    description: string;
+    items: string[];
+    source: string;
+  }[] = [
+    {
+      key: "trending",
+      label: "Trending topics",
+      description: "Topics your audience is currently engaging with, pulled from the competitor watchlist.",
+      items: topics,
+      source: reportSource,
+    },
+    {
+      key: "hooks",
+      label: "Hooks to adapt",
+      description: "Scroll-stopping opening lines you can adapt for your own posts.",
+      items: hookLibrary,
+      source: reportSource,
+    },
+    {
+      key: "gaps",
+      label: "Content gaps",
+      description: "Where competitors leave an audience need unaddressed — room for this client to lead.",
+      items: contentGaps,
+      source: reportSource,
+    },
+    {
+      key: "offers",
+      label: "Offer tracker",
+      description: "Offers, lead magnets, and conversion paths detected across the watchlist.",
+      items: offerTracker,
+      source: reportSource,
+    },
+    {
+      key: "comments",
+      label: "Comment themes",
+      description: "Recurring questions and objections showing up in the space.",
+      items: commentThemes,
+      source: reportSource,
+    },
+    {
+      key: "opportunity",
+      label: "Opportunity signals",
+      description: "Directional reads on velocity, shareability, and saturation for each angle.",
+      items: opportunitySignals,
+      source: reportSource,
+    },
+    {
+      key: "formats",
+      label: "Content formats",
+      description: "Formats and angles competitors use well, or leave open.",
+      items: trends,
+      source: reportSource,
+    },
+    {
+      key: "wins",
+      label: "Competitor wins",
+      description: "What's working broadly in the space, independent of any one client's scan.",
+      items: competitorWins,
+      source: "Marketing baseline",
+    },
+    {
+      key: "audios",
+      label: "Audios",
+      description: "Trending audio signals from connected platforms.",
+      items: audios.length
+        ? audios
+        : ["Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress."],
+      source: audios.length ? reportSource : "Setup required",
+    },
+    {
+      key: "posts",
+      label: "Recommended posts",
+      description: "Ready-to-adapt post concepts based on the current baseline.",
+      items: recommendedPosts,
+      source: "Marketing baseline",
+    },
+    {
+      key: "positioning",
+      label: "Positioning",
+      description: `How ${focusedClient?.name ?? "this client"} should stand apart from the competitors on the watchlist.`,
+      items: positioning,
+      source: positioningSource,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -508,207 +647,110 @@ export default async function IntelligencePage() {
             <div className="text-4xl font-semibold">{competitorAccounts.length}</div>
             <p className="mt-3 text-sm text-muted-foreground">
               Add social URLs, newsletters, podcasts, and broader watchlist
-              sources from Market + Competitor Analysis.
+              sources above, then Save &amp; scan competitors.
             </p>
-            <ButtonLink href={analysisHref} size="sm" variant="outline" className="mt-4">
-              Open Market + Competitor Analysis
-            </ButtonLink>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <InsightCard
-          title="Trending topics"
-          items={topics}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Hooks to adapt"
-          items={hookLibrary}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Content gaps"
-          items={contentGaps}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Offer tracker"
-          items={offerTracker}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Comment themes"
-          items={commentThemes}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Opportunity signals"
-          items={opportunitySignals}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Content formats"
-          items={trends}
-          source={reportSource}
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Competitor wins"
-          items={competitorWins}
-          source="Marketing baseline"
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Audios"
-          source={audios.length ? reportSource : "Setup required"}
-          items={
-            audios.length
-              ? audios
-              : ["Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress."]
-          }
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
-        <InsightCard
-          title="Recommended posts"
-          items={recommendedPosts}
-          source="Marketing baseline"
-          href={generateHref}
-          opsReady={opsReady}
-          reportId={latestReport?.id}
-          clientId={focusedClient?.id}
-          campaignId={latestCampaign?.id}
-        />
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2">
-              <Radar className="h-4 w-4" />
-              Positioning
+              <Sparkles className="h-4 w-4" />
+              Recommended next moves
             </CardTitle>
-            <Badge variant="outline">{positioningSource}</Badge>
+            <Badge variant="outline">{recommendationsSource}</Badge>
           </div>
           <CardDescription>
-            How {focusedClient?.name ?? "this client"} should stand apart from
-            the competitors on the watchlist.
+            The top {recommendationsToShow.length} decisions to brief this week, synthesized
+            across every category below. These are directions to hand off, not finished posts.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="grid gap-3 text-sm text-muted-foreground lg:grid-cols-2">
-            {positioning.map((item, index) => (
-              <li key={`positioning-${index}`} className="rounded-md border p-4">
-                <p>{item}</p>
+          <ul className="grid gap-3 lg:grid-cols-3">
+            {recommendationsToShow.map((item, index) => (
+              <li key={`rec-${index}`} className="rounded-lg border p-4">
+                <Badge variant="secondary" className="mb-2">
+                  {item.focus}
+                </Badge>
+                <p className="text-sm font-medium">{item.move}</p>
+                <p className="mt-2 text-sm text-muted-foreground">{item.why}</p>
                 <InsightActions
-                  title="Positioning"
-                  item={item}
-                  source={positioningSource}
-                  href={generateHref}
-                  opsReady={opsReady}
-                  reportId={latestReport?.id}
-                  clientId={focusedClient?.id}
-                  campaignId={latestCampaign?.id}
+                  title={`Recommendation: ${item.focus}`}
+                  item={item.move}
+                  source={recommendationsSource}
+                  {...insightContext}
                 />
               </li>
             ))}
           </ul>
         </CardContent>
       </Card>
-    </div>
-  );
-}
 
-function InsightCard({
-  title,
-  items,
-  source,
-  href,
-  opsReady,
-  reportId,
-  clientId,
-  campaignId,
-}: {
-  title: string;
-  items: string[];
-  source: string;
-  href: string;
-  opsReady: boolean;
-  reportId?: string;
-  clientId?: string;
-  campaignId?: string;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle>{title}</CardTitle>
-          <Badge variant="outline">{source}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          {items.map((item, index) => (
-            <li key={`${title}-${index}`} className="rounded-md border p-3">
-              <p>{item}</p>
-              <InsightActions
-                title={title}
-                item={item}
-                source={source}
-                href={href}
-                opsReady={opsReady}
-                reportId={reportId}
-                clientId={clientId}
-                campaignId={campaignId}
-              />
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Radar className="h-4 w-4" />
+            Insight categories
+          </CardTitle>
+          <CardDescription>
+            Pick a category to see its details. Each one pulls from the same
+            scan; the split is just to make one thing readable at a time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue={categories[0].key}>
+            <TabsList
+              variant="line"
+              className="h-auto flex-wrap justify-start gap-1"
+            >
+              {categories.map((category) => (
+                <TabsTrigger
+                  key={category.key}
+                  value={category.key}
+                  className="flex-none gap-1.5 px-2.5 py-1.5"
+                >
+                  {category.label}
+                  <Badge variant="secondary" className="ml-0.5">
+                    {category.items.length}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {categories.map((category) => (
+              <TabsContent key={category.key} value={category.key} className="mt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    {category.description}
+                  </p>
+                  <Badge variant="outline" className="shrink-0">
+                    {category.source}
+                  </Badge>
+                </div>
+                <ul className="mt-3 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+                  {category.items.map((item, index) => (
+                    <li
+                      key={`${category.key}-${index}`}
+                      className="rounded-md border p-3"
+                    >
+                      <p>{item}</p>
+                      <InsightActions
+                        title={category.label}
+                        item={item}
+                        source={category.source}
+                        {...insightContext}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

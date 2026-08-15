@@ -87,6 +87,7 @@ async function runOne(db: ReturnType<typeof createServiceClient>, report: Report
           opportunity_signals: scan.opportunity_signals,
           source: "website_competitor_scan",
         },
+        recommendations: scan.recommendations,
         summary: scan.summary,
         scanned_at: new Date().toISOString(),
       })

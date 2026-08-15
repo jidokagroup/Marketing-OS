@@ -732,6 +732,7 @@ export interface Database {
           error_message: string | null;
           requested_at: string;
           client_id: string | null;
+          recommendations: Json;
         };
         Insert: {
           id?: string;
@@ -750,6 +751,7 @@ export interface Database {
           error_message?: string | null;
           requested_at?: string;
           client_id?: string | null;
+          recommendations?: Json;
         };
         Update: Partial<
           Database["public"]["Tables"]["social_intelligence_reports"]["Insert"]
