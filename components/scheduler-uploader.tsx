@@ -6,6 +6,7 @@ import {
   CalendarClock,
   Download,
   FileSpreadsheet,
+  FileText,
   Loader2,
   MessageCircle,
   Upload,
@@ -38,7 +39,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
-const CONTENT_TYPES = ["video", "photo", "carousel", "email_campaign"] as const;
+const CONTENT_TYPES = ["video", "photo", "carousel", "email_campaign", "article"] as const;
 const DEFAULT_MAX_MEDIA_UPLOAD_MB = 500;
 const configuredMaxMediaMb = Number(process.env.NEXT_PUBLIC_MAX_MEDIA_UPLOAD_MB);
 const MAX_MEDIA_UPLOAD_MB =
@@ -51,6 +52,7 @@ const CONTENT_TYPE_LABELS: Record<(typeof CONTENT_TYPES)[number], string> = {
   photo: "Photo",
   carousel: "Carousel",
   email_campaign: "Email campaign",
+  article: "Blog / article",
 };
 const TEMPLATE_HEADERS = [
   "title",
@@ -109,8 +111,12 @@ type GeneratedOption = {
   short_version: string | null;
   organic_version: string | null;
   primary_script: string | null;
+  long_version: string | null;
+  sales_version: string | null;
 };
 type CsvRow = Record<string, string>;
+
+const BLOG_PLATFORM_KEY = "blog";
 
 function normalizeSchedulerPlatform(value: string) {
   const key = value.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
@@ -150,26 +156,49 @@ function splitPlatforms(value: string) {
  * link's content_id) and the manual dropdown pick, so both paths resolve
  * the same fields the same way without duplicating the logic.
  */
-function resolveGeneratedSelection(generatedContent: GeneratedOption[], id: string) {
+/**
+ * field, when set, names which generated variant the user actually wants to
+ * schedule (from a per-tab "Pair with a visual asset + schedule" button) and
+ * takes priority over the generic platform guess from the original
+ * generation request -- a piece generated for "Instagram, Blog post" is
+ * ambiguous about which one a given click means, the field is not.
+ */
+function resolveGeneratedSelection(
+  generatedContent: GeneratedOption[],
+  id: string,
+  field?: string,
+) {
   const selected = generatedContent.find((item) => item.id === id);
   if (!selected) return null;
 
-  const caption =
+  let caption =
     selected.organic_version ?? selected.short_version ?? selected.primary_script ?? "";
   let platformKey: string | null = null;
+  let contentType: (typeof CONTENT_TYPES)[number] | null = null;
   let disabledPlatform: { label: string; reason: string } | null = null;
 
-  if (selected.platform) {
-    const key =
-      splitPlatforms(selected.platform)[0] ?? selected.platform.trim().toLowerCase();
-    const definition = SCHEDULER_PLATFORMS.find((platform) => platform.key === key);
-    if (definition?.disabled) {
-      disabledPlatform = {
-        label: definition.label,
-        reason: definition.disabledReason ?? `${definition.label} is not available yet.`,
-      };
-    } else if (definition) {
-      platformKey = key;
+  if (field === "long_version") {
+    caption = selected.long_version ?? "";
+    platformKey = BLOG_PLATFORM_KEY;
+    contentType = "article";
+  } else if (field === "sales_version") {
+    caption = selected.sales_version ?? "";
+    platformKey = "mailchimp";
+    contentType = "email_campaign";
+  } else {
+    if (field === "primary_script") caption = selected.primary_script ?? "";
+    if (selected.platform) {
+      const key =
+        splitPlatforms(selected.platform)[0] ?? selected.platform.trim().toLowerCase();
+      const definition = SCHEDULER_PLATFORMS.find((platform) => platform.key === key);
+      if (definition?.disabled) {
+        disabledPlatform = {
+          label: definition.label,
+          reason: definition.disabledReason ?? `${definition.label} is not available yet.`,
+        };
+      } else if (definition) {
+        platformKey = key;
+      }
     }
   }
 
@@ -178,6 +207,7 @@ function resolveGeneratedSelection(generatedContent: GeneratedOption[], id: stri
     title: selected.title || selected.topic || "",
     caption,
     platformKey,
+    contentType,
     disabledPlatform,
   };
 }
@@ -282,8 +312,23 @@ function validateMedia(platforms: string[], contentType: string, file: File | nu
     }
     return null;
   }
+  if (platforms.includes(BLOG_PLATFORM_KEY)) {
+    if (platforms.length > 1) {
+      return "Blog / Article needs a separate scheduled item from social posts.";
+    }
+    if (contentType !== "article") {
+      return "Blog / Article uses the Blog / article content type.";
+    }
+    if (file && !file.type.startsWith("image/")) {
+      return "Blog / Article only accepts an image as the cover asset.";
+    }
+    return null;
+  }
   if (contentType === "email_campaign") {
     return "Email campaign is only for the Email Campaign platform.";
+  }
+  if (contentType === "article") {
+    return "Blog / article content type is only for the Blog / Article platform.";
   }
   if (platforms.includes("youtube")) {
     if (contentType !== "video") return "YouTube is video-only, so choose video.";
@@ -371,6 +416,7 @@ export function SchedulerUploader({
   defaultAgentId = "",
   defaultTitle = "",
   defaultContentId = "",
+  defaultContentField = "",
   generatedContent = [],
 }: {
   agents: AgentOption[];
@@ -379,6 +425,7 @@ export function SchedulerUploader({
   defaultAgentId?: string;
   defaultTitle?: string;
   defaultContentId?: string;
+  defaultContentField?: string;
   generatedContent?: GeneratedOption[];
 }) {
   const router = useRouter();
@@ -386,11 +433,11 @@ export function SchedulerUploader({
   const [pending, startTransition] = useTransition();
 
   // Resolved once for the initial render so arriving from a generated
-  // content page's "Schedule this" link (exact ID match) can seed every
-  // field's initial state directly, without a post-mount effect calling
-  // setState.
+  // content page's "Pair with a visual asset + schedule" link (exact ID +
+  // field match) can seed every field's initial state directly, without a
+  // post-mount effect calling setState.
   const initialSelection = defaultContentId
-    ? resolveGeneratedSelection(generatedContent, defaultContentId)
+    ? resolveGeneratedSelection(generatedContent, defaultContentId, defaultContentField)
     : null;
 
   const [selectedAgentId, setSelectedAgentId] = useState(
@@ -403,13 +450,14 @@ export function SchedulerUploader({
     initialSelection?.platformKey ? [initialSelection.platformKey] : ["instagram"],
   );
   const [contentType, setContentType] = useState<(typeof CONTENT_TYPES)[number]>(
-    initialSelection?.platformKey === "x"
-      ? "photo"
-      : initialSelection?.platformKey === "youtube"
-        ? "video"
-        : initialSelection?.platformKey === "mailchimp"
-          ? "email_campaign"
-          : "video",
+    initialSelection?.contentType ??
+      (initialSelection?.platformKey === "x"
+        ? "photo"
+        : initialSelection?.platformKey === "youtube"
+          ? "video"
+          : initialSelection?.platformKey === "mailchimp"
+            ? "email_campaign"
+            : "video"),
   );
   const [useBestTime, setUseBestTime] = useState(true);
   const [commentDmEnabled, setCommentDmEnabled] = useState(false);
@@ -425,14 +473,17 @@ export function SchedulerUploader({
   const hasX = platforms.includes("x");
   const hasYouTube = platforms.includes("youtube");
   const hasMailchimp = platforms.includes("mailchimp");
+  const hasBlog = platforms.includes(BLOG_PLATFORM_KEY);
   const emailCampaignProviderLabel = `Email campaign via ${emailProviderLabel}`;
   const mediaAccept = hasMailchimp
     ? undefined
-    : hasX
+    : hasBlog
       ? "image/*"
-      : hasYouTube
-        ? "video/*"
-        : "video/*,image/*";
+      : hasX
+        ? "image/*"
+        : hasYouTube
+          ? "video/*"
+          : "video/*,image/*";
   const connected = useMemo(
     () => new Set(connectedPlatforms),
     [connectedPlatforms],
@@ -441,7 +492,9 @@ export function SchedulerUploader({
   const disconnectedSelectedLabels = disconnectedSelected.map((platform) =>
     platform === "mailchimp"
       ? "Email Campaign"
-      : getPlatformDefinition(platform)?.label ?? platform,
+      : platform === BLOG_PLATFORM_KEY
+        ? "Blog / Article"
+        : getPlatformDefinition(platform)?.label ?? platform,
   );
   const autoPublishableSelected = platforms.every((platform) =>
     isAutoPublishableContent(platform, contentType),
@@ -481,7 +534,11 @@ export function SchedulerUploader({
         setContentType("email_campaign");
         return ["mailchimp"];
       }
-      if (adding && current.includes("mailchimp")) {
+      if (adding && platform === BLOG_PLATFORM_KEY) {
+        setContentType("article");
+        return [BLOG_PLATFORM_KEY];
+      }
+      if (adding && (current.includes("mailchimp") || current.includes(BLOG_PLATFORM_KEY))) {
         if (platform === "x") setContentType("photo");
         else if (platform === "youtube") setContentType("video");
         else setContentType("video");
@@ -501,7 +558,8 @@ export function SchedulerUploader({
       if (next.includes("x")) setContentType("photo");
       else if (next.includes("youtube")) setContentType("video");
       else if (next.includes("mailchimp")) setContentType("email_campaign");
-      else if (contentType === "email_campaign") setContentType("video");
+      else if (next.includes(BLOG_PLATFORM_KEY)) setContentType("article");
+      else if (contentType === "email_campaign" || contentType === "article") setContentType("video");
       return next;
     });
   }
@@ -790,6 +848,23 @@ export function SchedulerUploader({
                     </label>
                   );
                 })}
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 text-sm transition-colors has-checked:border-primary has-checked:bg-muted/60">
+                  <input
+                    type="checkbox"
+                    checked={hasBlog}
+                    onChange={() => togglePlatform(BLOG_PLATFORM_KEY)}
+                    className="mt-1 h-4 w-4"
+                  />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2 font-medium">
+                      <FileText className="h-4 w-4" />
+                      Blog / Article
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      No auto-publish — saves as a draft with a target date and cover image.
+                    </span>
+                  </span>
+                </label>
               </div>
               {hasX && (
                 <p className="text-xs text-muted-foreground">

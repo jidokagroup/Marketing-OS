@@ -278,6 +278,7 @@ export interface Database {
           below_threshold: boolean;
           attempts: number;
           model: string | null;
+          approved_at: string | null;
         };
         Insert: {
           id?: string;
@@ -308,6 +309,7 @@ export interface Database {
           below_threshold?: boolean;
           attempts?: number;
           model?: string | null;
+          approved_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["generated_content"]["Insert"]>;
         Relationships: [];

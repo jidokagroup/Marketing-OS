@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthContext } from "@/lib/auth";
+import type { Database } from "@/lib/supabase/types";
 import { ensureCommentDmInboxDraft } from "@/lib/inbox";
 import { matchGeneratedByTitle } from "@/lib/scheduler";
 import {
@@ -97,6 +99,82 @@ function cleanText(value: string | undefined) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+/**
+ * Blog / Article is a manual calendar entry, not a social auto-publish
+ * target -- it has no connected account to match, no posting-window
+ * recommendation, no Instagram-only comment-DM wiring. Deliberately kept
+ * out of SocialPlatform/PLATFORM_DEFINITIONS/SCHEDULER_PLATFORMS so it
+ * doesn't ripple into Settings, Intelligence, or Analytics as a fake
+ * "connectable" platform. That also keeps the record itself simple --
+ * title, caption, cover image, target date -- which is what makes it easy
+ * to hand off to Convia's scheduling platform later instead of entangled
+ * in machinery built for Jidoka to publish content itself.
+ */
+async function createBlogEntry({
+  supabase,
+  userId,
+  agentId,
+  title,
+  body,
+}: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+  agentId: string;
+  title: string;
+  body: CreateBody;
+}) {
+  const contentType = String(body.content_type ?? "article").trim().toLowerCase();
+  if (contentType !== "article") {
+    return NextResponse.json(
+      { error: "Blog / Article uses the article content type." },
+      { status: 400 },
+    );
+  }
+
+  const match = await matchGeneratedByTitle(supabase, agentId, title);
+  const { data, error } = await supabase
+    .from("marketing_os_scheduled_posts")
+    .insert({
+      agent_id: agentId,
+      owner_id: userId,
+      title,
+      content_type: "article",
+      platform: "blog",
+      social_account_id: null,
+      media_path: body.media_path || null,
+      media_file_name: cleanText(body.media_file_name),
+      scheduled_time: cleanText(body.scheduled_time ?? undefined),
+      status: "draft",
+      generated_content_id: match?.generated_content_id ?? null,
+      caption: cleanText(body.caption) ?? match?.caption ?? null,
+      schedule_reason:
+        "Blog / Article is a manual entry with no auto-publish -- pair a cover image and target date, then hand off to your CMS or Convia to publish.",
+      source_import: cleanText(body.source_import),
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json(
+      { error: error?.message ?? "Could not create post" },
+      { status: 500 },
+    );
+  }
+
+  revalidatePath("/scheduler");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+  revalidatePath("/generated");
+  revalidatePath("/clients");
+
+  return NextResponse.json({
+    ids: [data.id],
+    platforms: ["blog"],
+    attached: [],
+    matched: Boolean(match),
+  });
+}
+
 export async function POST(request: Request) {
   const context = await getAuthContext();
   if (!context) {
@@ -107,14 +185,22 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as CreateBody;
   const agentId = String(body.agent_id ?? "");
   const title = String(body.title ?? "").trim();
-  const contentType = String(body.content_type ?? "video").trim().toLowerCase();
-  const platforms = uniquePlatforms(body);
   if (!agentId || !title) {
     return NextResponse.json(
       { error: "agent_id and title are required" },
       { status: 400 },
     );
   }
+
+  const rawPlatforms = Array.isArray(body.platforms) && body.platforms.length > 0
+    ? body.platforms.map((platform) => String(platform).trim().toLowerCase())
+    : [String(body.platform ?? "instagram").trim().toLowerCase()];
+  if (rawPlatforms.length === 1 && rawPlatforms[0] === "blog") {
+    return createBlogEntry({ supabase, userId: user.id, agentId, title, body });
+  }
+
+  const contentType = String(body.content_type ?? "video").trim().toLowerCase();
+  const platforms = uniquePlatforms(body);
   if (platforms.length === 0) {
     return NextResponse.json(
       { error: "Choose at least one supported platform." },

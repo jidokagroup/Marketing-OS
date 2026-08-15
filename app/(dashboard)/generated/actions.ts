@@ -16,6 +16,7 @@ export async function updateGeneratedContentAction(formData: FormData) {
   const { supabase } = await requireUser();
   const id = String(formData.get("id") ?? "");
   if (!id) return;
+  const variant = String(formData.get("variant") ?? "");
 
   await supabase
     .from("marketing_os_generated_content")
@@ -34,6 +35,23 @@ export async function updateGeneratedContentAction(formData: FormData) {
   revalidatePath("/generated");
   revalidatePath("/scheduler");
   revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+  redirect(`/generated/${id}${variant ? `?saved=${variant}` : ""}`);
+}
+
+export async function toggleApprovalAction(formData: FormData) {
+  const { supabase } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+  const currentlyApproved = String(formData.get("currently_approved") ?? "") === "1";
+
+  await supabase
+    .from("marketing_os_generated_content")
+    .update({ approved_at: currentlyApproved ? null : new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath(`/generated/${id}`);
+  revalidatePath("/generated");
   revalidatePath("/dashboard");
 }
 

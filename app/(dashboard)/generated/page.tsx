@@ -29,6 +29,7 @@ type GeneratedItem = {
   sales_version: string | null;
   overall_score: number | null;
   below_threshold: boolean;
+  approved_at: string | null;
   created_at: string;
 };
 
@@ -49,7 +50,7 @@ function contentKind(
 }
 
 function libraryStatus(
-  item: Pick<GeneratedItem, "below_threshold">,
+  item: Pick<GeneratedItem, "below_threshold" | "approved_at">,
   postStatuses: string[],
 ) {
   if (item.below_threshold) return "needs revision";
@@ -57,7 +58,7 @@ function libraryStatus(
   if (postStatuses.includes("scheduled") || postStatuses.includes("posting")) {
     return "scheduled";
   }
-  if (postStatuses.includes("approved")) return "approved";
+  if (item.approved_at) return "approved";
   return "draft";
 }
 
@@ -88,7 +89,7 @@ export default async function GeneratedPage({
       supabase
         .from("marketing_os_generated_content")
         .select(
-          "id, agent_id, topic, title, platform, goal, length, primary_script, short_version, long_version, organic_version, sales_version, overall_score, below_threshold, created_at",
+          "id, agent_id, topic, title, platform, goal, length, primary_script, short_version, long_version, organic_version, sales_version, overall_score, below_threshold, approved_at, created_at",
         )
         .order("created_at", { ascending: false })
         .limit(200),
