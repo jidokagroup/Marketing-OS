@@ -68,6 +68,8 @@ export default async function SchedulerPage({
     title?: string;
     agent_id?: string;
     client?: string;
+    content_id?: string;
+    content_field?: string;
   }>;
 }) {
   const { user, supabase } = await requireUser();
@@ -76,6 +78,8 @@ export default async function SchedulerPage({
     title = "",
     agent_id: requestedAgentId = "",
     client: rawClient = "",
+    content_id: contentId = "",
+    content_field: contentField = "",
   } = await searchParams;
 
   const [{ data: allAgents }, { data: clients }] = await Promise.all([
@@ -129,7 +133,9 @@ export default async function SchedulerPage({
     .eq("owner_id", user.id);
   let generatedContentQuery = supabase
     .from("marketing_os_generated_content")
-    .select("id, agent_id, title, topic, platform, short_version, organic_version, primary_script")
+    .select(
+      "id, agent_id, title, topic, platform, short_version, organic_version, primary_script, long_version, sales_version",
+    )
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -310,6 +316,8 @@ export default async function SchedulerPage({
           emailProviderLabel={selectedEmailProviderLabel}
           defaultAgentId={effectiveDefaultAgentId}
           defaultTitle={title}
+          defaultContentId={contentId}
+          defaultContentField={contentField}
           generatedContent={generatedContent ?? []}
         />
       )}
