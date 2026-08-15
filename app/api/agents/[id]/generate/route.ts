@@ -20,7 +20,11 @@ export const maxDuration = 60;
 
 const MATCH_COUNT = 3;
 const RETRIEVAL_TIMEOUT_MS = 4_000;
-const GENERATION_TIMEOUT_MS = 20_000;
+// The function has a 60s budget (maxDuration above). The schema grew (blog
+// keywords, blog/email CTAs, link suggestions) since this was last tuned, so
+// generation legitimately needs more of that budget — 20s was forcing the
+// fallback template far more often than the timeout was meant to.
+const GENERATION_TIMEOUT_MS = 50_000;
 
 type ScriptMatch = {
   id: string;
