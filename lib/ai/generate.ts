@@ -180,8 +180,8 @@ async function generateOnce(
     prompt,
     jsonSchema: generatedContentJsonSchema,
     validator: generatedContent,
-    maxTokens: 1800,
-    timeoutMs: 14_000,
+    maxTokens: 2600,
+    timeoutMs: 45_000,
     maxRetries: 0,
   });
 }
@@ -206,13 +206,36 @@ function fallbackVoiceCue(dna: DnaInput) {
     .join(" ");
 }
 
+const STOPWORDS = new Set([
+  "the", "and", "for", "with", "your", "you", "this", "that", "into", "from",
+  "not", "just", "are", "was", "were", "have", "has", "had", "will", "can",
+  "how", "why", "what", "when", "who", "a", "an", "of", "to", "in", "on",
+  "it", "is", "be", "as", "at", "by", "or",
+]);
+
+/**
+ * Best-effort keyword phrases from the topic when Claude is unavailable.
+ * Prefers the topic itself and short noun-ish phrases over single stopwords,
+ * since a real SEO keyword is rarely one four-letter word split off a
+ * sentence.
+ */
 function fallbackKeywords(topic: string, audience: string): string[] {
-  const words = `${topic} ${audience}`
+  const clean = topic.replace(/\([^)]*\)/g, "").trim();
+  const words = clean
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
     .split(/\s+/)
-    .filter((word) => word.length > 3);
-  return [...new Set(words)].slice(0, 6);
+    .filter((word) => word.length > 3 && !STOPWORDS.has(word));
+
+  const phrases: string[] = [];
+  for (let i = 0; i < words.length - 1; i += 1) {
+    phrases.push(`${words[i]} ${words[i + 1]}`);
+  }
+
+  const keywords = [clean, ...phrases, ...words, audience]
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return [...new Set(keywords)].slice(0, 6);
 }
 
 function fallbackContent(req: GenerationRequest, dna: DnaInput, exemplars: string[]): GeneratedContentData {

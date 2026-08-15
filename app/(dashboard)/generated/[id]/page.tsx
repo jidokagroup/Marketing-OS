@@ -111,7 +111,6 @@ export default async function GeneratedDetailPage({
     },
     { value: "sales", label: "Email", text: content.sales_version },
   ];
-  const editableVariants = variants.filter((variant) => !variant.disabled);
 
   const hooks = (content.alternate_hooks ?? []) as string[];
   const ctas = (content.alternate_ctas ?? []) as string[];
@@ -218,73 +217,6 @@ export default async function GeneratedDetailPage({
         </CardContent>
       </Card>
 
-      <details className="mb-6 rounded-lg border p-4">
-        <summary className="flex cursor-pointer list-none items-center gap-2 font-medium">
-          <Edit3 className="h-4 w-4" />
-          Edit generated content
-        </summary>
-        <form action={updateGeneratedContentAction} className="mt-4 space-y-4">
-          <input type="hidden" name="id" value={content.id} />
-          {editableVariants.map((variant) => (
-            <div key={variant.value} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{variant.label}</label>
-                <Textarea
-                  name={
-                    variant.value === "primary"
-                      ? "primary_script"
-                      : `${variant.value}_version`
-                  }
-                  rows={variant.value === "primary" ? 8 : 5}
-                  defaultValue={variant.text ?? ""}
-                />
-              </div>
-              {variant.value === "long" && (
-                <div className="grid gap-4 rounded-md border p-3 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Blog CTA</label>
-                    <Textarea
-                      name="blog_cta"
-                      rows={2}
-                      defaultValue={content.blog_cta ?? ""}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">SEO / AEO keywords (one per line)</label>
-                    <Textarea
-                      name="blog_keywords"
-                      rows={4}
-                      defaultValue={blogKeywords.join("\n")}
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <label className="text-sm font-medium">
-                      Suggested internal links (one per line)
-                    </label>
-                    <Textarea
-                      name="blog_link_suggestions"
-                      rows={3}
-                      defaultValue={blogLinkSuggestions.join("\n")}
-                    />
-                  </div>
-                </div>
-              )}
-              {variant.value === "sales" && (
-                <div className="space-y-2 rounded-md border p-3">
-                  <label className="text-sm font-medium">Email CTA</label>
-                  <Textarea
-                    name="email_cta"
-                    rows={2}
-                    defaultValue={content.email_cta ?? ""}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-          <Button type="submit">Save edits</Button>
-        </form>
-      </details>
-
       {content.below_threshold && (
         <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
           This piece scored below the 90 fidelity bar after an automatic rewrite.
@@ -315,65 +247,75 @@ export default async function GeneratedDetailPage({
                       </p>
                     </TabsContent>
                   ) : (
-                    <TabsContent key={v.value} value={v.value} className="mt-4 space-y-3">
-                      <div className="flex justify-end">
-                        <CopyButton text={v.text ?? ""} />
-                      </div>
-                      <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">
-                        {v.text || "—"}
-                      </pre>
+                    <TabsContent key={v.value} value={v.value} className="mt-4">
+                      <form
+                        action={updateGeneratedContentAction}
+                        className="space-y-4"
+                      >
+                        <input type="hidden" name="id" value={content.id} />
+                        <div className="flex justify-end">
+                          <CopyButton text={v.text ?? ""} />
+                        </div>
+                        <Textarea
+                          name={
+                            v.value === "primary" ? "primary_script" : `${v.value}_version`
+                          }
+                          rows={12}
+                          className="font-sans text-sm leading-relaxed"
+                          defaultValue={v.text ?? ""}
+                        />
 
-                      {v.value === "long" && wantsBlogPost && (
-                        <div className="space-y-3 rounded-md border p-3">
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">
-                              Blog CTA
-                            </p>
-                            <div className="mt-1 flex items-start justify-between gap-2">
-                              <p className="text-sm">{content.blog_cta || "—"}</p>
-                              {content.blog_cta && <CopyButton text={content.blog_cta} />}
+                        {v.value === "long" && wantsBlogPost && (
+                          <div className="space-y-4 rounded-md border p-3">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">Blog CTA</label>
+                              <Textarea
+                                name="blog_cta"
+                                rows={3}
+                                defaultValue={content.blog_cta ?? ""}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                SEO / AEO keywords (one per line)
+                              </label>
+                              <Textarea
+                                name="blog_keywords"
+                                rows={6}
+                                defaultValue={blogKeywords.join("\n")}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                Suggested internal links (one per line)
+                              </label>
+                              <Textarea
+                                name="blog_link_suggestions"
+                                rows={5}
+                                defaultValue={blogLinkSuggestions.join("\n")}
+                              />
                             </div>
                           </div>
-                          {blogKeywords.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground">
-                                SEO / AEO keywords
-                              </p>
-                              <div className="mt-1 flex flex-wrap gap-1.5">
-                                {blogKeywords.map((keyword, index) => (
-                                  <Badge key={`kw-${index}`} variant="secondary">
-                                    {keyword}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {blogLinkSuggestions.length > 0 && (
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground">
-                                Suggested internal links
-                              </p>
-                              <ul className="mt-1 list-inside list-disc space-y-1 text-sm text-muted-foreground">
-                                {blogLinkSuggestions.map((suggestion, index) => (
-                                  <li key={`link-${index}`}>{suggestion}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                        )}
 
-                      {v.value === "sales" && (
-                        <div className="rounded-md border p-3">
-                          <p className="text-xs font-medium text-muted-foreground">
-                            Email CTA
-                          </p>
-                          <div className="mt-1 flex items-start justify-between gap-2">
-                            <p className="text-sm">{content.email_cta || "—"}</p>
-                            {content.email_cta && <CopyButton text={content.email_cta} />}
+                        {v.value === "sales" && (
+                          <div className="space-y-2 rounded-md border p-3">
+                            <label className="text-sm font-medium">Email CTA</label>
+                            <Textarea
+                              name="email_cta"
+                              rows={3}
+                              defaultValue={content.email_cta ?? ""}
+                            />
                           </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <Button type="submit" size="sm">
+                            <Edit3 className="mr-1 h-4 w-4" />
+                            Save {v.label.toLowerCase()}
+                          </Button>
                         </div>
-                      )}
+                      </form>
                     </TabsContent>
                   ),
                 )}
