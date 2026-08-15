@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 
+function parseLines(value: FormDataEntryValue | null) {
+  return String(value ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 export async function updateGeneratedContentAction(formData: FormData) {
   const { supabase } = await requireUser();
   const id = String(formData.get("id") ?? "");
@@ -14,10 +21,12 @@ export async function updateGeneratedContentAction(formData: FormData) {
     .from("marketing_os_generated_content")
     .update({
       primary_script: String(formData.get("primary_script") ?? "") || null,
-      short_version: String(formData.get("short_version") ?? "") || null,
       long_version: String(formData.get("long_version") ?? "") || null,
-      organic_version: String(formData.get("organic_version") ?? "") || null,
       sales_version: String(formData.get("sales_version") ?? "") || null,
+      blog_cta: String(formData.get("blog_cta") ?? "") || null,
+      email_cta: String(formData.get("email_cta") ?? "") || null,
+      blog_keywords: parseLines(formData.get("blog_keywords")),
+      blog_link_suggestions: parseLines(formData.get("blog_link_suggestions")),
     })
     .eq("id", id);
 
@@ -57,9 +66,11 @@ export async function duplicateGeneratedContentAction(formData: FormData) {
       primary_script: content.primary_script,
       alternate_hooks: content.alternate_hooks,
       alternate_ctas: content.alternate_ctas,
-      short_version: content.short_version,
       long_version: content.long_version,
-      organic_version: content.organic_version,
+      blog_cta: content.blog_cta,
+      email_cta: content.email_cta,
+      blog_keywords: content.blog_keywords,
+      blog_link_suggestions: content.blog_link_suggestions,
       sales_version: content.sales_version,
       retrieved_script_ids: content.retrieved_script_ids,
       overall_score: content.overall_score,

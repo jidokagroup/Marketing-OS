@@ -104,9 +104,9 @@ export function buildDnaBrief(dna: DnaInput): string {
 function requestBlock(req: GenerationRequest): string {
   const channelInstructions = [
     req.platform?.toLowerCase().includes("email") &&
-      "Email channel selected: make sales_version a complete email draft with subject line, preview text, body copy, and CTA.",
+      "Email channel selected: make sales_version a complete email draft with subject line, preview text, body copy. email_cta must read like something you'd click or reply to in an inbox.",
     req.platform?.toLowerCase().includes("blog") &&
-      "Blog post channel selected: make long_version a polished blog post with a headline, intro, scannable sections, and CTA.",
+      "Blog post channel selected: make long_version a polished blog post with a headline, intro, and ## section headings; populate blog_keywords and blog_link_suggestions. blog_cta must read like something on a web page (read/explore/subscribe), not a social comment prompt.",
   ].filter(Boolean);
   const lines = [
     `Topic: ${req.topic}`,
@@ -114,7 +114,7 @@ function requestBlock(req: GenerationRequest): string {
     req.platform && `Platform: ${req.platform}`,
     req.audience && `Audience: ${req.audience}`,
     req.offer && `Offer: ${req.offer}`,
-    req.cta && `Desired CTA: ${req.cta}`,
+    req.cta && `Desired CTA direction (adapt the wording per channel, do not reuse verbatim across primary_script, blog_cta, and email_cta): ${req.cta}`,
     req.length && `Length: ${req.length}`,
     req.notes && `Notes: ${req.notes}`,
     channelInstructions.length && `Channel instructions: ${channelInstructions.join(" ")}`,
@@ -126,7 +126,10 @@ const GEN_SYSTEM =
   "You are a ghostwriter that reproduces a specific creator's writing voice with the " +
   "highest possible fidelity. Write as the creator — their tone, cadence, beliefs, hook " +
   "and CTA styles, signature phrases, and storytelling structures. Reuse their phrasing " +
-  "naturally; never force it. The result should be indistinguishable from the original writer.";
+  "naturally; never force it. The result should be indistinguishable from the original writer. " +
+  "Each channel gets its own CTA in its own register: primary_script's CTA is social (comment, " +
+  "DM, save); blog_cta reads like a web page (read, explore, subscribe); email_cta reads like an " +
+  "inbox (reply, click, book a call). Never reuse the same CTA sentence across channels.";
 
 const MAX_FAST_GENERATION_EXEMPLARS = 3;
 const MAX_EXEMPLAR_CHARS = 700;
@@ -203,11 +206,22 @@ function fallbackVoiceCue(dna: DnaInput) {
     .join(" ");
 }
 
+function fallbackKeywords(topic: string, audience: string): string[] {
+  const words = `${topic} ${audience}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((word) => word.length > 3);
+  return [...new Set(words)].slice(0, 6);
+}
+
 function fallbackContent(req: GenerationRequest, dna: DnaInput, exemplars: string[]): GeneratedContentData {
   const title = req.title || req.topic;
   const goal = req.goal || "move the audience to the next step";
   const audience = req.audience || "the right audience";
-  const cta = req.cta || "comment or send a DM for the next step";
+  const socialCta = req.cta || "comment or send a DM for the next step";
+  const wantsBlog = req.platform?.toLowerCase().includes("blog") ?? false;
+  const wantsEmail = req.platform?.toLowerCase().includes("email") ?? false;
   const cue = fallbackVoiceCue(dna);
   const exampleLine = compactExemplars(exemplars)[0]?.split("\n").find(Boolean);
   const voiceLine = cue
@@ -228,8 +242,15 @@ function fallbackContent(req: GenerationRequest, dna: DnaInput, exemplars: strin
     "",
     `${voiceLine}`,
     "",
-    `CTA: ${cta}.`,
+    `CTA: ${socialCta}.`,
   ].join("\n");
+
+  const blogCta = wantsBlog
+    ? `Explore how this applies to ${audience.toLowerCase()} — read the full breakdown.`
+    : `Read more on how ${audience.toLowerCase()} put this into practice.`;
+  const emailCta = wantsEmail
+    ? `Reply to this email and tell us where you're stuck with ${req.topic}.`
+    : `Book a time to walk through this with our team.`;
 
   return {
     primary_script: primary,
@@ -239,14 +260,38 @@ function fallbackContent(req: GenerationRequest, dna: DnaInput, exemplars: strin
       `This is the part of ${req.topic} most teams skip.`,
     ],
     alternate_ctas: [
-      cta,
+      socialCta,
       "Save this and use it before the next campaign goes live.",
       "DM us the word NEXT if you want help applying this.",
     ],
-    short_version: `Most people overcomplicate ${req.topic}. Start by naming the real constraint, remove one unnecessary step, and make the next action obvious. ${cta}.`,
-    long_version: `${title}\n\n${primary}\n\nThe point is not to add more activity. The point is to make the next decision easier, cleaner, and more useful for the person you are trying to reach.`,
-    organic_version: `A useful way to look at ${req.topic}: the issue is usually not effort. It is clarity. When the message, proof, and next step line up, the content works harder without sounding forced.`,
-    sales_version: `Subject: ${title}\n\nIf ${req.topic} has been harder than expected, the fix may be simpler than adding another tactic.\n\nStart with the real blocker, tighten the message, and give people one clear next step.\n\n${cta}.`,
+    long_version: [
+      `## ${title}`,
+      "",
+      `Most conversations about ${req.topic} start in the wrong place. Before tactics, ${audience} need a clear read on the actual problem.`,
+      "",
+      `## Why the usual fix falls short`,
+      "",
+      `The common advice creates more noise than progress because it skips straight to execution. ${voiceLine}`,
+      "",
+      `## A practical shift to try`,
+      "",
+      `Start with the real blocker, tighten the message, and give people one clear next step tied back to ${goal}.`,
+      "",
+      `## Next step`,
+      "",
+      blogCta,
+    ].join("\n"),
+    blog_cta: blogCta,
+    blog_keywords: wantsBlog ? fallbackKeywords(req.topic, audience) : [],
+    blog_link_suggestions: wantsBlog
+      ? [
+          `Link the phrase "${req.topic}" to a recent social post covering the same idea.`,
+          `Link the CTA to your booking or contact form.`,
+          `Link "our approach" to a services or offer page.`,
+        ]
+      : [],
+    sales_version: `Subject: ${title}\n\nIf ${req.topic} has been harder than expected, the fix may be simpler than adding another tactic.\n\nStart with the real blocker, tighten the message, and give people one clear next step.\n\n${emailCta}`,
+    email_cta: emailCta,
   };
 }
 
@@ -307,8 +352,8 @@ function estimateQualityScore(
   const completenessBoost =
     content.alternate_hooks.length > 0 &&
     content.alternate_ctas.length > 0 &&
-    content.short_version.trim() &&
-    content.long_version.trim()
+    content.long_version.trim() &&
+    content.sales_version.trim()
       ? 2
       : 0;
   const base = 84 + exemplarBoost + completenessBoost + (scriptLength > 400 ? 2 : 0);
