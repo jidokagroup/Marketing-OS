@@ -68,6 +68,7 @@ export default async function SchedulerPage({
     title?: string;
     agent_id?: string;
     client?: string;
+    content_id?: string;
   }>;
 }) {
   const { user, supabase } = await requireUser();
@@ -76,6 +77,7 @@ export default async function SchedulerPage({
     title = "",
     agent_id: requestedAgentId = "",
     client: rawClient = "",
+    content_id: contentId = "",
   } = await searchParams;
 
   const [{ data: allAgents }, { data: clients }] = await Promise.all([
@@ -310,6 +312,7 @@ export default async function SchedulerPage({
           emailProviderLabel={selectedEmailProviderLabel}
           defaultAgentId={effectiveDefaultAgentId}
           defaultTitle={title}
+          defaultContentId={contentId}
           generatedContent={generatedContent ?? []}
         />
       )}

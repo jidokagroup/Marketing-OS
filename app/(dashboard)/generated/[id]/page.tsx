@@ -119,6 +119,7 @@ export default async function GeneratedDetailPage({
   const schedulerParams = new URLSearchParams({
     agent_id: agent?.id ?? "",
     title: content.title || content.topic || "",
+    content_id: content.id,
   });
   if (agent?.client_id) schedulerParams.set("client", agent.client_id);
   const generatedLibraryHref = agent?.client_id

@@ -145,6 +145,43 @@ function splitPlatforms(value: string) {
     .filter(Boolean);
 }
 
+/**
+ * Pure lookup shared by the initial-render seed (from a "Schedule this"
+ * link's content_id) and the manual dropdown pick, so both paths resolve
+ * the same fields the same way without duplicating the logic.
+ */
+function resolveGeneratedSelection(generatedContent: GeneratedOption[], id: string) {
+  const selected = generatedContent.find((item) => item.id === id);
+  if (!selected) return null;
+
+  const caption =
+    selected.organic_version ?? selected.short_version ?? selected.primary_script ?? "";
+  let platformKey: string | null = null;
+  let disabledPlatform: { label: string; reason: string } | null = null;
+
+  if (selected.platform) {
+    const key =
+      splitPlatforms(selected.platform)[0] ?? selected.platform.trim().toLowerCase();
+    const definition = SCHEDULER_PLATFORMS.find((platform) => platform.key === key);
+    if (definition?.disabled) {
+      disabledPlatform = {
+        label: definition.label,
+        reason: definition.disabledReason ?? `${definition.label} is not available yet.`,
+      };
+    } else if (definition) {
+      platformKey = key;
+    }
+  }
+
+  return {
+    agentId: selected.agent_id,
+    title: selected.title || selected.topic || "",
+    caption,
+    platformKey,
+    disabledPlatform,
+  };
+}
+
 function parseBool(value: string) {
   return ["1", "true", "yes", "y", "on"].includes(value.trim().toLowerCase());
 }
@@ -333,6 +370,7 @@ export function SchedulerUploader({
   emailProviderLabel = "your selected email provider",
   defaultAgentId = "",
   defaultTitle = "",
+  defaultContentId = "",
   generatedContent = [],
 }: {
   agents: AgentOption[];
@@ -340,17 +378,38 @@ export function SchedulerUploader({
   emailProviderLabel?: string;
   defaultAgentId?: string;
   defaultTitle?: string;
+  defaultContentId?: string;
   generatedContent?: GeneratedOption[];
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [selectedAgentId, setSelectedAgentId] = useState(defaultAgentId);
-  const [titleValue, setTitleValue] = useState(defaultTitle);
-  const [captionOverride, setCaptionOverride] = useState("");
-  const [platforms, setPlatforms] = useState<string[]>(["instagram"]);
+
+  // Resolved once for the initial render so arriving from a generated
+  // content page's "Schedule this" link (exact ID match) can seed every
+  // field's initial state directly, without a post-mount effect calling
+  // setState.
+  const initialSelection = defaultContentId
+    ? resolveGeneratedSelection(generatedContent, defaultContentId)
+    : null;
+
+  const [selectedAgentId, setSelectedAgentId] = useState(
+    initialSelection?.agentId ?? defaultAgentId,
+  );
+  const [selectedContentId, setSelectedContentId] = useState(defaultContentId);
+  const [titleValue, setTitleValue] = useState(initialSelection?.title ?? defaultTitle);
+  const [captionOverride, setCaptionOverride] = useState(initialSelection?.caption ?? "");
+  const [platforms, setPlatforms] = useState<string[]>(
+    initialSelection?.platformKey ? [initialSelection.platformKey] : ["instagram"],
+  );
   const [contentType, setContentType] = useState<(typeof CONTENT_TYPES)[number]>(
-    "video",
+    initialSelection?.platformKey === "x"
+      ? "photo"
+      : initialSelection?.platformKey === "youtube"
+        ? "video"
+        : initialSelection?.platformKey === "mailchimp"
+          ? "email_campaign"
+          : "video",
   );
   const [useBestTime, setUseBestTime] = useState(true);
   const [commentDmEnabled, setCommentDmEnabled] = useState(false);
@@ -391,31 +450,22 @@ export function SchedulerUploader({
   const captionPreview = captionOverride.trim();
 
   function pickGeneratedContent(id: string) {
-    const selected = generatedContent.find((item) => item.id === id);
-    if (!selected) return;
-    setSelectedAgentId(selected.agent_id);
-    setTitleValue(selected.title || selected.topic || "");
-    setCaptionOverride(
-      selected.organic_version ??
-        selected.short_version ??
-        selected.primary_script ??
-        "",
-    );
-    if (selected.platform) {
-      const key =
-        splitPlatforms(selected.platform)[0] ??
-        selected.platform.trim().toLowerCase();
-      const definition = SCHEDULER_PLATFORMS.find((platform) => platform.key === key);
-      if (definition?.disabled) {
-        toast.info(definition.disabledReason ?? `${definition.label} is not available yet.`);
-        return;
-      }
-      if (definition) {
-        setPlatforms([key]);
-        if (key === "x") setContentType("photo");
-        if (key === "youtube") setContentType("video");
-        if (key === "mailchimp") setContentType("email_campaign");
-      }
+    const selection = resolveGeneratedSelection(generatedContent, id);
+    if (!selection) return;
+    setSelectedContentId(id);
+    setSelectedAgentId(selection.agentId);
+    setTitleValue(selection.title);
+    setCaptionOverride(selection.caption);
+    if (selection.disabledPlatform) {
+      toast.info(selection.disabledPlatform.reason);
+      return;
+    }
+    if (selection.platformKey) {
+      const key = selection.platformKey;
+      setPlatforms([key]);
+      if (key === "x") setContentType("photo");
+      if (key === "youtube") setContentType("video");
+      if (key === "mailchimp") setContentType("email_campaign");
     }
   }
 
@@ -646,7 +696,7 @@ export function SchedulerUploader({
                 <select
                   id="generated_content_pick"
                   onChange={(event) => pickGeneratedContent(event.target.value)}
-                  defaultValue=""
+                  value={selectedContentId}
                   className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <option value="">Choose a generated title</option>
