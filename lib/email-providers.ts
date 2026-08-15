@@ -9,6 +9,7 @@ export type EmailProviderKey =
   | "klaviyo"
   | "activecampaign"
   | "constant_contact"
+  | "instantly"
   | "custom_api";
 
 export interface EmailProviderDefinition {
@@ -86,6 +87,14 @@ export const EMAIL_PROVIDER_DEFINITIONS: EmailProviderDefinition[] = [
     connection: "OAuth",
     bestFor: "Newsletter campaigns, contact lists, and small-business email reporting.",
     note: "Prepared as a future provider option.",
+  },
+  {
+    key: "instantly",
+    label: "Instantly",
+    status: "api_setup",
+    connection: "API key",
+    bestFor: "Cold outbound sequences, inbox warm-up, and high-volume prospecting sends.",
+    note: "Best for lead-gen and outbound campaigns kept separate from nurture/newsletter sends.",
   },
   {
     key: "custom_api",

@@ -20,6 +20,19 @@ import {
   PLATFORM_DEFINITIONS,
   connectionLabel,
 } from "@/lib/social/platforms";
+import { cn } from "@/lib/utils";
+
+// Platform credentials and OAuth for these move to Convia's distribution
+// layer under the collaboration — Jidoka's settings page no longer initiates
+// the connection for them, it just reflects that they're handled elsewhere.
+const CONVIA_MANAGED_PLATFORMS = new Set([
+  "instagram",
+  "facebook",
+  "youtube",
+  "x",
+  "tiktok",
+  "linkedin",
+]);
 import {
   asRow,
   asRows,
@@ -241,7 +254,9 @@ export default async function SettingsPage() {
             const account = accountByPlatform.get(platform.key);
             const connected = account?.status === "active";
             const isEmailCampaign = platform.key === "mailchimp";
+            const isConviaManaged = CONVIA_MANAGED_PLATFORMS.has(platform.key);
             const canConnect =
+              !isConviaManaged &&
               platform.connectable &&
               !platform.disabled &&
               latestAgent?.id &&
@@ -252,14 +267,19 @@ export default async function SettingsPage() {
             return (
               <div
                 key={platform.key}
-                className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+                className={cn(
+                  "flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between",
+                  isConviaManaged && "opacity-60",
+                )}
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{label}</p>
                     <Badge
                       variant={
-                        isEmailCampaign && selectedEmailProvider !== "mailchimp"
+                        isConviaManaged
+                          ? "outline"
+                          : isEmailCampaign && selectedEmailProvider !== "mailchimp"
                           ? emailProviderSettings?.status === "connected"
                             ? "default"
                             : "outline"
@@ -270,7 +290,11 @@ export default async function SettingsPage() {
                             : "destructive"
                       }
                     >
-                      {isEmailCampaign && selectedEmailProvider !== "mailchimp"
+                      {isConviaManaged
+                        ? connected
+                          ? "Connected"
+                          : "Not connected"
+                        : isEmailCampaign && selectedEmailProvider !== "mailchimp"
                         ? selectedEmailProviderLabel
                         : platform.disabled
                         ? "API setup"
@@ -280,14 +304,20 @@ export default async function SettingsPage() {
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {isEmailCampaign && selectedEmailProvider !== "mailchimp"
+                    {isConviaManaged
+                      ? "Distribution and OAuth for this platform run through Convia."
+                      : isEmailCampaign && selectedEmailProvider !== "mailchimp"
                       ? `${selectedEmailProviderDefinition.connection}. ${selectedEmailProviderDefinition.bestFor}`
                       : account?.username ??
                       platform.disabledReason ??
                       connectionLabel(platform.key, connected)}
                   </p>
                 </div>
-                {canConnect ? (
+                {isConviaManaged ? (
+                  <span className="text-sm text-muted-foreground">
+                    Connect through Convia
+                  </span>
+                ) : canConnect ? (
                   <a
                     href={`/api/social/connect?agent_id=${latestAgent.id}&platform=${platform.key}`}
                     className="inline-flex h-8 items-center justify-center rounded-lg border px-3 text-sm font-medium transition-colors hover:bg-muted"
@@ -424,25 +454,34 @@ export default async function SettingsPage() {
             </div>
           </form>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {EMAIL_PROVIDER_DEFINITIONS.map((provider) => (
-              <div key={provider.key} className="rounded-lg border p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">{provider.label}</p>
-                  <Badge
-                    variant={provider.status === "live" ? "default" : "outline"}
-                  >
-                    {emailProviderStatusLabel(provider.status)}
-                  </Badge>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              All providers
+            </p>
+            <div className="divide-y rounded-lg border">
+              {EMAIL_PROVIDER_DEFINITIONS.map((provider) => (
+                <div
+                  key={provider.key}
+                  className="flex flex-col gap-1.5 p-3 sm:flex-row sm:items-center sm:gap-4"
+                >
+                  <div className="flex shrink-0 items-center gap-2 sm:w-44">
+                    <p className="font-medium">{provider.label}</p>
+                    <Badge
+                      variant={provider.status === "live" ? "default" : "outline"}
+                      className="shrink-0"
+                    >
+                      {emailProviderStatusLabel(provider.status)}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground sm:flex-1">
+                    {provider.bestFor}
+                  </p>
+                  <p className="text-xs text-muted-foreground sm:w-36 sm:shrink-0 sm:text-right">
+                    {provider.connection}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {provider.bestFor}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {provider.connection}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
