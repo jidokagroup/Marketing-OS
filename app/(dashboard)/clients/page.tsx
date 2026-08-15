@@ -127,24 +127,27 @@ export default async function ClientsPage() {
                   <div className="flex items-center gap-2">
                     <Bot className="h-3.5 w-3.5" />
                     {clientAgents.length} Writing Agent{clientAgents.length === 1 ? "" : "s"}
+                    {connectedAgentCount > 0 &&
+                      ` · ${connectedAgentCount} connected`}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-3.5 w-3.5" />
-                    {connectedAgentCount} agent
-                    {connectedAgentCount === 1 ? "" : "s"} with connected accounts
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {generatedCount} generated piece{generatedCount === 1 ? "" : "s"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CalendarClock className="h-3.5 w-3.5" />
-                    {postCount} scheduled item{postCount === 1 ? "" : "s"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Inbox className="h-3.5 w-3.5" />
-                    {inboxCount} Inbox review item{inboxCount === 1 ? "" : "s"}
-                  </div>
+                  {generatedCount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {generatedCount} generated piece{generatedCount === 1 ? "" : "s"}
+                    </div>
+                  )}
+                  {postCount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      {postCount} scheduled item{postCount === 1 ? "" : "s"}
+                    </div>
+                  )}
+                  {inboxCount > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Inbox className="h-3.5 w-3.5" />
+                      {inboxCount} Inbox review item{inboxCount === 1 ? "" : "s"}
+                    </div>
+                  )}
                 </div>
 
                 {clientAgents.length > 0 && (

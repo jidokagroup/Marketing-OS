@@ -17,9 +17,10 @@ import { PLATFORM_DEFINITIONS } from "@/lib/social/platforms";
 import { PageHeader } from "@/components/page-header";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { Badge } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ScanStatusBanner } from "./ScanStatusBanner";
+import { InsightMoreActions } from "./InsightMoreActions";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
@@ -739,71 +740,27 @@ function InsightActions({
     { label: "Create task", action: createTaskFromInsightAction },
     { label: "Assign to team", action: assignInsightToTeamAction },
     { label: "Save", action: saveInsightForLaterAction },
-    { label: "Dismiss", action: dismissInsightAction },
+    { label: "Dismiss", action: dismissInsightAction, destructive: true },
   ];
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-3 flex items-center gap-2">
       <ButtonLink href={generateHref} size="xs" variant="outline">
         Turn into content package
       </ButtonLink>
-      {actions.map((action) =>
-        opsReady ? (
-          <form key={action.label} action={action.action}>
-            <InsightHiddenFields
-              title={insightTitle}
-              body={item}
-              type={title}
-              source={source}
-              reportId={reportId}
-              clientId={clientId}
-              campaignId={campaignId}
-            />
-            <Button
-              type="submit"
-              size="xs"
-              variant={action.label === "Dismiss" ? "ghost" : "outline"}
-            >
-              {action.label}
-            </Button>
-          </form>
-        ) : (
-          <Button key={action.label} type="button" size="xs" variant="outline" disabled>
-            {action.label}
-          </Button>
-        ),
-      )}
+      <InsightMoreActions
+        actions={actions}
+        opsReady={opsReady}
+        hiddenFields={{
+          title: insightTitle,
+          body: item,
+          type: title,
+          source,
+          reportId,
+          clientId,
+          campaignId,
+        }}
+      />
     </div>
-  );
-}
-
-function InsightHiddenFields({
-  title,
-  body,
-  type,
-  source,
-  reportId,
-  clientId,
-  campaignId,
-}: {
-  title: string;
-  body: string;
-  type: string;
-  source: string;
-  reportId?: string;
-  clientId?: string;
-  campaignId?: string;
-}) {
-  return (
-    <>
-      <input type="hidden" name="insight_title" value={title} />
-      <input type="hidden" name="insight_body" value={body} />
-      <input type="hidden" name="insight_type" value={type} />
-      <input type="hidden" name="insight_source" value={source} />
-      <input type="hidden" name="report_id" value={reportId ?? ""} />
-      <input type="hidden" name="client_id" value={clientId ?? ""} />
-      <input type="hidden" name="campaign_id" value={campaignId ?? ""} />
-      <input type="hidden" name="assignee_name" value="Marketing team" />
-    </>
   );
 }

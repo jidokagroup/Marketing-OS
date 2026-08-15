@@ -46,6 +46,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const metadata = { title: "Settings · Jidoka Marketing Team OS" };
 
@@ -184,11 +185,21 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Workspace connections, billing, team capacity, playbooks, and account details."
+        description="Connections, billing, team, playbooks, and account — grouped by tab."
       />
 
       {schemaMissing && <OpsSchemaNotice />}
 
+      <Tabs defaultValue="connections">
+        <TabsList>
+          <TabsTrigger value="connections">Connections</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
+          {!schemaMissing && <TabsTrigger value="team">Team</TabsTrigger>}
+          {!schemaMissing && <TabsTrigger value="playbooks">Playbooks</TabsTrigger>}
+          <TabsTrigger value="account">Account</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="connections" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -410,7 +421,9 @@ export default async function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
+        <TabsContent value="billing" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -436,8 +449,10 @@ export default async function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
 
       {!schemaMissing && (
+        <TabsContent value="team" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -538,9 +553,11 @@ export default async function SettingsPage() {
             )}
           </CardContent>
         </Card>
+        </TabsContent>
       )}
 
       {!schemaMissing && (
+        <TabsContent value="playbooks" className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Playbooks</CardTitle>
@@ -645,8 +662,10 @@ export default async function SettingsPage() {
             )}
           </CardContent>
         </Card>
+        </TabsContent>
       )}
 
+        <TabsContent value="account" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Account</CardTitle>
@@ -694,6 +713,8 @@ export default async function SettingsPage() {
           </Link>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
