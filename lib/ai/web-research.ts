@@ -21,11 +21,15 @@ import { getAnthropic, CLAUDE_MODEL } from "@/lib/ai/anthropic";
  * prompt says so, and the scan is told to label it as such.
  */
 
-const RESEARCH_TIMEOUT_MS = 120_000;
-const MAX_SEARCHES = 8;
+// Kept tight on purpose: this runs before the report call inside a Netlify
+// background function that the platform kills at ~15 minutes, and a killed
+// worker strands its row at `running`. Worst case here is 2 minutes.
+const RESEARCH_TIMEOUT_MS = 60_000;
+const MAX_SEARCHES = 6;
 // Server-side tool loops can pause at ~10 iterations with stop_reason
-// "pause_turn"; resume a bounded number of times rather than hanging.
-const MAX_CONTINUATIONS = 3;
+// "pause_turn"; resume once rather than hanging. Research is supporting
+// context, so a partial answer is far better than blowing the time budget.
+const MAX_CONTINUATIONS = 1;
 
 type TextBlock = { type: string; text?: string };
 
