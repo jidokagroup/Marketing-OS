@@ -35,6 +35,7 @@ import {
   updateGeneratedContentAction,
 } from "../actions";
 import { GenerationStatusBanner } from "./GenerationStatusBanner";
+import { PrimaryScriptTab } from "./PrimaryScriptTab";
 import { SavedToast } from "./SavedToast";
 
 const SCORE_FIELDS: { key: string; label: string }[] = [
@@ -345,6 +346,17 @@ export default async function GeneratedDetailPage({
                         {v.disabledNote}
                       </p>
                     </TabsContent>
+                  ) : v.value === "primary" ? (
+                    <TabsContent key={v.value} value={v.value} className="mt-4">
+                      <PrimaryScriptTab
+                        contentId={content.id}
+                        label={v.label}
+                        initialScript={v.text ?? ""}
+                        hooks={hooks}
+                        ctas={ctas}
+                        scheduleHref={v.field ? scheduleHref(v.field, pieceTitle) : undefined}
+                      />
+                    </TabsContent>
                   ) : (
                     <TabsContent key={v.value} value={v.value} className="mt-4">
                       <form
@@ -357,9 +369,7 @@ export default async function GeneratedDetailPage({
                           <CopyButton text={v.text ?? ""} />
                         </div>
                         <Textarea
-                          name={
-                            v.value === "primary" ? "primary_script" : `${v.value}_version`
-                          }
+                          name={`${v.value}_version`}
                           rows={12}
                           className="font-sans text-sm leading-relaxed"
                           defaultValue={v.text ?? ""}
@@ -432,40 +442,6 @@ export default async function GeneratedDetailPage({
               </Tabs>
             </CardContent>
           </Card>
-
-          {(hooks.length > 0 || ctas.length > 0) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Alternates</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {hooks.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
-                      Hooks
-                    </p>
-                    <ul className="space-y-1 text-sm">
-                      {hooks.map((h, i) => (
-                        <li key={i}>• {h}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {ctas.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
-                      CTAs
-                    </p>
-                    <ul className="space-y-1 text-sm">
-                      {ctas.map((c, i) => (
-                        <li key={i}>• {c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="space-y-6">
