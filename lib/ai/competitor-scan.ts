@@ -25,6 +25,8 @@ export type ScanClient = {
   name: string;
   industry: string | null;
   notes: string | null;
+  /** What a strategist observed in-app; no API exposes competitor audio trends. */
+  trending_audio_notes?: string | null;
 } | null;
 
 /** One insight, traceable back to the competitor page it was drawn from. */
@@ -184,6 +186,8 @@ const scanJsonSchema = {
         "engagement, editing or production patterns, voiceover vs. music-led, on-screen text style, or " +
         "trending audio. Ground these in COMPETITOR EXECUTION DATA (real platform API numbers) first and cite " +
         "the specific figures; TikTok web-search findings are lower confidence, so label them as approximate. " +
+        "For audio specifically, use TRENDING AUDIO NOTES if present and say it came from the strategist's own " +
+        "observation; if there are no such notes, do not name any trending sound -- no API exposes that data. " +
         "For any account listed under NO EXECUTION DATA AVAILABLE, say so plainly instead of guessing. " +
         "Never a topic or content idea here.",
     ),
@@ -332,6 +336,15 @@ export async function runCompetitorScan({
       }`
     : "CLIENT: a marketing client (no specific client selected).";
 
+  // Hand-entered audio observations. Treated as first-party evidence: a human
+  // watched the feed, which is the only reliable source for this right now.
+  const audioBlock = client?.trending_audio_notes?.trim()
+    ? "\nTRENDING AUDIO NOTES (observed in-app by the client's strategist — treat as " +
+      "first-party observation, more reliable than inference, and the only audio " +
+      "source available; do not contradict or embellish it):\n" +
+      client.trending_audio_notes.trim()
+    : "";
+
   const gapBlock = executionGaps.length
     ? "\nNO EXECUTION DATA AVAILABLE FOR THESE ACCOUNTS (say so plainly in competitor_wins " +
       "rather than guessing how they execute):\n" +
@@ -359,7 +372,7 @@ export async function runCompetitorScan({
     prompt:
       `${clientBlock}\n\n` +
       `COMPETITOR RESEARCH MATERIAL:\n${competitorBlock}\n` +
-      `${executionBrief}\n${gapBlock}\n\n` +
+      `${executionBrief}\n${audioBlock}\n${gapBlock}\n\n` +
       "Produce the intelligence report. Fill every field separately and keep " +
       "each one's content inside its own array — never continue one section's " +
       "list into the next field, and never emit a section name as a list item. " +

@@ -280,7 +280,7 @@ export default async function IntelligencePage() {
       .maybeSingle(),
     supabase
       .from("marketing_os_clients")
-      .select("id, name, industry")
+      .select("id, name, industry, trending_audio_notes")
       .eq("owner_id", user.id)
       .order("name"),
     opsTable(supabase, "marketing_os_campaigns")
@@ -329,7 +329,6 @@ export default async function IntelligencePage() {
   const positioningSource = opportunities.positioning.length
     ? "Latest saved scan"
     : "Marketing baseline";
-  const audios = latestReport ? jsonArray(latestReport.audios) : [];
   const recommendedPosts = opportunities.recommended_posts.length
     ? opportunities.recommended_posts
     : asInsights(BASELINE_RECOMMENDED_POSTS);
@@ -364,6 +363,13 @@ export default async function IntelligencePage() {
   const allClients = clients ?? [];
   const focusedClient =
     allClients.find((client) => client.name === latestReport?.industry) ?? null;
+  // One note per line, so a multi-line jot renders as separate cards.
+  const audioNotes = asInsights(
+    (focusedClient?.trending_audio_notes ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+  );
   const opsReady = !isOpsSchemaMissing(campaignsResult.error);
   const campaigns = opsReady
     ? asRows<InsightCampaign>(campaignsResult.data)
@@ -448,13 +454,14 @@ export default async function IntelligencePage() {
     {
       key: "audios",
       label: "Audios",
-      description: "Trending audio signals from connected platforms.",
-      items: audios.length
-        ? audios
+      description:
+        "Audio you noted from the apps. No platform API exposes competitor trending audio, so this is whatever the strategist recorded on the client above.",
+      items: audioNotes.length
+        ? audioNotes
         : asInsights([
-            "Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress.",
+            "No trending audio notes yet — add them on the Client card above and they'll feed into the next scan.",
           ]),
-      source: audios.length ? reportSource : "Setup required",
+      source: audioNotes.length ? "Strategist notes" : "Not recorded",
     },
     {
       key: "posts",
@@ -602,6 +609,29 @@ export default async function IntelligencePage() {
               </option>
             ))}
           </select>
+
+          <div className="mt-4 space-y-2">
+            <label htmlFor="trending_audio_notes" className="text-sm font-medium">
+              Trending audio notes
+            </label>
+            <Textarea
+              id="trending_audio_notes"
+              name="trending_audio_notes"
+              form="competitor-scan-form"
+              rows={3}
+              defaultValue={focusedClient?.trending_audio_notes ?? ""}
+              placeholder={
+                "e.g. Reels: sped-up 'Tell Me Why' clip on before/after posts\n" +
+                "TikTok: whispered-voiceover trend on myth-busting videos"
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              No platform exposes competitor trending audio — TikTok removed it from
+              Creative Center, and Instagram&apos;s audio API only covers publishing. Note
+              what you actually see in the app and the scan will use it instead of
+              guessing. Saved with the client and reused on every scan.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

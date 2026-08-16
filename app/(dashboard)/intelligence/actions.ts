@@ -138,11 +138,19 @@ export async function saveCompetitorsAction(formData: FormData) {
     );
 
   const clientId = String(formData.get("client_id") ?? "").trim();
+  // Hand-entered audio observations live on the client so they persist across
+  // scans; no API exposes competitor trending audio, so this is the only source.
+  const audioNotes = String(formData.get("trending_audio_notes") ?? "").trim();
   let client: ScanClient = null;
   if (clientId) {
+    await supabase
+      .from("marketing_os_clients")
+      .update({ trending_audio_notes: audioNotes || null })
+      .eq("id", clientId);
+
     const { data } = await supabase
       .from("marketing_os_clients")
-      .select("name, industry, notes")
+      .select("name, industry, notes, trending_audio_notes")
       .eq("id", clientId)
       .maybeSingle();
     client = data ?? null;

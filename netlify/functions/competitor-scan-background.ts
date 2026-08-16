@@ -37,7 +37,7 @@ async function loadClient(
   }
   const { data } = await db
     .from("marketing_os_clients")
-    .select("name, industry, notes")
+    .select("name, industry, notes, trending_audio_notes")
     .eq("id", report.client_id)
     .maybeSingle();
   return (data as ScanClient) ?? null;

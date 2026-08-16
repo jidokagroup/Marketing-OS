@@ -44,6 +44,7 @@ export interface Database {
           name: string;
           industry: string | null;
           notes: string | null;
+          trending_audio_notes: string | null;
         };
         Insert: {
           id?: string;
@@ -51,8 +52,14 @@ export interface Database {
           name: string;
           industry?: string | null;
           notes?: string | null;
+          trending_audio_notes?: string | null;
         };
-        Update: { name?: string; industry?: string | null; notes?: string | null };
+        Update: {
+          name?: string;
+          industry?: string | null;
+          notes?: string | null;
+          trending_audio_notes?: string | null;
+        };
         Relationships: [];
       };
       writing_agents: {
