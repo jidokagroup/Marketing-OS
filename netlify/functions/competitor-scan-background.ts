@@ -37,7 +37,7 @@ async function loadClient(
   }
   const { data } = await db
     .from("marketing_os_clients")
-    .select("name, industry, notes")
+    .select("name, industry, notes, trending_audio_notes")
     .eq("id", report.client_id)
     .maybeSingle();
   return (data as ScanClient) ?? null;
@@ -68,7 +68,33 @@ async function runOne(db: ReturnType<typeof createServiceClient>, report: Report
     // here as a catchable error we can write to the row, instead of killing the
     // invocation with nothing but a platform log entry.
     const { runCompetitorScan } = await import("../../lib/ai/competitor-scan");
-    const scan = await runCompetitorScan({ client, websites });
+
+    // Real platform data first (Instagram Business Discovery + YouTube Data
+    // API), then a web-search pass for TikTok, which has no commercial API.
+    // Both degrade to empty rather than failing the scan.
+    const { loadCompetitorExecutionData } = await import(
+      "../../lib/social/competitor-execution"
+    );
+    const execution = await loadCompetitorExecutionData(db, report.owner_id, websites);
+
+    let executionBrief = execution.brief;
+    if (execution.tiktokHandles.length) {
+      const { researchTikTokAccounts } = await import("../../lib/ai/web-research");
+      const clientContext = client
+        ? `CLIENT: ${client.name}${client.industry ? ` — ${client.industry}` : ""}`
+        : "CLIENT: a marketing client.";
+      executionBrief += await researchTikTokAccounts(
+        execution.tiktokHandles,
+        clientContext,
+      );
+    }
+
+    const scan = await runCompetitorScan({
+      client,
+      websites,
+      executionBrief,
+      executionGaps: execution.gaps,
+    });
 
     await db
       .from("marketing_os_social_intelligence_reports")
@@ -78,13 +104,17 @@ async function runOne(db: ReturnType<typeof createServiceClient>, report: Report
         trending_topics: scan.trending_topics,
         hooks: scan.hooks,
         content_opportunities: {
-          items: scan.content_opportunities,
+          items: scan.content_formats,
           positioning: scan.positioning,
           content_gaps: scan.content_gaps,
           hook_library: scan.hook_library,
           offer_tracker: scan.offer_tracker,
           comment_themes: scan.comment_themes,
           opportunity_signals: scan.opportunity_signals,
+          competitor_wins: scan.competitor_wins,
+          recommended_posts: scan.recommended_posts,
+          opportunity_score: scan.opportunity_score,
+          content_gap_score: scan.content_gap_score,
           source: "website_competitor_scan",
         },
         recommendations: scan.recommendations,
