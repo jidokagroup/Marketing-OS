@@ -279,6 +279,9 @@ export interface Database {
           attempts: number;
           model: string | null;
           approved_at: string | null;
+          status: ScanStatus;
+          error_message: string | null;
+          requested_at: string;
         };
         Insert: {
           id?: string;
@@ -310,6 +313,9 @@ export interface Database {
           attempts?: number;
           model?: string | null;
           approved_at?: string | null;
+          status?: ScanStatus;
+          error_message?: string | null;
+          requested_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["generated_content"]["Insert"]>;
         Relationships: [];

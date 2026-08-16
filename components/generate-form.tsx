@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
@@ -16,7 +16,6 @@ export function GenerateForm({ agentId }: { agentId: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
 
   const prefillTitle = searchParams.get("title") ?? "";
   const prefillTopic = searchParams.get("topic") ?? "";
@@ -24,18 +23,6 @@ export function GenerateForm({ agentId }: { agentId: string }) {
   const prefillNotes = searchParams.get("notes") ?? "";
   const prefillPlatforms = searchParams.getAll("platforms");
   const defaultPlatforms = prefillPlatforms.length ? prefillPlatforms : ["instagram"];
-
-  useEffect(() => {
-    if (!busy) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setElapsed((seconds) => seconds + 1);
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [busy]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,10 +39,11 @@ export function GenerateForm({ agentId }: { agentId: string }) {
       toast.error("Topic is required");
       return;
     }
-    setElapsed(0);
     setBusy(true);
-    toast.info("Generating draft — this usually takes under a minute…");
     try {
+      // Generation runs in the background — this call only queues it and
+      // returns the row id, so it stays fast regardless of how long the
+      // actual Claude call takes.
       const res = await fetch(`/api/agents/${agentId}/generate`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -63,16 +51,16 @@ export function GenerateForm({ agentId }: { agentId: string }) {
       });
       const json = await readJsonResponse<{
         id?: string;
-        overall?: number;
+        status?: string;
       }>(res);
-      if (!res.ok) {
-        toast.error(json.error ?? "Generation failed");
+      if (!res.ok || !json.id) {
+        toast.error(json.error ?? "Could not queue generation");
         return;
       }
-      toast.success(`Done — authenticity ${Math.round(Number(json.overall ?? 0))}/100`);
+      toast.info("Generating draft — this usually takes under a minute…");
       router.push(`/generated/${json.id}`);
     } catch {
-      toast.error("Network error during generation");
+      toast.error("Network error while queueing generation");
     } finally {
       setBusy(false);
     }
@@ -169,13 +157,8 @@ export function GenerateForm({ agentId }: { agentId: string }) {
       </div>
       <Button type="submit" disabled={busy}>
         <Sparkles className="mr-1 h-4 w-4" />
-        {busy ? "Generating draft…" : "Generate content package"}
+        {busy ? "Queueing…" : "Generate content package"}
       </Button>
-      {busy && (
-        <p className="text-sm text-muted-foreground">
-          Matching voice examples and drafting now. Elapsed: {elapsed}s
-        </p>
-      )}
     </form>
   );
 }

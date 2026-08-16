@@ -34,6 +34,7 @@ import {
   toggleApprovalAction,
   updateGeneratedContentAction,
 } from "../actions";
+import { GenerationStatusBanner } from "./GenerationStatusBanner";
 import { SavedToast } from "./SavedToast";
 
 const SCORE_FIELDS: { key: string; label: string }[] = [
@@ -100,6 +101,7 @@ export default async function GeneratedDetailPage({
           ? "Approved"
           : "Draft review";
 
+  const isPending = content.status === "queued" || content.status === "running";
   const platformText = String(content.platform ?? "").toLowerCase();
   const wantsBlogPost = platformText.includes("blog");
   const agentId = agent?.id ?? "";
@@ -173,6 +175,11 @@ export default async function GeneratedDetailPage({
   return (
     <div className="mx-auto max-w-4xl">
       <SavedToast variant={saved} />
+      <GenerationStatusBanner
+        status={content.status}
+        errorMessage={content.error_message}
+        retryHref={agent ? `/agents/${agent.id}?tab=generate` : undefined}
+      />
       <div className="mb-6">
         <Link
           href={generatedLibraryHref}
@@ -213,34 +220,38 @@ export default async function GeneratedDetailPage({
               <ScoreBadge score={Number(content.overall_score)} />
             </div>
           )}
-          <form action={toggleApprovalAction}>
-            <input type="hidden" name="id" value={content.id} />
-            <input
-              type="hidden"
-              name="currently_approved"
-              value={isApproved ? "1" : "0"}
-            />
-            <Button
-              type="submit"
-              variant={isApproved ? "outline" : "default"}
-              size="sm"
-            >
-              <CircleCheckBig className="mr-1 h-3.5 w-3.5" />
-              {isApproved ? "Unapprove" : "Approve"}
-            </Button>
-          </form>
+          {!isPending && (
+            <form action={toggleApprovalAction}>
+              <input type="hidden" name="id" value={content.id} />
+              <input
+                type="hidden"
+                name="currently_approved"
+                value={isApproved ? "1" : "0"}
+              />
+              <Button
+                type="submit"
+                variant={isApproved ? "outline" : "default"}
+                size="sm"
+              >
+                <CircleCheckBig className="mr-1 h-3.5 w-3.5" />
+                {isApproved ? "Unapprove" : "Approve"}
+              </Button>
+            </form>
+          )}
           {agent && (
             <ButtonLink href={`/agents/${agent.id}?tab=generate`} variant="outline" size="sm">
               Generate another
             </ButtonLink>
           )}
-          <form action={duplicateGeneratedContentAction}>
-            <input type="hidden" name="id" value={content.id} />
-            <Button type="submit" variant="outline" size="sm">
-              <CopyPlus className="mr-1 h-3.5 w-3.5" />
-              Duplicate
-            </Button>
-          </form>
+          {!isPending && (
+            <form action={duplicateGeneratedContentAction}>
+              <input type="hidden" name="id" value={content.id} />
+              <Button type="submit" variant="outline" size="sm">
+                <CopyPlus className="mr-1 h-3.5 w-3.5" />
+                Duplicate
+              </Button>
+            </form>
+          )}
           <form action={deleteGeneratedContentAction}>
             <input type="hidden" name="id" value={content.id} />
             <ConfirmSubmitButton
@@ -256,26 +267,28 @@ export default async function GeneratedDetailPage({
         </div>
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="grid gap-4 py-4 text-sm md:grid-cols-[1fr_auto]">
-          <div className="text-muted-foreground">
-            <p>
-              The authenticity score estimates how closely this piece matches the
-              agent&apos;s voice, beliefs, syntax, hooks, phrases, and brand knowledge.
-            </p>
-            <p className="mt-1">
-              Scores above 90 are usually ready for review and scheduling.
-            </p>
-          </div>
-          <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="font-medium">Approval status</p>
-            <p className="mt-1 flex items-center gap-2 text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              {approvalStatus}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {!isPending && (
+        <Card className="mb-6">
+          <CardContent className="grid gap-4 py-4 text-sm md:grid-cols-[1fr_auto]">
+            <div className="text-muted-foreground">
+              <p>
+                The authenticity score estimates how closely this piece matches the
+                agent&apos;s voice, beliefs, syntax, hooks, phrases, and brand knowledge.
+              </p>
+              <p className="mt-1">
+                Scores above 90 are usually ready for review and scheduling.
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="font-medium">Approval status</p>
+              <p className="mt-1 flex items-center gap-2 text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                {approvalStatus}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {content.below_threshold && (
         <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
@@ -284,6 +297,7 @@ export default async function GeneratedDetailPage({
         </div>
       )}
 
+      {!isPending && (
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <Card>
@@ -466,6 +480,7 @@ export default async function GeneratedDetailPage({
           </Card>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -2,34 +2,10 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { getAuthContext } from "@/lib/auth";
-import { embedQuery, toVectorLiteral } from "@/lib/ai/embeddings";
-import {
-  runFallbackGeneration,
-  runGeneration,
-  type GenerationRequest,
-  type DnaInput,
-} from "@/lib/ai/generate";
-import { CLAUDE_MODEL } from "@/lib/ai/anthropic";
-import { buildBrandBrainBrief } from "@/lib/brand-brain";
+import type { GenerationRequest } from "@/lib/ai/generate";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/core-agents";
-import { opsTable } from "@/lib/marketing-os/operations";
-import type { BrandBrain } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
-
-const MATCH_COUNT = 3;
-const RETRIEVAL_TIMEOUT_MS = 4_000;
-// The function has a 60s budget (maxDuration above). The schema grew (blog
-// keywords, blog/email CTAs, link suggestions) since this was last tuned, so
-// generation legitimately needs more of that budget — 20s was forcing the
-// fallback template far more often than the timeout was meant to.
-const GENERATION_TIMEOUT_MS = 50_000;
-
-type ScriptMatch = {
-  id: string;
-  content: string;
-};
 
 function cleanPlatformList(value: unknown) {
   if (!Array.isArray(value)) return [];
@@ -46,84 +22,45 @@ function channelLabel(key: string) {
   return CONTENT_CHANNEL_LABELS[key] ?? key.replace(/_/g, " ");
 }
 
-class GenerationTimeoutError extends Error {
-  constructor() {
-    super(
-      "Content generation timed out before it could finish. Try fewer channels or shorter notes, then generate again.",
-    );
-    this.name = "GenerationTimeoutError";
+/**
+ * Resolve the deployed origin so the route can hand work to the background
+ * worker. Netlify sets URL/DEPLOY_PRIME_URL; NEXT_PUBLIC_SITE_URL wins locally.
+ */
+function siteOrigin() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.URL ||
+    process.env.DEPLOY_PRIME_URL ||
+    ""
+  ).replace(/\/$/, "");
+}
+
+/**
+ * Hand generation to the Netlify background function. Background functions
+ * ack with 202 straight away and then run with a multi-minute budget, so
+ * awaiting this trigger stays fast -- it is the generation itself we must
+ * not wait for (see the background function for why: a regular Netlify
+ * Function's real platform timeout is far lower than the maxDuration this
+ * route used to declare).
+ */
+async function triggerGenerationWorker(contentId: string): Promise<boolean> {
+  const origin = siteOrigin();
+  const secret = process.env.CRON_SECRET;
+  if (!origin || !secret) return false;
+
+  try {
+    const res = await fetch(`${origin}/.netlify/functions/generate-content-background`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ contentId }),
+    });
+    return res.ok || res.status === 202;
+  } catch {
+    return false;
   }
-}
-
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout>;
-  const timer = new Promise<never>((_, reject) => {
-    timeout = setTimeout(() => reject(new GenerationTimeoutError()), timeoutMs);
-  });
-
-  return Promise.race([promise, timer]).finally(() => clearTimeout(timeout));
-}
-
-function jsonArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.map((item) =>
-        typeof item === "string" ? item : JSON.stringify(item),
-      )
-    : [];
-}
-
-function readOpportunities(value: unknown) {
-  if (Array.isArray(value)) return jsonArray(value);
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    return [...jsonArray(record.items), ...jsonArray(record.positioning)];
-  }
-  return [];
-}
-
-async function latestIntelligenceBrief(
-  supabase: unknown,
-  ownerId: string,
-) {
-  const { data } = await opsTable(
-    supabase,
-    "marketing_os_social_intelligence_reports",
-  )
-    .select(
-      "summary, trending_topics, hooks, audios, content_opportunities, scanned_at",
-    )
-    .eq("owner_id", ownerId)
-    .order("scanned_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const report = data as
-    | {
-        summary?: string | null;
-        trending_topics?: unknown;
-        hooks?: unknown;
-        audios?: unknown;
-        content_opportunities?: unknown;
-        scanned_at?: string | null;
-      }
-    | null;
-  if (!report) return "";
-
-  const parts = [
-    report.summary && `Latest intelligence summary: ${report.summary}`,
-    jsonArray(report.trending_topics).length &&
-      `Trending topics: ${jsonArray(report.trending_topics).join(" | ")}`,
-    jsonArray(report.hooks).length &&
-      `Hooks to adapt: ${jsonArray(report.hooks).join(" | ")}`,
-    readOpportunities(report.content_opportunities).length &&
-      `Opportunities: ${readOpportunities(report.content_opportunities).join(" | ")}`,
-    jsonArray(report.audios).length &&
-      `Audio/trend notes: ${jsonArray(report.audios).join(" | ")}`,
-  ].filter(Boolean);
-
-  return parts.length
-    ? `\nLatest Intelligence Context (${report.scanned_at ?? "latest scan"}):\n${parts.join("\n")}`
-    : "";
 }
 
 export async function POST(
@@ -158,17 +95,6 @@ export async function POST(
     platforms.length > 0
       ? platforms.map(channelLabel).join(", ")
       : body.platform?.trim() || undefined;
-  const req: GenerationRequest = {
-    topic,
-    title: body.title?.trim() || topic,
-    goal: body.goal?.trim() || undefined,
-    platform: platformLabel,
-    audience: body.audience?.trim() || undefined,
-    offer: body.offer?.trim() || undefined,
-    cta: body.cta?.trim() || undefined,
-    length: body.length?.trim() || undefined,
-    notes: body.notes?.trim() || undefined,
-  };
 
   // Require an analyzed agent (Voice DNA present).
   const { data: voice } = await supabase
@@ -183,154 +109,56 @@ export async function POST(
     );
   }
 
-  try {
-    // 1) Retrieve the closest matching scripts via pgvector, then fall back to
-    // recent chunks so generation still works if embeddings are unavailable.
-    const queryText = [req.topic, req.goal, req.notes].filter(Boolean).join(" — ");
-    let matches: ScriptMatch[] = [];
-
-    try {
-      const { data } = await withTimeout(
-        embedQuery(queryText).then((queryEmbedding) =>
-          supabase.rpc("marketing_os_match_scripts", {
-            p_agent_id: agentId,
-            p_query_embedding: toVectorLiteral(queryEmbedding),
-            p_match_count: MATCH_COUNT,
-          }),
-        ),
-        RETRIEVAL_TIMEOUT_MS,
-      );
-      matches = ((data ?? []) as ScriptMatch[]).filter((match) =>
-        Boolean(match.content?.trim()),
-      );
-    } catch (error) {
-      console.warn(
-        "Generation retrieval fallback used:",
-        error instanceof Error ? error.message : error,
-      );
-    }
-
-    if (matches.length === 0) {
-      const { data: recentScripts } = await supabase
-        .from("marketing_os_uploaded_scripts")
-        .select("id, content")
-        .eq("agent_id", agentId)
-        .order("created_at", { ascending: false })
-        .limit(MATCH_COUNT);
-      matches = ((recentScripts ?? []) as ScriptMatch[]).filter((match) =>
-        Boolean(match.content?.trim()),
-      );
-    }
-
-    const exemplars = matches.map((m) => m.content);
-    const retrievedIds = matches.map((m) => m.id);
-
-    // 2) Load DNA profiles.
-    const [v, b, h, s, p, k] = await Promise.all([
-      supabase.from("marketing_os_voice_profiles").select("*").eq("agent_id", agentId).maybeSingle(),
-      supabase.from("marketing_os_belief_profiles").select("*").eq("agent_id", agentId).maybeSingle(),
-      supabase.from("marketing_os_hook_libraries").select("*").eq("agent_id", agentId).maybeSingle(),
-      supabase.from("marketing_os_story_frameworks").select("*").eq("agent_id", agentId).maybeSingle(),
-      supabase.from("marketing_os_phrase_libraries").select("*").eq("agent_id", agentId).maybeSingle(),
-      supabase.from("marketing_os_knowledge_graphs").select("*").eq("agent_id", agentId).maybeSingle(),
-    ]);
-    const dna: DnaInput = {
-      voice: v.data as unknown as DnaInput["voice"],
-      belief: b.data as unknown as DnaInput["belief"],
-      hooks: h.data as unknown as DnaInput["hooks"],
-      story: s.data as unknown as DnaInput["story"],
-      phrase: p.data as unknown as DnaInput["phrase"],
-      knowledge: k.data as unknown as DnaInput["knowledge"],
-    };
-
-    // 2b) Load the per-agent authoritative business facts.
-    const { data: brain } = await supabase
-      .from("marketing_os_brand_brains")
-      .select("*")
-      .eq("agent_id", agentId)
-      .maybeSingle();
-    const intelligenceBrief = await latestIntelligenceBrief(supabase, user.id);
-    const brandBrief = [
-      buildBrandBrainBrief((brain as BrandBrain) ?? null),
-      intelligenceBrief,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    // 3) Generate + QC (with one auto-rewrite below threshold).
-    let result;
-    try {
-      result = await withTimeout(
-        runGeneration(req, dna, exemplars, brandBrief),
-        GENERATION_TIMEOUT_MS,
-      );
-    } catch (error) {
-      if (!(error instanceof GenerationTimeoutError)) throw error;
-      result = runFallbackGeneration(req, dna, exemplars);
-    }
-
-    // 4) Persist.
-    const { data: inserted, error: insertError } = await supabase
-      .from("marketing_os_generated_content")
-      .insert({
-        agent_id: agentId,
-        owner_id: user.id,
-        title: req.title ?? req.topic,
-        topic: req.topic,
-        goal: req.goal ?? null,
-        platform: platformLabel ?? null,
-        audience: req.audience ?? null,
-        offer: req.offer ?? null,
-        cta: req.cta ?? null,
-        length: req.length ?? null,
-        notes: req.notes ?? null,
-        primary_script: result.content.primary_script,
-        alternate_hooks: result.content.alternate_hooks,
-        alternate_ctas: result.content.alternate_ctas,
-        long_version: result.content.long_version,
-        blog_cta: result.content.blog_cta,
-        blog_keywords: result.content.blog_keywords,
-        blog_link_suggestions: result.content.blog_link_suggestions,
-        sales_version: result.content.sales_version,
-        email_cta: result.content.email_cta,
-        retrieved_script_ids: retrievedIds,
-        overall_score: result.score.overall,
-        below_threshold: result.belowThreshold,
-        attempts: result.attempts,
-        model: CLAUDE_MODEL,
-      })
-      .select("id")
-      .single();
-
-    if (insertError || !inserted) {
-      throw new Error(insertError?.message ?? "Could not save content");
-    }
-
-    const { error: scoreError } = await supabase.from("marketing_os_quality_scores").insert({
-      generated_content_id: inserted.id,
+  // Generation itself runs out-of-band: retrieval plus a Claude call for a
+  // full multi-channel bundle can easily exceed what a regular Netlify
+  // Function is actually allowed to run for. Queue the row and let the
+  // worker fill it in; the page polls and swaps in the result when it's
+  // ready, the same pattern already used for competitor scans.
+  const { data: inserted, error: insertError } = await supabase
+    .from("marketing_os_generated_content")
+    .insert({
+      agent_id: agentId,
       owner_id: user.id,
-      voice_match: result.score.voice_match,
-      syntax_match: result.score.syntax_match,
-      hook_match: result.score.hook_match,
-      story_match: result.score.story_match,
-      belief_match: result.score.belief_match,
-      emotional_match: result.score.emotional_match,
-      phrase_match: result.score.phrase_match,
-      brand_accuracy: result.score.brand_accuracy,
-      knowledge_accuracy: result.score.knowledge_accuracy,
-      overall: result.score.overall,
-      attempt: result.attempts,
-      rationale: result.score.rationale,
-    });
-    if (scoreError) throw new Error(scoreError.message);
+      title: body.title?.trim() || topic,
+      topic,
+      goal: body.goal?.trim() || null,
+      platform: platformLabel ?? null,
+      audience: body.audience?.trim() || null,
+      offer: body.offer?.trim() || null,
+      cta: body.cta?.trim() || null,
+      length: body.length?.trim() || null,
+      notes: body.notes?.trim() || null,
+      status: "queued",
+      requested_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
 
-    revalidatePath("/generated");
-    revalidatePath("/dashboard");
-
-    return NextResponse.json({ id: inserted.id, overall: result.score.overall });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Generation failed";
-    const status = err instanceof GenerationTimeoutError ? 504 : 500;
-    return NextResponse.json({ error: message }, { status });
+  if (insertError || !inserted) {
+    return NextResponse.json(
+      { error: insertError?.message ?? "Could not queue generation" },
+      { status: 500 },
+    );
   }
+
+  const triggered = await triggerGenerationWorker(inserted.id);
+  if (!triggered) {
+    const reason = !siteOrigin()
+      ? "no site URL configured"
+      : !process.env.CRON_SECRET
+        ? "CRON_SECRET is not set"
+        : "the background worker could not be reached";
+    await supabase
+      .from("marketing_os_generated_content")
+      .update({
+        status: "failed",
+        error_message: `Generation worker was not triggered (${reason}). Try generating again.`,
+      })
+      .eq("id", inserted.id);
+  }
+
+  revalidatePath("/generated");
+  revalidatePath("/dashboard");
+
+  return NextResponse.json({ id: inserted.id, status: triggered ? "queued" : "failed" });
 }
