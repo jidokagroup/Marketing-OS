@@ -180,10 +180,12 @@ const scanJsonSchema = {
     ),
     competitor_wins: insightJsonSchema(
       "Exactly 3-5 observations about HOW these competitors execute, not what they talk about: content format " +
-        "mix (stories vs. short-form vs. long-form vs. blog), editing or production patterns, voiceover vs. " +
-        "music-led, on-screen text style, or any trending audio / sound the material references. Infer only " +
-        "from what's actually visible in the fetched page text or metadata -- if a site gives no signal on " +
-        "execution style, say so plainly instead of guessing. Never a topic or content idea here.",
+        "mix (stories vs. short-form vs. long-form vs. blog), posting cadence, which formats actually earn " +
+        "engagement, editing or production patterns, voiceover vs. music-led, on-screen text style, or " +
+        "trending audio. Ground these in COMPETITOR EXECUTION DATA (real platform API numbers) first and cite " +
+        "the specific figures; TikTok web-search findings are lower confidence, so label them as approximate. " +
+        "For any account listed under NO EXECUTION DATA AVAILABLE, say so plainly instead of guessing. " +
+        "Never a topic or content idea here.",
     ),
     recommended_posts: insightJsonSchema(
       "Exactly 4-6 concrete, ready-to-brief post concepts (format + specific angle) synthesized from the " +
@@ -311,9 +313,15 @@ async function fetchSiteExcerpts(websites: string[]) {
 export async function runCompetitorScan({
   client,
   websites,
+  executionBrief = "",
+  executionGaps = [],
 }: {
   client: ScanClient;
   websites: string[];
+  /** Real platform-API execution data (Instagram/YouTube), if any. */
+  executionBrief?: string;
+  /** Watchlist entries with no execution data, and why. */
+  executionGaps?: { url: string; reason: string }[];
 }): Promise<CompetitorScanResult> {
   const excerpts = await fetchSiteExcerpts(websites);
   const fetched = excerpts.filter((excerpt) => excerpt.text);
@@ -323,6 +331,12 @@ export async function runCompetitorScan({
         client.notes ? `\nAudience / ICP / notes: ${client.notes}` : ""
       }`
     : "CLIENT: a marketing client (no specific client selected).";
+
+  const gapBlock = executionGaps.length
+    ? "\nNO EXECUTION DATA AVAILABLE FOR THESE ACCOUNTS (say so plainly in competitor_wins " +
+      "rather than guessing how they execute):\n" +
+      executionGaps.map((gap) => `- ${gap.url}: ${gap.reason}`).join("\n")
+    : "";
 
   const competitorBlock = fetched.length
     ? fetched
@@ -344,7 +358,8 @@ export async function runCompetitorScan({
       "that's possible.",
     prompt:
       `${clientBlock}\n\n` +
-      `COMPETITOR RESEARCH MATERIAL:\n${competitorBlock}\n\n` +
+      `COMPETITOR RESEARCH MATERIAL:\n${competitorBlock}\n` +
+      `${executionBrief}\n${gapBlock}\n\n` +
       "Produce the intelligence report. Fill every field separately and keep " +
       "each one's content inside its own array — never continue one section's " +
       "list into the next field, and never emit a section name as a list item. " +
@@ -360,8 +375,10 @@ export async function runCompetitorScan({
       "- offer_tracker: 4-6 specific offer or CTA signals actually seen or implied on these sites\n" +
       "- comment_themes: 4-6 comment themes\n" +
       "- opportunity_signals: 4-6 opportunity signals\n" +
-      "- competitor_wins: 3-5 observations on HOW competitors execute (format mix, editing style, " +
-      "voiceover vs. music, on-screen text, trending audio) -- never topics or content ideas\n" +
+      "- competitor_wins: 3-5 observations on HOW competitors execute (format mix, cadence, which " +
+      "formats earn engagement, editing style, voiceover vs. music, trending audio) -- never topics " +
+      "or content ideas. Use the real execution data above and cite its figures; state plainly where " +
+      "no execution data was available rather than guessing\n" +
       "- recommended_posts: 4-6 concrete, ready-to-brief post concepts specific to this client\n" +
       "- recommendations: exactly 3 moves, ranked by impact, synthesized across the fields " +
       "above. Each is a decision to brief the team on this week (what to prioritize, test, " +

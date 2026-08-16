@@ -68,7 +68,33 @@ async function runOne(db: ReturnType<typeof createServiceClient>, report: Report
     // here as a catchable error we can write to the row, instead of killing the
     // invocation with nothing but a platform log entry.
     const { runCompetitorScan } = await import("../../lib/ai/competitor-scan");
-    const scan = await runCompetitorScan({ client, websites });
+
+    // Real platform data first (Instagram Business Discovery + YouTube Data
+    // API), then a web-search pass for TikTok, which has no commercial API.
+    // Both degrade to empty rather than failing the scan.
+    const { loadCompetitorExecutionData } = await import(
+      "../../lib/social/competitor-execution"
+    );
+    const execution = await loadCompetitorExecutionData(db, report.owner_id, websites);
+
+    let executionBrief = execution.brief;
+    if (execution.tiktokHandles.length) {
+      const { researchTikTokAccounts } = await import("../../lib/ai/web-research");
+      const clientContext = client
+        ? `CLIENT: ${client.name}${client.industry ? ` — ${client.industry}` : ""}`
+        : "CLIENT: a marketing client.";
+      executionBrief += await researchTikTokAccounts(
+        execution.tiktokHandles,
+        clientContext,
+      );
+    }
+
+    const scan = await runCompetitorScan({
+      client,
+      websites,
+      executionBrief,
+      executionGaps: execution.gaps,
+    });
 
     await db
       .from("marketing_os_social_intelligence_reports")
