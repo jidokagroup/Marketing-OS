@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
 import { type ScanClient } from "@/lib/ai/competitor-scan";
+import { triggerBackgroundFunction } from "@/lib/background-trigger";
 import { asRow, opsTable, type CampaignRow } from "@/lib/marketing-os/operations";
 
 const BASELINE_TOPICS = [
@@ -98,19 +99,11 @@ async function triggerScanWorker(reportId: string): Promise<boolean> {
   const secret = process.env.CRON_SECRET;
   if (!origin || !secret) return false;
 
-  try {
-    const res = await fetch(`${origin}/.netlify/functions/competitor-scan-background`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${secret}`,
-      },
-      body: JSON.stringify({ reportId }),
-    });
-    return res.ok || res.status === 202;
-  } catch {
-    return false;
-  }
+  return triggerBackgroundFunction(
+    `${origin}/.netlify/functions/competitor-scan-background`,
+    secret,
+    { reportId },
+  );
 }
 
 export async function saveCompetitorsAction(formData: FormData) {

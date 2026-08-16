@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 
 import { getAuthContext } from "@/lib/auth";
 import type { GenerationRequest } from "@/lib/ai/generate";
+import { triggerBackgroundFunction } from "@/lib/background-trigger";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/core-agents";
 
 export const runtime = "nodejs";
@@ -48,19 +49,11 @@ async function triggerGenerationWorker(contentId: string): Promise<boolean> {
   const secret = process.env.CRON_SECRET;
   if (!origin || !secret) return false;
 
-  try {
-    const res = await fetch(`${origin}/.netlify/functions/generate-content-background`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${secret}`,
-      },
-      body: JSON.stringify({ contentId }),
-    });
-    return res.ok || res.status === 202;
-  } catch {
-    return false;
-  }
+  return triggerBackgroundFunction(
+    `${origin}/.netlify/functions/generate-content-background`,
+    secret,
+    { contentId },
+  );
 }
 
 export async function POST(

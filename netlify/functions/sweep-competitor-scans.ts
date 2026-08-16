@@ -30,17 +30,34 @@ export default async function handler() {
     );
   }
 
-  const response = await fetch(`${origin}/.netlify/functions/competitor-scan-background`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${secret}` },
-  });
+  // A background function should ack almost immediately -- if it doesn't,
+  // something is wrong (not just "still working", since the ack is separate
+  // from the work). Bound the wait so a stuck worker can't also hang this
+  // scheduled sweep, which would otherwise silently stop draining the queue.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${origin}/.netlify/functions/competitor-scan-background`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+      signal: controller.signal,
+    });
 
-  return new Response(await response.text(), {
-    status: response.status,
-    headers: {
-      "content-type": response.headers.get("content-type") ?? "application/json",
-    },
-  });
+    return new Response(await response.text(), {
+      status: response.status,
+      headers: {
+        "content-type": response.headers.get("content-type") ?? "application/json",
+      },
+    });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "worker unreachable";
+    return new Response(JSON.stringify({ ok: false, error: reason }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const config = {
