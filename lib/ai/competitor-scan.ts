@@ -15,11 +15,15 @@ const MAX_SITES = 12;
 const MAX_SITE_CHARS = 3500;
 const SITE_FETCH_TIMEOUT_MS = 8000;
 
-// The scan runs in a Netlify background function, not in a request handler,
-// so it can afford real time and a real token budget instead of the tight
-// caps a request/response cycle would force. The SDK retries once on
-// timeout, so worst case is roughly double this.
-const SCAN_TIMEOUT_MS = 240_000;
+// The scan runs in a Netlify background function, so it can afford real time
+// instead of the tight caps a request/response cycle would force -- but not
+// unlimited time: the platform kills the worker at ~15 minutes, and a killed
+// worker never runs its catch block, stranding the row at `running` forever.
+// The SDK retries once on timeout, so this is doubled in the worst case; at
+// 180s that is 6 minutes, which leaves room for the site fetches, the platform
+// API calls, and the web-search pass inside the 15-minute budget.
+const SCAN_TIMEOUT_MS = 180_000;
+const SCAN_MAX_RETRIES = 1;
 
 export type ScanClient = {
   name: string;
@@ -405,6 +409,7 @@ export async function runCompetitorScan({
     validator: scanValidator,
     maxTokens: 8000,
     timeoutMs: SCAN_TIMEOUT_MS,
+    maxRetries: SCAN_MAX_RETRIES,
   });
 
   return cleanScan(scan);

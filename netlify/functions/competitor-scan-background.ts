@@ -19,6 +19,12 @@ const SWEEP_LIMIT = 5;
 // Rows stuck in `running` longer than this were almost certainly lost with a
 // dead worker, so a later sweep is allowed to retry them.
 const STALE_RUNNING_MS = 10 * 60 * 1000;
+// Past this a row has already had a full retry cycle and is still stuck, so
+// retrying again just spins forever and the page shows a permanent spinner.
+// Give up and record why, so the user sees an error they can act on. Netlify
+// kills a background function at ~15 minutes without running its catch block,
+// which is the usual way a row ends up here.
+const ABANDON_RUNNING_MS = 25 * 60 * 1000;
 
 type ReportRow = {
   id: string;
@@ -193,6 +199,21 @@ export default async function handler(request: Request) {
     // form is easy to get subtly wrong, and a rejected filter would return no
     // rows, which is indistinguishable from an empty queue.
     const staleBefore = new Date(Date.now() - STALE_RUNNING_MS).toISOString();
+    const abandonBefore = new Date(Date.now() - ABANDON_RUNNING_MS).toISOString();
+
+    // Give up on rows that have already had a retry cycle and are still stuck.
+    // Without this they are picked up as "stale" on every sweep forever and the
+    // page spins indefinitely with no way for the user to tell it has died.
+    await db
+      .from("marketing_os_social_intelligence_reports")
+      .update({
+        status: "failed",
+        error_message:
+          "The scan worker stopped before finishing (it most likely hit the platform's " +
+          "time limit). Save the watchlist again to retry.",
+      })
+      .eq("status", "running")
+      .lt("requested_at", abandonBefore);
 
     const [queued, stale] = await Promise.all([
       db
@@ -206,6 +227,7 @@ export default async function handler(request: Request) {
         .select(columns)
         .eq("status", "running")
         .lt("requested_at", staleBefore)
+        .gte("requested_at", abandonBefore)
         .order("requested_at", { ascending: true })
         .limit(SWEEP_LIMIT),
     ]);
