@@ -15,10 +15,10 @@ const MAX_SITES = 12;
 const MAX_SITE_CHARS = 3500;
 const SITE_FETCH_TIMEOUT_MS = 8000;
 
-// The scan runs in a Netlify background function (~15 min budget), not in a
-// request handler. Generating ten populated arrays takes well over a minute, so
-// this is sized for the model finishing rather than for a request deadline.
-// The SDK retries once on timeout, so worst case is roughly double this.
+// The scan runs in a Netlify background function, not in a request handler,
+// so it can afford real time and a real token budget instead of the tight
+// caps a request/response cycle would force. The SDK retries once on
+// timeout, so worst case is roughly double this.
 const SCAN_TIMEOUT_MS = 240_000;
 
 export type ScanClient = {
@@ -27,6 +27,12 @@ export type ScanClient = {
   notes: string | null;
 } | null;
 
+/** One insight, traceable back to the competitor page it was drawn from. */
+export type ScanInsight = {
+  insight: string;
+  source_url: string | null;
+};
+
 export type ScanRecommendation = {
   focus: string;
   move: string;
@@ -34,18 +40,27 @@ export type ScanRecommendation = {
 };
 
 export type CompetitorScanResult = {
-  trending_topics: string[];
-  hooks: string[];
-  content_opportunities: string[];
-  positioning: string[];
-  content_gaps: string[];
-  hook_library: string[];
-  offer_tracker: string[];
-  comment_themes: string[];
-  opportunity_signals: string[];
+  trending_topics: ScanInsight[];
+  hooks: ScanInsight[];
+  content_formats: ScanInsight[];
+  positioning: ScanInsight[];
+  content_gaps: ScanInsight[];
+  hook_library: ScanInsight[];
+  offer_tracker: ScanInsight[];
+  comment_themes: ScanInsight[];
+  opportunity_signals: ScanInsight[];
+  competitor_wins: ScanInsight[];
+  recommended_posts: ScanInsight[];
   recommendations: ScanRecommendation[];
+  opportunity_score: number;
+  content_gap_score: number;
   summary: string;
 };
+
+const insightValidator = z.object({
+  insight: z.string().min(3),
+  source_url: z.string().nullable(),
+});
 
 const recommendationValidator = z.object({
   focus: z.string().min(2),
@@ -54,17 +69,41 @@ const recommendationValidator = z.object({
 });
 
 const scanValidator = z.object({
-  trending_topics: z.array(z.string()).min(1),
-  hooks: z.array(z.string()).min(1),
-  content_opportunities: z.array(z.string()).min(1),
-  positioning: z.array(z.string()).min(1),
-  content_gaps: z.array(z.string()).min(1),
-  hook_library: z.array(z.string()).min(1),
-  offer_tracker: z.array(z.string()).min(1),
-  comment_themes: z.array(z.string()).min(1),
-  opportunity_signals: z.array(z.string()).min(1),
+  trending_topics: z.array(insightValidator).min(1),
+  hooks: z.array(insightValidator).min(1),
+  content_formats: z.array(insightValidator).min(1),
+  positioning: z.array(insightValidator).min(1),
+  content_gaps: z.array(insightValidator).min(1),
+  hook_library: z.array(insightValidator).min(1),
+  offer_tracker: z.array(insightValidator).min(1),
+  comment_themes: z.array(insightValidator).min(1),
+  opportunity_signals: z.array(insightValidator).min(1),
+  competitor_wins: z.array(insightValidator).min(1),
+  recommended_posts: z.array(insightValidator).min(1),
   recommendations: z.array(recommendationValidator).min(1),
+  opportunity_score: z.number().min(0).max(100),
+  content_gap_score: z.number().min(0).max(100),
   summary: z.string().min(20),
+});
+
+const insightJsonSchema = (description: string) => ({
+  type: "array",
+  minItems: 1,
+  items: {
+    type: "object",
+    additionalProperties: false,
+    required: ["insight", "source_url"],
+    properties: {
+      insight: { type: "string", description: "The insight itself, specific enough to act on." },
+      source_url: {
+        type: ["string", "null"],
+        description:
+          "The exact competitor URL (from COMPETITOR RESEARCH MATERIAL) this was drawn from, so the " +
+          "user can open it for context. Null only for a judgment synthesized across multiple sites.",
+      },
+    },
+  },
+  description,
 });
 
 const recommendationJsonSchema = {
@@ -79,11 +118,12 @@ const recommendationJsonSchema = {
     move: {
       type: "string",
       description:
-        "The decision or next step for the team to make this week. A direction to brief, not finished copy for any platform.",
+        "The decision or next step for the team to make this week, specific to this client's industry " +
+        "and audience -- not generic marketing advice. A direction to brief, not finished copy for any platform.",
     },
     why: {
       type: "string",
-      description: "One-sentence reasoning tying the move back to the scan data.",
+      description: "One-sentence reasoning tying the move back to specific scan data.",
     },
   },
 };
@@ -94,81 +134,61 @@ const scanJsonSchema = {
   required: [
     "trending_topics",
     "hooks",
-    "content_opportunities",
+    "content_formats",
     "positioning",
     "content_gaps",
     "hook_library",
     "offer_tracker",
     "comment_themes",
     "opportunity_signals",
+    "competitor_wins",
+    "recommended_posts",
     "recommendations",
+    "opportunity_score",
+    "content_gap_score",
     "summary",
   ],
   properties: {
     // Note: the structured-output API only supports minItems of 0 or 1, so
     // item counts are steered via descriptions and the prompt instead.
-    trending_topics: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 5-6 topic ideas the client should post about, informed by competitor positioning.",
-    },
-    hooks: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description: "Exactly 4-6 scroll-stopping opening lines the client can adapt.",
-    },
-    content_opportunities: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 4-6 content formats or angles competitors use well or leave open.",
-    },
-    positioning: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 3-5 statements on how the client should position against these competitors: unique angles, differentiators, and messaging stances the competitors leave open.",
-    },
-    content_gaps: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 4-6 gaps where competitors cover an audience need that the client should address more clearly.",
-    },
-    hook_library: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 6-8 reusable hook patterns tagged by likely channel or format.",
-    },
-    offer_tracker: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 4-6 offers, lead magnets, CTAs, booking paths, or conversion moves detected or logically inferred from the public websites.",
-    },
-    comment_themes: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 4-6 likely buyer questions, objections, complaints, or comment-to-DM triggers based on the competitor material.",
-    },
-    opportunity_signals: {
-      type: "array",
-      minItems: 1,
-      items: { type: "string" },
-      description:
-        "Exactly 4-6 directional opportunity signals combining likely velocity, save/share value, relevance, and saturation. Do not invent exact performance metrics.",
-    },
+    trending_topics: insightJsonSchema(
+      "Exactly 5-6 topic ideas the client should post about, specific to their industry and audience, informed by competitor positioning.",
+    ),
+    hooks: insightJsonSchema("Exactly 4-6 scroll-stopping opening lines the client can adapt."),
+    content_formats: insightJsonSchema(
+      "Exactly 4-6 content formats or angles competitors use well or leave open (e.g. carousel breakdowns, myth-busting reels, comment-to-DM posts).",
+    ),
+    positioning: insightJsonSchema(
+      "Exactly 3-5 statements on how the client should stand out from these specific competitors while staying " +
+        "competitive on what actually matters to buyers in this category -- not just 'be different', but " +
+        "different in a way that still wins the sale.",
+    ),
+    content_gaps: insightJsonSchema(
+      "Exactly 4-6 gaps where competitors cover an audience need that the client should address more clearly.",
+    ),
+    hook_library: insightJsonSchema("Exactly 6-8 reusable hook patterns tagged by likely channel or format."),
+    offer_tracker: insightJsonSchema(
+      "Exactly 4-6 specific offers, lead magnets, CTAs, or booking paths seen or clearly implied on the " +
+        "competitor sites -- concrete enough that the client can decide whether to test something similar " +
+        "or deliberately not compete on it.",
+    ),
+    comment_themes: insightJsonSchema(
+      "Exactly 4-6 likely buyer questions, objections, complaints, or comment-to-DM triggers based on the competitor material.",
+    ),
+    opportunity_signals: insightJsonSchema(
+      "Exactly 4-6 directional opportunity signals combining likely velocity, save/share value, relevance, and saturation. Do not invent exact performance metrics.",
+    ),
+    competitor_wins: insightJsonSchema(
+      "Exactly 3-5 observations about HOW these competitors execute, not what they talk about: content format " +
+        "mix (stories vs. short-form vs. long-form vs. blog), editing or production patterns, voiceover vs. " +
+        "music-led, on-screen text style, or any trending audio / sound the material references. Infer only " +
+        "from what's actually visible in the fetched page text or metadata -- if a site gives no signal on " +
+        "execution style, say so plainly instead of guessing. Never a topic or content idea here.",
+    ),
+    recommended_posts: insightJsonSchema(
+      "Exactly 4-6 concrete, ready-to-brief post concepts (format + specific angle) synthesized from the " +
+        "findings above, tailored to this client's industry and audience -- not generic post ideas.",
+    ),
     recommendations: {
       type: "array",
       minItems: 1,
@@ -178,6 +198,19 @@ const scanJsonSchema = {
         "Each is a decision (what to prioritize, what to test, what to fix) drawn from the " +
         "categories above — never a finished post, caption, or platform-specific copy, and " +
         "never a publishing or scheduling instruction.",
+    },
+    opportunity_score: {
+      type: "number",
+      description:
+        "Your honest 0-100 judgment of how much real opportunity this client has against these specific " +
+        "competitors right now, based on what the scan found -- not a formula, an assessment. Vary it: a " +
+        "thin, saturated field scores low; a field with clear open gaps and weak competitor execution scores high.",
+    },
+    content_gap_score: {
+      type: "number",
+      description:
+        "Your honest 0-100 judgment of how large and addressable the content gaps are for this client, based " +
+        "on what the scan found. Vary it based on the actual size and clarity of the gaps identified above.",
     },
     summary: {
       type: "string",
@@ -193,13 +226,15 @@ const scanJsonSchema = {
 const MAX_ITEMS: Record<string, number> = {
   trending_topics: 6,
   hooks: 6,
-  content_opportunities: 6,
+  content_formats: 6,
   positioning: 5,
   content_gaps: 6,
   hook_library: 8,
   offer_tracker: 6,
   comment_themes: 6,
   opportunity_signals: 6,
+  competitor_wins: 5,
+  recommended_posts: 6,
 };
 
 const FIELD_LABELS = new Set(
@@ -209,22 +244,17 @@ const FIELD_LABELS = new Set(
 /**
  * Clean one list from the model.
  *
- * Observed failure: instead of closing `trending_topics` and opening the next
- * field, the model kept writing into the first array — emitting a bare section
- * label (" hooks") followed by that section's content, every element carrying
- * the leading space of a comma-separated continuation. Each string is a valid
- * string, so the JSON Schema and zod both accept it and the label renders as a
- * one-word card in the UI.
- *
- * Dropping bare labels removes the marker, and capping the list drops the
- * spilled content after it, since the overflow always lands past the documented
- * count.
+ * Observed failure (string-array era): instead of closing one field and
+ * opening the next, the model kept writing into the first array, emitting a
+ * bare section label followed by that section's content. Each insight's text
+ * is checked the same way here, since the failure mode is about the model's
+ * list-boundary behavior, not the item shape.
  */
-function cleanList(field: string, items: string[]): string[] {
+function cleanList(field: string, items: ScanInsight[]): ScanInsight[] {
   const cleaned = items
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .filter((item) => !FIELD_LABELS.has(item.toLowerCase()));
+    .map((item) => ({ insight: item.insight.trim(), source_url: item.source_url?.trim() || null }))
+    .filter((item) => item.insight.length > 0)
+    .filter((item) => !FIELD_LABELS.has(item.insight.toLowerCase()));
 
   return cleaned.slice(0, MAX_ITEMS[field] ?? cleaned.length);
 }
@@ -242,16 +272,22 @@ function cleanRecommendations(items: ScanRecommendation[]): ScanRecommendation[]
     .slice(0, MAX_RECOMMENDATIONS);
 }
 
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 function cleanScan(scan: CompetitorScanResult): CompetitorScanResult {
   const cleaned = { ...scan };
   for (const field of Object.keys(MAX_ITEMS)) {
     const key = field as keyof CompetitorScanResult;
     const value = cleaned[key];
     if (Array.isArray(value)) {
-      (cleaned[key] as string[]) = cleanList(field, value as string[]);
+      (cleaned[key] as ScanInsight[]) = cleanList(field, value as ScanInsight[]);
     }
   }
   cleaned.recommendations = cleanRecommendations(cleaned.recommendations);
+  cleaned.opportunity_score = clampScore(cleaned.opportunity_score);
+  cleaned.content_gap_score = clampScore(cleaned.content_gap_score);
   return cleaned;
 }
 
@@ -284,7 +320,7 @@ export async function runCompetitorScan({
 
   const clientBlock = client
     ? `CLIENT: ${client.name}${client.industry ? ` — industry: ${client.industry}` : ""}${
-        client.notes ? `\nNotes: ${client.notes}` : ""
+        client.notes ? `\nAudience / ICP / notes: ${client.notes}` : ""
       }`
     : "CLIENT: a marketing client (no specific client selected).";
 
@@ -301,30 +337,43 @@ export async function runCompetitorScan({
       "ideas the agency's client can post across Instagram, Facebook, YouTube, X, " +
       "TikTok, and email. Health-related ideas must stay compliance-safe: no " +
       "medical claims, no promises of outcomes. Every idea must be specific enough " +
-      "to write a post from, and tailored to the client — not generic marketing advice.",
+      "to write a post from, tailored to the client's specific industry and audience " +
+      "— never generic marketing advice that could apply to any business. Every " +
+      "insight must be grounded in the actual competitor research material provided " +
+      "— never invented — and cited back to the specific URL it came from wherever " +
+      "that's possible.",
     prompt:
       `${clientBlock}\n\n` +
       `COMPETITOR RESEARCH MATERIAL:\n${competitorBlock}\n\n` +
       "Produce the intelligence report. Fill every field separately and keep " +
       "each one's content inside its own array — never continue one section's " +
-      "list into the next field, and never emit a section name as a list item:\n" +
+      "list into the next field, and never emit a section name as a list item. " +
+      "Tailor every field to this client's specific industry and audience, not " +
+      "generic marketing advice, and cite the source_url each insight came from " +
+      "whenever it traces to one specific competitor page:\n" +
       "- trending_topics: 5-6 topics the client should cover\n" +
       "- hooks: 4-6 hooks to adapt\n" +
-      "- content_opportunities: 4-6 content format opportunities\n" +
-      "- positioning: 3-5 statements differentiating the client from these competitors\n" +
+      "- content_formats: 4-6 content format opportunities\n" +
+      "- positioning: 3-5 statements on standing out from these competitors while staying competitive\n" +
       "- content_gaps: 4-6 gaps\n" +
       "- hook_library: 6-8 reusable hook patterns\n" +
-      "- offer_tracker: 4-6 offer or CTA signals\n" +
+      "- offer_tracker: 4-6 specific offer or CTA signals actually seen or implied on these sites\n" +
       "- comment_themes: 4-6 comment themes\n" +
       "- opportunity_signals: 4-6 opportunity signals\n" +
+      "- competitor_wins: 3-5 observations on HOW competitors execute (format mix, editing style, " +
+      "voiceover vs. music, on-screen text, trending audio) -- never topics or content ideas\n" +
+      "- recommended_posts: 4-6 concrete, ready-to-brief post concepts specific to this client\n" +
       "- recommendations: exactly 3 moves, ranked by impact, synthesized across the fields " +
       "above. Each is a decision to brief the team on this week (what to prioritize, test, " +
       "or fix) — never finished copy, a caption, or a publishing/scheduling instruction. " +
       "Content generation and distribution are handled downstream by a separate system.\n" +
+      "- opportunity_score / content_gap_score: your genuine 0-100 judgment for this specific " +
+      "client and this specific set of competitors -- these should move up or down based on what " +
+      "the scan actually found, not sit near the same number every time\n" +
       "- summary: what competitors emphasize and where this client can stand out",
     jsonSchema: scanJsonSchema,
     validator: scanValidator,
-    maxTokens: 2500,
+    maxTokens: 8000,
     timeoutMs: SCAN_TIMEOUT_MS,
   });
 

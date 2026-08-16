@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  ExternalLink,
   Globe2,
   Radar,
   RefreshCw,
@@ -82,9 +83,7 @@ const BASELINE_RECOMMENDED_POSTS = [
 ];
 
 const BASELINE_COMPETITOR_WINS = [
-  "Simple one-problem posts are easier to save and share than broad advice lists.",
-  "Expert POV performs well when it challenges generic advice without attacking anyone.",
-  "Customer-story frameworks work best when claims stay specific, clear, and proof-based.",
+  "Add competitor websites and save to see how they actually execute — format mix, editing style, voiceover vs. music, trending audio.",
 ];
 
 const BASELINE_POSITIONING = [
@@ -166,28 +165,53 @@ function readRecommendations(value: unknown): ScanRecommendation[] {
     .filter((item) => item.focus && item.move && item.why);
 }
 
-function jsonArray(value: unknown): string[] {
-  return Array.isArray(value)
-    ? value.map((item) =>
-        typeof item === "string" ? item : JSON.stringify(item),
-      )
-    : [];
+type Insight = { insight: string; source_url: string | null };
+
+/**
+ * Read one insight list.
+ *
+ * Scans now store `{ insight, source_url }` so each item links back to the
+ * competitor page it came from. Older rows stored plain strings, which still
+ * render — just without a source link.
+ */
+function jsonArray(value: unknown): Insight[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item): Insight => {
+      if (typeof item === "string") return { insight: item, source_url: null };
+      if (item && typeof item === "object") {
+        const record = item as Record<string, unknown>;
+        const text = typeof record.insight === "string" ? record.insight : "";
+        const url = typeof record.source_url === "string" ? record.source_url : null;
+        return { insight: text || JSON.stringify(item), source_url: url };
+      }
+      return { insight: String(item), source_url: null };
+    })
+    .filter((item) => item.insight.trim().length > 0);
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 // content_opportunities is either a legacy plain array or, for newer scans,
-// an object shaped { items, positioning }.
+// an object carrying every category plus the scan's own scores.
 function readOpportunities(value: unknown) {
-  if (Array.isArray(value)) {
-    return {
-      items: jsonArray(value),
-      positioning: [],
-      content_gaps: [],
-      hook_library: [],
-      offer_tracker: [],
-      comment_themes: [],
-      opportunity_signals: [],
-    };
-  }
+  const empty = {
+    items: [] as Insight[],
+    positioning: [] as Insight[],
+    content_gaps: [] as Insight[],
+    hook_library: [] as Insight[],
+    offer_tracker: [] as Insight[],
+    comment_themes: [] as Insight[],
+    opportunity_signals: [] as Insight[],
+    competitor_wins: [] as Insight[],
+    recommended_posts: [] as Insight[],
+    opportunity_score: null as number | null,
+    content_gap_score: null as number | null,
+  };
+
+  if (Array.isArray(value)) return { ...empty, items: jsonArray(value) };
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>;
     return {
@@ -198,46 +222,13 @@ function readOpportunities(value: unknown) {
       offer_tracker: jsonArray(record.offer_tracker),
       comment_themes: jsonArray(record.comment_themes),
       opportunity_signals: jsonArray(record.opportunity_signals),
+      competitor_wins: jsonArray(record.competitor_wins),
+      recommended_posts: jsonArray(record.recommended_posts),
+      opportunity_score: readNumber(record.opportunity_score),
+      content_gap_score: readNumber(record.content_gap_score),
     };
   }
-  return {
-    items: [],
-    positioning: [],
-    content_gaps: [],
-    hook_library: [],
-    offer_tracker: [],
-    comment_themes: [],
-    opportunity_signals: [],
-  };
-}
-
-function directionalScore({
-  trendCount,
-  hookCount,
-  gapCount,
-  offerCount,
-  commentCount,
-  opportunityCount,
-  watchlistCount,
-}: {
-  trendCount: number;
-  hookCount: number;
-  gapCount: number;
-  offerCount: number;
-  commentCount: number;
-  opportunityCount: number;
-  watchlistCount: number;
-}) {
-  const raw =
-    34 +
-    Math.min(trendCount, 6) * 5 +
-    Math.min(hookCount, 8) * 3 +
-    Math.min(gapCount, 6) * 4 +
-    Math.min(offerCount, 6) * 3 +
-    Math.min(commentCount, 6) * 3 +
-    Math.min(opportunityCount, 6) * 4 +
-    Math.min(watchlistCount, 10) * 2;
-  return Math.min(96, raw);
+  return empty;
 }
 
 function scoreLabel(score: number) {
@@ -245,6 +236,18 @@ function scoreLabel(score: number) {
   if (score >= 68) return "promising";
   if (score >= 50) return "needs more data";
   return "early signal";
+}
+
+/** Host + trimmed path, so a source link reads as a place rather than a URL. */
+function sourceLabel(url: string) {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/$/, "");
+    const host = parsed.hostname.replace(/^www\./, "");
+    return path && path !== "/" ? `${host}${path}` : host;
+  } catch {
+    return url;
+  }
 }
 
 export default async function IntelligencePage() {
@@ -293,40 +296,52 @@ export default async function IntelligencePage() {
       .map((account) => account.platform),
   );
   const platforms = PLATFORM_DEFINITIONS.filter((platform) => platform.scheduler);
+  const asInsights = (items: string[]) =>
+    items.map((text) => ({ insight: text, source_url: null }));
   const topics = latestReport
     ? jsonArray(latestReport.trending_topics)
-    : BASELINE_TOPICS;
-  const hooks = latestReport ? jsonArray(latestReport.hooks) : BASELINE_HOOKS;
+    : asInsights(BASELINE_TOPICS);
+  const hooks = latestReport ? jsonArray(latestReport.hooks) : asInsights(BASELINE_HOOKS);
   const opportunities = readOpportunities(latestReport?.content_opportunities);
   const trends = latestReport && opportunities.items.length
     ? opportunities.items
-    : BASELINE_TRENDS;
+    : asInsights(BASELINE_TRENDS);
   const positioning = opportunities.positioning.length
     ? opportunities.positioning
-    : BASELINE_POSITIONING;
+    : asInsights(BASELINE_POSITIONING);
   const contentGaps = opportunities.content_gaps.length
     ? opportunities.content_gaps
-    : BASELINE_CONTENT_GAPS;
+    : asInsights(BASELINE_CONTENT_GAPS);
   const hookLibrary = opportunities.hook_library.length
     ? opportunities.hook_library
     : hooks.length
       ? hooks
-      : BASELINE_HOOK_LIBRARY;
+      : asInsights(BASELINE_HOOK_LIBRARY);
   const offerTracker = opportunities.offer_tracker.length
     ? opportunities.offer_tracker
-    : BASELINE_OFFER_TRACKER;
+    : asInsights(BASELINE_OFFER_TRACKER);
   const commentThemes = opportunities.comment_themes.length
     ? opportunities.comment_themes
-    : BASELINE_COMMENT_THEMES;
+    : asInsights(BASELINE_COMMENT_THEMES);
   const opportunitySignals = opportunities.opportunity_signals.length
     ? opportunities.opportunity_signals
-    : BASELINE_OPPORTUNITY_SIGNALS;
+    : asInsights(BASELINE_OPPORTUNITY_SIGNALS);
   const positioningSource = opportunities.positioning.length
     ? "Latest saved scan"
     : "Marketing baseline";
   const audios = latestReport ? jsonArray(latestReport.audios) : [];
-  const recommendedPosts = BASELINE_RECOMMENDED_POSTS;
-  const competitorWins = BASELINE_COMPETITOR_WINS;
+  const recommendedPosts = opportunities.recommended_posts.length
+    ? opportunities.recommended_posts
+    : asInsights(BASELINE_RECOMMENDED_POSTS);
+  const recommendedPostsSource = opportunities.recommended_posts.length
+    ? "Latest saved scan"
+    : "Marketing baseline";
+  const competitorWins = opportunities.competitor_wins.length
+    ? opportunities.competitor_wins
+    : asInsights(BASELINE_COMPETITOR_WINS);
+  const competitorWinsSource = opportunities.competitor_wins.length
+    ? "Latest saved scan"
+    : "Marketing baseline";
   const recommendations = latestReport
     ? readRecommendations(latestReport.recommendations)
     : [];
@@ -338,19 +353,11 @@ export default async function IntelligencePage() {
     : "Marketing baseline";
   const reportSource = latestReport ? "Latest saved scan" : "Baseline guidance";
   const competitorAccounts = latestReport?.competitor_accounts ?? [];
-  const marketScore = directionalScore({
-    trendCount: topics.length,
-    hookCount: hookLibrary.length,
-    gapCount: contentGaps.length,
-    offerCount: offerTracker.length,
-    commentCount: commentThemes.length,
-    opportunityCount: opportunitySignals.length,
-    watchlistCount: competitorAccounts.length,
-  });
-  const contentGapScore = Math.min(
-    95,
-    45 + Math.min(contentGaps.length, 6) * 7 + Math.min(competitorAccounts.length, 10) * 1.5,
-  );
+  // The scan judges both scores itself against the competitors it actually
+  // read. The old formula only counted how many items came back, so it landed
+  // on the same number every run no matter what the scan found.
+  const marketScore = opportunities.opportunity_score;
+  const contentGapScore = opportunities.content_gap_score;
   const generateHref = latestAgent?.id
     ? `/agents/${latestAgent.id}?tab=generate`
     : "/agents";
@@ -377,7 +384,7 @@ export default async function IntelligencePage() {
     key: string;
     label: string;
     description: string;
-    items: string[];
+    items: Insight[];
     source: string;
   }[] = [
     {
@@ -404,7 +411,8 @@ export default async function IntelligencePage() {
     {
       key: "offers",
       label: "Offer tracker",
-      description: "Offers, lead magnets, and conversion paths detected across the watchlist.",
+      description:
+        "What competitors are actively selling and how they ask for the sale — their lead magnets, free tools, consults, and booking paths. Use it to decide what to match, what to beat, and what to deliberately not compete on.",
       items: offerTracker,
       source: reportSource,
     },
@@ -432,9 +440,10 @@ export default async function IntelligencePage() {
     {
       key: "wins",
       label: "Competitor wins",
-      description: "What's working broadly in the space, independent of any one client's scan.",
+      description:
+        "How these competitors execute, not what they talk about — format mix, editing and production style, voiceover vs. music, on-screen text, and trending audio.",
       items: competitorWins,
-      source: "Marketing baseline",
+      source: competitorWinsSource,
     },
     {
       key: "audios",
@@ -442,20 +451,22 @@ export default async function IntelligencePage() {
       description: "Trending audio signals from connected platforms.",
       items: audios.length
         ? audios
-        : ["Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress."],
+        : asInsights([
+            "Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress.",
+          ]),
       source: audios.length ? reportSource : "Setup required",
     },
     {
       key: "posts",
       label: "Recommended posts",
-      description: "Ready-to-adapt post concepts based on the current baseline.",
+      description: "Ready-to-brief post concepts drawn from this scan's findings.",
       items: recommendedPosts,
-      source: "Marketing baseline",
+      source: recommendedPostsSource,
     },
     {
       key: "positioning",
       label: "Positioning",
-      description: `How ${focusedClient?.name ?? "this client"} should stand apart from the competitors on the watchlist.`,
+      description: `How ${focusedClient?.name ?? "this client"} should stand apart from these competitors while staying competitive on what buyers actually care about.`,
       items: positioning,
       source: positioningSource,
     },
@@ -551,6 +562,7 @@ export default async function IntelligencePage() {
             <ScanStatusBanner
               status={latestReport?.status}
               errorMessage={latestReport?.error_message}
+              startedAt={latestReport?.requested_at}
             />
           </div>
           {latestReport?.summary && (
@@ -601,15 +613,21 @@ export default async function IntelligencePage() {
               Opportunity Score
             </CardTitle>
             <CardDescription>
-              Directional read from topics, hooks, gaps, offers, comments, and
-              the competitor watchlist.
+              The scan&apos;s own read on how much room this client has against
+              the competitors it read. Moves with each scan.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-semibold">{marketScore}</span>
-              <Badge variant="secondary">{scoreLabel(marketScore)}</Badge>
-            </div>
+            {marketScore == null ? (
+              <p className="text-sm text-muted-foreground">
+                Save a competitor watchlist to get a score for this client.
+              </p>
+            ) : (
+              <div className="flex items-end gap-2">
+                <span className="text-4xl font-semibold">{marketScore}</span>
+                <Badge variant="secondary">{scoreLabel(marketScore)}</Badge>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -620,16 +638,21 @@ export default async function IntelligencePage() {
               Content Gap Score
             </CardTitle>
             <CardDescription>
-              How much white space competitors leave open for this client.
+              How large and addressable the gaps competitors leave open are,
+              judged by the scan itself.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-semibold">
-                {Math.round(contentGapScore)}
-              </span>
-              <Badge variant="secondary">{scoreLabel(contentGapScore)}</Badge>
-            </div>
+            {contentGapScore == null ? (
+              <p className="text-sm text-muted-foreground">
+                Save a competitor watchlist to get a score for this client.
+              </p>
+            ) : (
+              <div className="flex items-end gap-2">
+                <span className="text-4xl font-semibold">{contentGapScore}</span>
+                <Badge variant="secondary">{scoreLabel(contentGapScore)}</Badge>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -739,11 +762,24 @@ export default async function IntelligencePage() {
                         <span className="shrink-0 font-medium text-muted-foreground">
                           {index + 1}.
                         </span>
-                        <p className="text-foreground">{item}</p>
+                        <div className="space-y-1.5">
+                          <p className="text-foreground">{item.insight}</p>
+                          {item.source_url && (
+                            <a
+                              href={item.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              {sourceLabel(item.source_url)}
+                            </a>
+                          )}
+                        </div>
                       </div>
                       <InsightActions
                         title={category.label}
-                        item={item}
+                        item={item.insight}
                         source={category.source}
                         {...insightContext}
                       />

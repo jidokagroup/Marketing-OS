@@ -73,6 +73,25 @@ const BASELINE_OPPORTUNITY_SIGNALS = [
   "High conversion intent: pair comment keywords with a DM sequence and booking CTA.",
 ];
 
+const BASELINE_COMPETITOR_WINS = [
+  "Add competitor websites and save to see how they actually execute — format mix, editing style, voiceover vs. music, trending audio.",
+];
+
+const BASELINE_RECOMMENDED_POSTS = [
+  "Carousel: 5 signs your audience is ready for the offer",
+  "Reel: The one question customers ask before they buy",
+  "Caption: Why the common advice is incomplete",
+  "Lead magnet post: Comment GUIDE for the next-step checklist",
+];
+
+const BASELINE_OPPORTUNITY_SCORE = 60;
+const BASELINE_CONTENT_GAP_SCORE = 55;
+
+/** Baseline guidance has no real competitor page behind it, so every item is untraceable. */
+function asInsight(text: string) {
+  return { insight: text, source_url: null as string | null };
+}
+
 /**
  * Resolve the deployed origin so the action can hand work to the background
  * worker. Netlify sets URL/DEPLOY_PRIME_URL; NEXT_PUBLIC_SITE_URL wins locally.
@@ -151,21 +170,25 @@ export async function saveCompetitorsAction(formData: FormData) {
       client_id: clientId || null,
       platforms,
       competitor_accounts: competitorWebsites,
-      trending_topics: BASELINE_TOPICS,
-      hooks: BASELINE_HOOKS,
+      trending_topics: BASELINE_TOPICS.map(asInsight),
+      hooks: BASELINE_HOOKS.map(asInsight),
       audios: [
         "Connect Instagram and YouTube to collect live audio trends. TikTok is paused while API setup is in progress.",
       ],
       // Stored as an object so positioning rides along without a schema change;
       // the Intelligence page reads both this shape and the legacy plain array.
       content_opportunities: {
-        items: BASELINE_TRENDS,
-        positioning: BASELINE_POSITIONING,
-        content_gaps: BASELINE_CONTENT_GAPS,
-        hook_library: BASELINE_HOOK_LIBRARY,
-        offer_tracker: BASELINE_OFFER_TRACKER,
-        comment_themes: BASELINE_COMMENT_THEMES,
-        opportunity_signals: BASELINE_OPPORTUNITY_SIGNALS,
+        items: BASELINE_TRENDS.map(asInsight),
+        positioning: BASELINE_POSITIONING.map(asInsight),
+        content_gaps: BASELINE_CONTENT_GAPS.map(asInsight),
+        hook_library: BASELINE_HOOK_LIBRARY.map(asInsight),
+        offer_tracker: BASELINE_OFFER_TRACKER.map(asInsight),
+        comment_themes: BASELINE_COMMENT_THEMES.map(asInsight),
+        opportunity_signals: BASELINE_OPPORTUNITY_SIGNALS.map(asInsight),
+        competitor_wins: BASELINE_COMPETITOR_WINS.map(asInsight),
+        recommended_posts: BASELINE_RECOMMENDED_POSTS.map(asInsight),
+        opportunity_score: BASELINE_OPPORTUNITY_SCORE,
+        content_gap_score: BASELINE_CONTENT_GAP_SCORE,
         source: "baseline",
       },
       status: hasWatchlist ? "queued" : "complete",
