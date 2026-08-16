@@ -102,6 +102,7 @@ export default async function GeneratedDetailPage({
           : "Draft review";
 
   const isPending = content.status === "queued" || content.status === "running";
+  const isFallback = !isPending && content.model === "fallback-template";
   const platformText = String(content.platform ?? "").toLowerCase();
   const wantsBlogPost = platformText.includes("blog");
   const agentId = agent?.id ?? "";
@@ -119,6 +120,15 @@ export default async function GeneratedDetailPage({
     });
     return `/scheduler?${params.toString()}`;
   }
+
+  const regenerateHref = agent
+    ? `/agents/${agent.id}?tab=generate&${new URLSearchParams({
+        title: content.title ?? "",
+        topic: content.topic ?? "",
+        goal: content.goal ?? "",
+        notes: content.notes ?? "",
+      }).toString()}`
+    : undefined;
 
   const variants: {
     value: string;
@@ -290,7 +300,22 @@ export default async function GeneratedDetailPage({
         </Card>
       )}
 
-      {content.below_threshold && (
+      {isFallback && (
+        <div className="mb-6 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <p>
+            <span className="font-medium">This piece is a generic placeholder, not AI-generated content.</span>{" "}
+            Claude didn&apos;t return a usable draft, so a template was used instead. Regenerate to get real
+            content in this agent&apos;s voice.
+          </p>
+          {regenerateHref && (
+            <ButtonLink href={regenerateHref} size="sm" variant="outline" className="mt-3">
+              Regenerate
+            </ButtonLink>
+          )}
+        </div>
+      )}
+
+      {content.below_threshold && !isFallback && (
         <div className="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
           This piece scored below the 90 fidelity bar after an automatic rewrite.
           Review carefully before publishing.

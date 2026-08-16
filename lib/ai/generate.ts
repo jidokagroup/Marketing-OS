@@ -172,16 +172,20 @@ async function generateOnce(
       ? `\nThe previous draft scored below the fidelity bar. Fix these issues:\n${feedback}`
       : "",
     "",
-    "Produce a concise content bundle. Keep each field useful but compact so the draft can be generated quickly.",
+    "Produce a complete, high-quality content bundle for every requested channel. Write full-length, specific content -- do not truncate or summarize for brevity.",
   ].join("\n");
 
+  // This runs inside the generate-content-background Netlify function, which
+  // has a multi-minute budget, not a request/response cycle to fit inside --
+  // so give Claude real room to write a full multi-channel bundle instead of
+  // silently falling back to the generic template below.
   return generateStructured<GeneratedContentData>({
     system: GEN_SYSTEM,
     prompt,
     jsonSchema: generatedContentJsonSchema,
     validator: generatedContent,
-    maxTokens: 2600,
-    timeoutMs: 45_000,
+    maxTokens: 6000,
+    timeoutMs: 170_000,
     maxRetries: 0,
   });
 }
@@ -420,10 +424,19 @@ export async function runGeneration(
   let usedFallback = false;
   try {
     content = await generateOnce(req, brief, exemplars, undefined, brandBrief);
-  } catch (error) {
-    if (!shouldUseFastFallback(error)) throw error;
-    usedFallback = true;
-    content = fallbackContent(req, dna, exemplars);
+  } catch (firstError) {
+    // A single overload/timeout on the first attempt shouldn't drop straight
+    // to the generic template -- running in the background means there's
+    // room to retry once for real content before giving up.
+    try {
+      content = await generateOnce(req, brief, exemplars, undefined, brandBrief);
+    } catch (secondError) {
+      if (!shouldUseFastFallback(secondError) && !shouldUseFastFallback(firstError)) {
+        throw secondError;
+      }
+      usedFallback = true;
+      content = fallbackContent(req, dna, exemplars);
+    }
   }
   const score =
     process.env.JIDOKA_DEEP_QC === "1" || process.env.BRKFREE_DEEP_QC === "1"
