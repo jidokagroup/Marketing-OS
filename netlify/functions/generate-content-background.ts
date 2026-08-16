@@ -214,7 +214,10 @@ async function runOne(db: ReturnType<typeof createServiceClient>, row: ContentRo
         overall_score: result.score.overall,
         below_threshold: result.belowThreshold,
         attempts: result.attempts,
-        model: CLAUDE_MODEL,
+        // attempts === 0 means every real Claude attempt failed and this is
+        // the deterministic fallback template, not AI-generated content --
+        // record that plainly instead of implying a normal model run.
+        model: result.attempts === 0 ? "fallback-template" : CLAUDE_MODEL,
       })
       .eq("id", row.id);
 
