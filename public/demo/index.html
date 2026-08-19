@@ -304,7 +304,7 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .gn{font-size:10.5px;color:#8791AE;margin-bottom:5px;font-weight:600}
 .gb p{font-size:13px;line-height:1.5;color:#DDE3F2}
 .gb p.tiny{font-size:11.5px;color:#98A2BC;margin-top:7px}
-.av{width:34px;height:34px;border-radius:10px;flex:0 0 34px;display:grid;place-items:center;
+.gav2{width:34px;height:34px;border-radius:10px;flex:0 0 34px;display:grid;place-items:center;
   background:#3B4270;color:#DDE3F2;font-weight:700;font-size:13px}
 .cbar{width:4px;align-self:stretch;border-radius:99px;background:#E5AC48;flex:0 0 4px;margin:2px 0}
 .wi{width:34px;height:34px;border-radius:10px;flex:0 0 34px;display:grid;place-items:center;
@@ -379,6 +379,66 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
   .rsvg .dot.on{r:3.2}
 }
 
+/* --- editable content surfaces --- */
+.ed{font-size:13.5px;line-height:1.62;color:var(--body);white-space:pre-wrap;word-break:break-word;
+  border-radius:8px;padding:5px 8px;margin:-5px -8px;outline:none;transition:background .15s,box-shadow .15s}
+.ed:hover{background:var(--surface-2)}
+.ed:focus{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--jidoka)}
+.ed:empty::before{content:"Write something…";color:var(--faint)}
+.savedot{font-size:10.5px;font-weight:700;color:var(--ok);opacity:0;transition:opacity .2s;
+  margin-left:auto;flex:0 0 auto}
+.savedot.on{opacity:1}
+.mini2{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);
+  background:var(--surface);border-radius:8px;padding:5px 10px;white-space:nowrap}
+.mini2:hover{color:var(--ink);border-color:var(--line-2)}
+
+/* chapter list */
+.chaps{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.chap{display:flex;gap:10px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--line)}
+.chap:last-child{border-bottom:none}
+.chap .cmk{width:5px;height:5px;border-radius:50%;background:var(--convia);flex:0 0 5px;margin-top:10px}
+.chapline{flex:1;min-width:0;font-size:13px}
+
+/* structured links to the client's own work */
+.lnks{display:flex;flex-direction:column;gap:7px;margin-top:5px}
+.lnk{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:10px;padding:8px 11px}
+.lk{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;
+  border-radius:5px;background:var(--jidoka-soft);color:var(--jidoka);flex:0 0 auto}
+.lk.podcast{background:var(--convia-soft);color:var(--convia)}
+.lk.cta{background:#E6F7EF;color:#0B7A4B}
+.lkl{flex:1;min-width:140px;font-size:13px;font-weight:600;color:var(--ink)}
+.lku{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--muted);min-width:120px}
+
+/* per-platform caption cards */
+.capgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.capcard{border:1px solid var(--line);border-radius:13px;background:var(--surface-2);padding:13px 14px;
+  display:flex;flex-direction:column;gap:9px}
+.caphead{display:flex;align-items:center;gap:8px}
+.pf{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:6px}
+.pf.linkedin{background:#E7F0FA;color:#0A66C2}
+.pf.x{background:#E9EAEC;color:#111}
+.pf.instagram{background:#FCEAF3;color:#C0357E}
+.caplen{font-size:10px;color:var(--faint);margin-left:auto}
+.capbody{font-size:12.5px;line-height:1.55}
+
+/* carousel */
+.carou{display:flex;flex-direction:column;gap:13px}
+.cstage{display:flex;align-items:center;gap:12px;justify-content:center}
+.cframe{width:100%;max-width:330px;aspect-ratio:1080/1350;border-radius:14px;overflow:hidden;
+  box-shadow:0 18px 44px rgba(11,15,26,.28);flex:0 0 auto}
+.cslide{width:100%;height:100%;display:block}
+.cnav{width:36px;height:36px;flex:0 0 36px;border-radius:50%;border:1px solid var(--line);
+  background:var(--surface);color:var(--muted);font-size:20px;line-height:1}
+.cnav:hover{color:var(--ink);border-color:var(--line-2)}
+.cdots{display:flex;gap:6px;justify-content:center}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--line-2);padding:0}
+.cdot.on{background:var(--jidoka);transform:scale(1.3)}
+.cedit{border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:var(--surface-2)}
+.slidetext{font-size:14px;font-weight:600;margin-top:4px}
+.crow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cnote{font-size:11.5px;color:var(--muted)}
+
 /* --- three-cycle sparkline --- */
 .spark{display:flex;gap:8px;margin:13px 0 3px}
 .scol{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
@@ -437,6 +497,8 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
   .topbar{padding:11px 14px;gap:10px} .crumb h1{font-size:15px} .crumb p{display:none}
   .g4,.g3,.g2{grid-template-columns:repeat(2,1fr)}
   .result{grid-template-columns:repeat(2,1fr)}
+  .capgrid{grid-template-columns:1fr}
+  .cnav{display:none} .cframe{max-width:100%}
   .ctagrid{grid-template-columns:1fr} .cta{padding:18px} .cta h2{font-size:19px}
   .bigcta,.ghostcta{width:100%;justify-content:center}
   .loop{padding:16px;border-radius:14px} .kpi{font-size:23px}
@@ -520,7 +582,7 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 
     <div class="feed" id="feed">
       <div class="gi slack">
-        <div class="av">P</div>
+        <div class="gav2">P</div>
         <div class="gb"><div class="gn">Priya · 8:52am</div>
           <p>out sick again today, so sorry 😔 can you cover Marea + Elevator this week?</p></div>
       </div>
@@ -616,7 +678,7 @@ const M=Object.fromEntries(MODULES.map(m=>[m.id,m]));
    genuinely shared (Jidoka writes the words, Convia Pro cuts and formats
    them for each platform), and pretending otherwise misrepresents either
    partner. */
-const STAGE_NAMES=[['Source content','j'],['Extract the signal','j'],
+const STAGE_NAMES=[['Source content','c'],['Extract the signal','c'],
                    ['Build the campaign','b'],['Distribute','c'],
                    ['Compare analytics','j'],['Scan market signals','j'],
                    ['Choose the next move','j'],['Feed it back in','j']];
@@ -792,28 +854,47 @@ const OUTPUTS=[
    ['07','Caught in year seven. That is six years nobody gets back.'],
    ['08','Save this and bring the three-panel list to your next appointment. Comment MARKERS for the list.']]},
 
- {id:'blog',label:'Blog post',o:'j',meta:'1,240 words · SEO / AEO',
+ {id:'blog',label:'Blog post',o:'j',meta:'1,980 words · SEO / AEO',
   blocks:[['H1','What “Normal” Bloodwork Actually Means — And the Three Markers It Hides'],
-   ['INTRO','Every year, millions of people are told their labs look fine. Most of them believe that means they are healthy. It does not. It means their results sit inside a range built from everyone else who walked into the lab that year — and a large share of those people were already metabolically unwell.'],
-   ['## Where reference ranges come from','A reference range is a population statistic, not a health target. It describes what is common in the sampled group. When the sampled group trends toward insulin resistance, the range moves with it, and “normal” quietly drifts.'],
-   ['## The three markers that move first','Fasting insulin, ApoB, and hs-CRP change years before glucose or a standard lipid panel register anything. They are not exotic tests. They are simply not on most default panels, so they do not get ordered.'],
-   ['## What this looks like in practice','In one case from the interview, a patient held normal fasting glucose for six consecutive years. Her fasting insulin rose across the same period, unmeasured. The pattern was only caught in year seven, after a request for an expanded panel.'],
-   ['## What to ask for','Bring three requests to your next appointment: fasting insulin, ApoB, and hs-CRP. Ask for the actual numbers rather than the flag, and ask where each sits inside the range rather than whether it cleared it.'],
-   ['KEYWORDS','normal bloodwork meaning · fasting insulin test · ApoB vs LDL · hs-CRP inflammation marker · optimal vs normal lab ranges'],
-   ['INTERNAL LINKS','Link “fasting insulin” to the metabolic panel explainer · Link the CTA to the intake form · Link “our approach” to the clinical method page']]},
+   ['META DESCRIPTION','A “normal” lab result is a population statistic, not a health target. Here is where reference ranges come from, the three markers that move years earlier, and exactly what to ask for at your next appointment.'],
+   ['INTRO','Every year, millions of people are told their labs look fine. Most of them believe that means they are healthy. It does not. It means their results sit inside a range built from everyone else who walked into the lab that year — and a large share of those people were already metabolically unwell.\n\nThat distinction is not academic. It is the difference between catching a metabolic problem in year one and catching it in year seven.'],
+   ['## Where reference ranges come from','A reference range is a population statistic, not a health target. It describes what is common in the sampled group, usually the middle 95% of it. Nothing in that method asks whether the sampled people were well.\n\nWhen the sampled group trends toward insulin resistance, the range moves with it. “Normal” quietly drifts, and the flag on your results drifts with it.'],
+   ['## Why the range keeps drifting','Labs re-baseline against the population they serve. As metabolic health declines across that population, yesterday\u2019s borderline result becomes today\u2019s unremarkable one. Nobody makes a decision to loosen the standard — it loosens on its own, one cohort at a time.'],
+   ['## The three markers that move first','Fasting insulin, ApoB, and hs-CRP change years before glucose or a standard lipid panel register anything. They are not exotic tests. They are simply not on most default panels, so they do not get ordered.\n\n**Fasting insulin.** The earliest of the three. Insulin rises to hold glucose steady, so glucose stays flat while the work required to keep it there climbs. By the time glucose moves, the compensation has been running for years.\n\n**ApoB.** Counts the actual number of atherogenic particles rather than the cholesterol inside them. Two people with identical LDL-C can have very different ApoB, and the risk follows the particle count.\n\n**hs-CRP.** A general inflammation signal. On its own it explains little; alongside the other two it separates a benign picture from one worth acting on.'],
+   ['## What this looks like in practice','In one case from the interview, a patient held normal fasting glucose for six consecutive years. Her fasting insulin rose across the same period, unmeasured. The pattern was only caught in year seven, after a request for an expanded panel.\n\nNothing in her chart was ever flagged. Every year the result came back inside the range, and every year the range was doing what it was designed to do — describing a population, not assessing her.'],
+   ['## What to ask for','Bring three requests to your next appointment: fasting insulin, ApoB, and hs-CRP. Ask for the actual numbers rather than the flag, and ask where each sits inside the range rather than whether it cleared it.\n\nA result at the 90th percentile of “normal” and one at the 10th are both reported the same way. Only one of them is worth a conversation.'],
+   ['## If your doctor pushes back','Two objections come up most. The first is that these are not standard — true, and not a reason against ordering them. The second is that there is nothing to do about the results — also worth testing, because the earliest interventions are the least invasive ones.'],
+   ['CTA · MID-ARTICLE','Hear the full case discussed on Ep. 41 — The Longevity Bottleneck, with Dr. Sana Whitfield (47 min).'],
+   ['CTA · CLOSING','Book a panel review — bring your most recent results and we will walk through where each number actually sits, not just whether it was flagged.'],
+   
+   ['KEYWORDS','normal bloodwork meaning · fasting insulin test · ApoB vs LDL · hs-CRP inflammation marker · optimal vs normal lab ranges · what to ask your doctor about labs'],
+   ['INTERNAL LINKS','Link “fasting insulin” to the metabolic panel explainer · Link both CTAs to the booking flow · Link “our approach” to the clinical method page']],
+  links:[['Book a panel review','/book/panel-review','cta'],
+         ['Ep. 41 — The Longevity Bottleneck','/podcast/41-the-longevity-bottleneck','podcast'],
+         ['“Three markers most panels bury” carousel','/social/ig-three-markers','instagram'],
+         ['“Normal is a population statistic” post','/social/li-normal-is-a-statistic','linkedin']]},
 
  {id:'podcast',label:'Podcast episode',o:'c',meta:'47:12 · show notes + chapters',
   blocks:[['EPISODE TITLE','Ep. 41 — The Longevity Bottleneck, with Dr. Sana Whitfield'],
    ['DESCRIPTION','Dr. Sana Whitfield explains why a “normal” lab result is a population statistic rather than a health target, which three markers move first, and what to actually ask for at your next appointment.'],
-   ['CHAPTERS','00:00 Cold open — “normal is not optimal” 03:18 How reference ranges are built 11:40 Fasting insulin, and why it moves first 22:05 ApoB versus standard lipid panels 31:12 The six-year case 40:30 What to request at your next appointment'],
+   ['CHAPTERS',['00:00 — Cold open: “normal is not optimal”',
+     '03:18 — How reference ranges are actually built',
+     '11:40 — Fasting insulin, and why it moves first',
+     '22:05 — ApoB versus the standard lipid panel',
+     '31:12 — The six-year case',
+     '40:30 — What to request at your next appointment',
+     '44:50 — Where to start if you only change one thing']],
    ['PULL QUOTE','“Normal only ever meant common. It never meant healthy.”'],
    ['AUDIOGRAM','0:28–0:38 selected — highest-emotion segment, captioned, 1:1 and 9:16 cuts']]},
 
  {id:'email',label:'Email',o:'j',meta:'Newsletter · 3,200 subscribers',
-  blocks:[['SUBJECT','Your bloodwork is “normal.” Here is what that word is hiding.'],
-   ['PREVIEW','A reference range is a population statistic, not a health target.'],
-   ['BODY','Most people leave an appointment relieved because nothing was flagged. But a reference range describes what is common in the people who were tested — and a large share of them were already metabolically unwell.\n\nThree markers tend to move years before anything gets flagged: fasting insulin, ApoB, and hs-CRP. In this week’s episode, Dr. Sana Whitfield describes a patient whose glucose stayed normal for six years while her fasting insulin climbed the entire time.\n\nIf you have one appointment this year, make it count: ask for those three by name, and ask where each number sits inside the range rather than whether it cleared it.'],
-   ['CTA','Reply with the word LIST and I will send the exact three-panel request to bring with you.']]},
+  blocks:[['SUBJECT','The six years nobody got back'],
+   ['PREVIEW','Her glucose was normal every single year. That was the problem.'],
+   ['BODY','I want to tell you about a patient of Sana\u2019s, because I have not stopped thinking about her since we recorded.\n\nSix years of bloodwork. Every year her fasting glucose came back normal. Every year nothing was flagged, so nothing was said. In year seven someone finally ordered a fasting insulin, and it had been climbing the entire time — quietly doing the work of holding that “normal” glucose in place.\n\nShe did nothing wrong. She showed up, she got tested, she was told she was fine. The tests she needed were simply not on the panel.\n\nThis is the part that gets me: a reference range was never designed to tell you whether you are healthy. It describes what is common among the people who happened to get tested — and a large share of them are already metabolically unwell. So the bar moves, year over year, and “normal” moves with it.\n\nThree markers tend to move years before anything gets flagged: fasting insulin, ApoB, and hs-CRP. None of them are exotic. They are just not standard, which means they only get run if someone asks.\n\nIf you have one appointment this year, that is the ask. And when the results come back, do not settle for the flag — ask where each number actually sits inside the range. Ninetieth percentile and tenth percentile are both reported as “normal.” Only one of them is worth a conversation.'],
+   ['CTA','Book a panel review. Bring whatever results you already have — we will go through them line by line and tell you plainly whether anything deserves attention, and if nothing does, we will tell you that too.'],
+   ['P.S.','The full conversation with Dr. Sana Whitfield is Ep. 41 — The Longevity Bottleneck. The six-year case starts around 31:12 if you want to go straight there.']],
+  links:[['Book a panel review','/book/panel-review','cta'],
+         ['Ep. 41 — The Longevity Bottleneck','/podcast/41-the-longevity-bottleneck','podcast']]},
 
  {id:'captions',label:'Platform captions',o:'c',meta:'Native to each platform — not one caption reposted',
   variants:[['LinkedIn','A “normal” lab result is a population statistic, not a health target.\n\nReference ranges are built from the people who happened to get tested — and a large share of them were already metabolically unwell. So “normal” means common. It has never meant healthy.\n\nThree markers move years before anything gets flagged: fasting insulin, ApoB, hs-CRP.\n\nDr. Sana Whitfield describes a patient whose glucose stayed normal for six years while her insulin climbed the whole time. Caught in year seven.\n\nWhat would you add to the request list?'],
@@ -1018,6 +1099,182 @@ function ctaBlock(){
   </section>`;
 }
 
+/* ===================== editable content ===================== */
+/**
+ * Every piece of copy in Content Studio is editable and saves itself.
+ *
+ * Edits are keyed by output id plus block index and kept in localStorage, so a
+ * revision survives a reload and a walkthrough can be personalised before a
+ * call. Storage is wrapped because an embedded viewer can refuse it outright,
+ * in which case edits still work for the session and simply do not persist.
+ */
+const EDIT_KEY='cvj-content-edits-v1';
+let EDITS={};
+try{ EDITS=JSON.parse(localStorage.getItem(EDIT_KEY)||'{}') }catch{ EDITS={} }
+let saveTimer=null;
+function saveEdit(key,value){
+  EDITS[key]=value;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{
+    try{ localStorage.setItem(EDIT_KEY,JSON.stringify(EDITS)) }catch{ /* session-only */ }
+    flashSaved();
+  },420);
+}
+const edited=(key,fallback)=> Object.prototype.hasOwnProperty.call(EDITS,key)?EDITS[key]:fallback;
+const hasEdits=()=>Object.keys(EDITS).length>0;
+function resetEdits(){
+  EDITS={};
+  try{ localStorage.removeItem(EDIT_KEY) }catch{}
+  paint();
+}
+function flashSaved(){
+  const n=el('saved'); if(!n) return;
+  n.classList.add('on'); clearTimeout(n._t);
+  n._t=setTimeout(()=>n.classList.remove('on'),1400);
+}
+/** One editable surface. `k` is the storage key; text is always plain. */
+const editable=(k,text,cls='')=>
+  `<div class="ed ${cls}" contenteditable="plaintext-only" spellcheck="false"
+     data-edit="${esc(k)}" role="textbox" aria-multiline="true">${esc(edited(k,text))}</div>`;
+
+/* ===================== carousel ===================== */
+/* Slides are drawn rather than laid out in HTML so the on-screen preview and
+   the exported PNG come from one description and cannot drift apart. */
+const SLIDE_W=1080, SLIDE_H=1350;
+let slideIx=0;
+
+function slideTheme(i,total){
+  if(i===0) return {bg:['#171A4A','#0B0D2B'],accent:'#7C7FFF',kind:'cover'};
+  if(i===total-1) return {bg:['#0C3A44','#071E26'],accent:'#5BD8EC',kind:'cta'};
+  return {bg:['#0E1424','#0A0F1C'],accent:'#5BD8EC',kind:'body'};
+}
+
+/** Shared text layout maths, used by both the DOM preview and the canvas export. */
+function wrapLines(ctx,text,maxWidth){
+  const out=[];
+  for(const para of String(text).split('\n')){
+    const words=para.split(/\s+/).filter(Boolean);
+    if(!words.length){ out.push(''); continue }
+    let line=words[0];
+    for(let i=1;i<words.length;i++){
+      const test=line+' '+words[i];
+      if(ctx.measureText(test).width<=maxWidth) line=test;
+      else { out.push(line); line=words[i] }
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+function drawSlide(canvas,i,text){
+  const total=CAROUSEL().length, t=slideTheme(i,total);
+  const ctx=canvas.getContext('2d');
+  canvas.width=SLIDE_W; canvas.height=SLIDE_H;
+
+  const g=ctx.createLinearGradient(0,0,SLIDE_W,SLIDE_H);
+  g.addColorStop(0,t.bg[0]); g.addColorStop(1,t.bg[1]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,SLIDE_W,SLIDE_H);
+
+  // corner wash, keeps a flat export from looking like a slide of plain text
+  const glow=ctx.createRadialGradient(SLIDE_W*0.85,SLIDE_H*0.12,0,SLIDE_W*0.85,SLIDE_H*0.12,SLIDE_W*0.8);
+  glow.addColorStop(0,t.accent+'2E'); glow.addColorStop(1,'transparent');
+  ctx.fillStyle=glow; ctx.fillRect(0,0,SLIDE_W,SLIDE_H);
+
+  ctx.fillStyle=t.accent; ctx.fillRect(88,150,64,7);
+
+  ctx.fillStyle='rgba(255,255,255,.5)';
+  ctx.font='600 30px "IBM Plex Mono", monospace';
+  ctx.fillText(String(i+1).padStart(2,'0')+' / '+String(total).padStart(2,'0'),88,112);
+
+  const size = t.kind==='cover'?92 : text.length>150?54 : text.length>90?64 : 74;
+  ctx.font='800 '+size+'px Archivo, system-ui, sans-serif';
+  ctx.fillStyle='#FFFFFF';
+  const lines=wrapLines(ctx,text,SLIDE_W-176);
+  const lh=size*1.22;
+  let y=t.kind==='cover'? 300 : 260;
+  for(const line of lines){ ctx.fillText(line,88,y+size); y+=lh }
+
+  ctx.font='600 28px Archivo, system-ui, sans-serif';
+  ctx.fillStyle='rgba(255,255,255,.42)';
+  ctx.fillText('@mareawellness',88,SLIDE_H-92);
+  ctx.textAlign='right';
+  ctx.fillStyle=t.accent;
+  ctx.fillText(t.kind==='cta'?'Save this →':'Swipe →',SLIDE_W-88,SLIDE_H-92);
+  ctx.textAlign='left';
+  return canvas;
+}
+
+const CAROUSEL=()=>{
+  const o=OUTPUTS.find(x=>x.id==='carousel');
+  return o.slides.map(([n,t],i)=>[n,edited('carousel:'+i,t)]);
+};
+
+function paintSlides(){
+  document.querySelectorAll('canvas[data-slide]').forEach(cv=>{
+    const i=+cv.dataset.slide;
+    drawSlide(cv,i,CAROUSEL()[i][1]);
+  });
+}
+
+/**
+ * Hands a rendered slide to the viewer as a PNG.
+ *
+ * Two routes, because this page is served two ways. Inside the claude.ai
+ * artifact viewer an ordinary download link is inert, so the save goes
+ * through the host's downloads capability; served from our own site there is
+ * no host, and the anchor is the whole mechanism.
+ */
+const slideBlob=i=>new Promise(resolve=>{
+  const cv=document.createElement('canvas');
+  drawSlide(cv,i,CAROUSEL()[i][1]);
+  cv.toBlob(resolve,'image/png');
+});
+const slideName=i=>'marea-carousel-'+String(i+1).padStart(2,'0')+'.png';
+
+async function downloadSlide(i){
+  const blob=await slideBlob(i);
+  if(!blob) return;
+  const host=window.claude&&typeof window.claude.use==='function'
+    ? await window.claude.use('downloads').catch(()=>null) : null;
+  if(host){
+    try{ await host.save({filename:slideName(i),data:blob}) }
+    catch(err){ if(err&&err.code!=='declined') console.warn('Slide save failed:',err) }
+    return;
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=slideName(i);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+// Sequential, not parallel: the host allows one open save prompt at a time.
+async function downloadAllSlides(){
+  for(let i=0;i<CAROUSEL().length;i++) await downloadSlide(i);
+}
+
+function carouselUI(){
+  const slides=CAROUSEL(), total=slides.length;
+  slideIx=Math.max(0,Math.min(slideIx,total-1));
+  return `<div class="carou">
+    <div class="cstage">
+      <button class="cnav prev" data-slide-step="-1" aria-label="Previous slide">‹</button>
+      <div class="cframe"><canvas data-slide="${slideIx}" class="cslide"></canvas></div>
+      <button class="cnav next" data-slide-step="1" aria-label="Next slide">›</button>
+    </div>
+    <div class="cdots">${slides.map((_,i)=>
+      `<button class="cdot${i===slideIx?' on':''}" data-slide-go="${i}" aria-label="Slide ${i+1}"></button>`).join('')}</div>
+    <div class="cedit">
+      <span class="eyebrow">Slide ${slideIx+1} copy — edit and the slide redraws</span>
+      ${editable('carousel:'+slideIx,OUTPUTS.find(x=>x.id==='carousel').slides[slideIx][1],'slidetext')}
+    </div>
+    <div class="crow">
+      <button class="mini2" data-dl-slide="${slideIx}">Download this slide (PNG)</button>
+      <button class="mini2" data-dl-all="1">Download all ${total} slides</button>
+      <span class="cnote">1080 × 1350 — drop straight into Canva or post as-is</span>
+    </div>
+  </div>`;
+}
+
 const V={
  command(){ const c=C(),p=cycle>0?CYCLES[cycle-1]:null;
   // Three cycles at once, so the trajectory is the point rather than a number
@@ -1078,14 +1335,36 @@ const V={
 
  content(){ const c=C();
   const o=OUTPUTS.find(x=>x.id===out)||OUTPUTS[0];
-  const body=()=>{
-    if(o.slides) return `<div class="grid g2" style="gap:10px">${o.slides.map(([n,t])=>
-      `<div class="slide"><span class="sn">${esc(n)}</span><p>${esc(t)}</p></div>`).join('')}</div>`;
-    if(o.variants) return o.variants.map(([n,t])=>
-      `<div class="outblk"><span class="eyebrow">${esc(n)}</span><pre class="outtext">${esc(t)}</pre></div>`).join('');
-    return o.blocks.map(([n,t])=>
-      `<div class="outblk"><span class="eyebrow">${esc(n)}</span><pre class="outtext">${esc(t)}</pre></div>`).join('');
+
+  const linkRow=([label,url,kind],n)=>`<div class="lnk">
+      <span class="lk ${esc(kind)}">${esc(kind)}</span>
+      ${editable(o.id+':link:'+n+':label',label,'lkl')}
+      ${editable(o.id+':link:'+n+':url',url,'lku')}</div>`;
+
+  const block=([name,text],n)=>{
+    if(Array.isArray(text)) return `<div class="outblk">
+      <span class="eyebrow">${esc(name)}</span>
+      <div class="chaps">${text.map((line,k)=>
+        `<div class="chap"><span class="cmk"></span>${editable(o.id+':'+n+':'+k,line,'chapline')}</div>`).join('')}</div></div>`;
+    return `<div class="outblk"><span class="eyebrow">${esc(name)}</span>
+      ${editable(o.id+':'+n,text)}</div>`;
   };
+
+  const body=()=>{
+    if(o.id==='carousel') return carouselUI();
+    // One card per platform: a shared scroll of captions reads as one blended
+    // block, and the whole point of this tab is that they are not the same.
+    if(o.variants) return `<div class="capgrid">${o.variants.map(([n,t],k)=>`
+      <div class="capcard">
+        <div class="caphead"><span class="pf ${esc(n.toLowerCase())}">${esc(n)}</span>
+          <span class="caplen mono" data-len-for="${o.id}:v:${k}">${edited(o.id+':v:'+k,t).length} chars</span></div>
+        ${editable(o.id+':v:'+k,t,'capbody')}
+      </div>`).join('')}</div>`;
+    return o.blocks.map(block).join('') +
+      (o.links?`<div class="outblk"><span class="eyebrow">Links to this client’s own work</span>
+        <div class="lnks">${o.links.map(linkRow).join('')}</div></div>`:'');
+  };
+
   return `<section class="sec">
    <div class="sec-h"><h2>One recording → every asset</h2><span class="badge jd">Jidoka writes</span><span class="badge cv">Convia Pro cuts &amp; formats</span></div>
    <div class="card srcbar">
@@ -1096,11 +1375,13 @@ const V={
      </div>
      <span class="badge ok">${esc(c.r.assets)} assets produced</span>
    </div>
-   <p class="lede">${esc(SOURCE.note)}</p>
+   <p class="lede">${esc(SOURCE.note)} Everything here is editable — click any text, type, and it saves itself.</p>
    <div class="chips">${OUTPUTS.map(x=>`<button class="chip" data-out="${x.id}" aria-pressed="${x.id===out}">${esc(x.label)}${x.o==='c'?' <i class="dot"></i>':''}</button>`).join('')}</div>
    <div class="card p0">
      <div class="chead"><h3>${esc(o.label)}</h3><span class="badge nt mono">${esc(o.meta)}</span>
-       ${o.o==='c'?'<span class="badge cv">Convia Pro</span>':'<span class="badge jd">Jidoka</span>'}</div>
+       ${o.o==='c'?'<span class="badge cv">Convia Pro</span>':'<span class="badge jd">Jidoka</span>'}
+       <span class="savedot" id="saved">Saved</span>
+       ${hasEdits()?'<button class="mini2" data-reset-edits="1">Reset edits</button>':''}</div>
      <div style="padding:17px;display:flex;flex-direction:column;gap:15px">${body()}</div>
    </div>
    <div class="grid g3">
@@ -1108,7 +1389,7 @@ const V={
        <div class="kpi tnum">${c.auth}</div><div class="ksub">${cycle>0?`<span class="delta">+${c.auth-CYCLES[cycle-1].auth}</span>`:'<span class="delta flat">baseline</span>'} voice match</div></button>
      <button class="card" data-ins="content"><div class="ch"><span class="eyebrow">Extracted from source</span></div>
        <div class="kpi tnum">${cycle===0?'14':cycle===1?'16':'18'}</div><div class="ksub">hooks · 6 proof points · 3 objections</div></button>
-     <button class="card" data-nav="scheduler"><div class="ch"><span class="eyebrow">Hand-off</span><i class="dot"></i><span class="star">★</span></div>
+     <button class="card" data-nav="scheduler"><div class="ch"><span class="eyebrow">Hand-off</span><i class="dot"></i></div>
        <h3 style="font-size:14.5px">Ready for Convia Pro</h3><p class="lede" style="font-size:12.5px;margin-top:6px">${esc(c.r.assets)} assets queued →</p></button>
    </div></section>`},
 
@@ -1414,6 +1695,9 @@ function addon(id,title,kpis,listTitle,rows,o){
      <h3 style="font-size:15px">See what feeds ${esc(title)} →</h3></button></section>`;
 }
 function paint(){ el('canvas').innerHTML=(V[view]||V.command)();
+  // Canvases come back empty from innerHTML, so the slide art is drawn after
+  // every render rather than once.
+  paintSlides();
   el('run').querySelector('.lbl').textContent = step>=8?`Run cycle ${Math.min(cycle+2,3)}`:`Run ${C().label.toLowerCase()}`; }
 
 /* ===================== events ===================== */
@@ -1429,9 +1713,30 @@ document.addEventListener('click',e=>{
   const cy=e.target.closest('[data-cyc]'); if(cy){setCycle(+cy.dataset.cyc);return}
   if(e.target.closest('[data-next]')){ setCycle(Math.min(cycle+1,2)); runLoop(); return }
   const ic=e.target.closest('[data-icp]'); if(ic){icp=ic.dataset.icp;paint();return}
-  const ou=e.target.closest('[data-out]'); if(ou){out=ou.dataset.out;paint();return}
+  const ou=e.target.closest('[data-out]'); if(ou){out=ou.dataset.out;slideIx=0;paint();return}
+  const st=e.target.closest('[data-slide-step]');
+  if(st){ const n=CAROUSEL().length;
+    slideIx=(slideIx+ +st.dataset.slideStep+n)%n; paint(); return }
+  const go2=e.target.closest('[data-slide-go]'); if(go2){slideIx=+go2.dataset.slideGo;paint();return}
+  const dl=e.target.closest('[data-dl-slide]'); if(dl){downloadSlide(+dl.dataset.dlSlide);return}
+  if(e.target.closest('[data-dl-all]')){ downloadAllSlides(); return }
+  if(e.target.closest('[data-reset-edits]')){ resetEdits(); return }
   if(e.target.closest('#more')){el('drawer').classList.add('open');el('scrim').classList.add('open')}
 });
+document.addEventListener('input',e=>{
+  const ed=e.target.closest('[data-edit]'); if(!ed) return;
+  const key=ed.dataset.edit;
+  saveEdit(key,ed.innerText);
+  // Live side-effects that do not touch the element being typed in.
+  const counter=document.querySelector(`[data-len-for="${key}"]`);
+  if(counter) counter.textContent=ed.innerText.length+' chars';
+  if(key.startsWith('carousel:')) paintSlides();
+});
+// Enter should make a new line, not submit or leave the block.
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.closest('[data-edit]')) e.stopPropagation();
+},true);
+
 el('run').addEventListener('click',()=>{ if(view!=='command')go('command');
   if(step>=8&&cycle<2)setCycle(cycle+1); runLoop(); });
 el('menu').addEventListener('click',()=>{el('drawer').classList.add('open');el('scrim').classList.add('open')});
