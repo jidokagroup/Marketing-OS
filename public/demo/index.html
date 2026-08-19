@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T18:02:11Z">
+<meta name="demo-build" content="2026-08-19T18:40:33Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -13,11 +13,18 @@
 <title>Convia Pro × Jidoka</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>*,*::before,*::after{box-sizing:border-box}
 body{margin:0}img,svg,video{max-width:100%}</style>
 </head>
 <body>
+<!-- Loaded without blocking: a render-blocking stylesheet also blocks the
+     script at the end of the body, which would hold the opening sequence
+     hostage to a font request. display=swap paints in the fallback first. -->
+<noscript><link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"></noscript>
+
 <style>
 /* ---------------- tokens ---------------- */
 :root{
@@ -286,6 +293,10 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .gate{position:fixed;inset:0;z-index:80;background:var(--panel);color:var(--panel-ink);
   display:flex;align-items:flex-start;justify-content:center;padding:34px 22px;overflow-y:auto}
 .gate.hide{display:none}
+.gate.leaving{opacity:0;transform:scale(1.015);
+  transition:opacity .55s ease,transform .55s ease;pointer-events:none}
+.app.arrive{animation:arrive .7s cubic-bezier(.2,.7,.3,1) both}
+@keyframes arrive{from{opacity:0;transform:translateY(10px) scale(.995)}to{opacity:1;transform:none}}
 .gatein{max-width:600px;width:100%;padding-bottom:40px}
 .ghead{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .gate .eyebrow{color:#6C78A0}
@@ -296,10 +307,77 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .lv{font-size:14px;font-weight:800;color:#FF8095}
 .gintro{font-size:13.5px;color:var(--panel-muted)}
 
+/* --- skip --- */
+.skipx{position:fixed;top:18px;right:18px;z-index:3;width:38px;height:38px;border-radius:50%;
+  display:grid;place-items:center;border:1px solid #26324D;background:rgba(20,30,51,.8);
+  backdrop-filter:blur(8px);transition:background .16s,border-color .16s,transform .16s}
+.skipx:hover{background:#1D2947;border-color:#3B4270;transform:rotate(90deg)}
+.skipx svg{width:16px;height:16px;stroke:#AEB8D6;stroke-width:2;stroke-linecap:round}
+
+/* --- opening line --- */
+.opener{font-size:clamp(20px,4vw,30px);font-weight:700;letter-spacing:-.02em;color:#fff;
+  text-align:center;margin:14vh 0 0;opacity:0;transform:translateY(8px);overflow:hidden;
+  max-height:30vh;
+  transition:opacity .7s ease,transform .7s ease,max-height .5s ease .3s,margin .5s ease .3s}
+.opener.in{opacity:1;transform:none}
+/* Fades, then stops taking up room, so the laptop rises into its place. */
+.opener.out{opacity:0;transform:translateY(-6px);max-height:0;margin-top:0;
+  transition:opacity .45s ease,transform .45s ease,max-height .5s ease .3s,margin .5s ease .3s}
+
+/* --- the laptop --- */
+/* The lid keeps its full layout height however far it is rotated, so the
+   wrapper both carries the height and clips what is folded away. The laptop
+   is pinned to the wrapper's bottom edge, which is where the hinge is: as the
+   height shrinks, the part that disappears is the part already folded flat.
+   The side padding with matching negative margin gives the perspective splay
+   somewhere to go without widening the column. */
+.lapwrap{box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;
+  justify-content:flex-end;padding:0 70px;margin:0 -70px;
+  transition:height .95s cubic-bezier(.34,.9,.35,1)}
+.lap{flex:0 0 auto;perspective:1500px;perspective-origin:50% 100%;margin-top:14px;opacity:0;
+  transition:opacity .5s ease}
+.lap.shown{opacity:1}
+.lid{transform-origin:50% 100%;transform:rotateX(-89deg);
+  transition:transform 1s cubic-bezier(.34,.9,.35,1)}
+.lap.open .lid{transform:rotateX(0deg)}
+.lap.shut .lid{transform:rotateX(-89deg);transition-duration:.8s;
+  transition-timing-function:cubic-bezier(.6,0,.5,1)}
+/* A shut laptop is a dark slab, not a sliver of legible desktop. */
+.lap.shut .screen{opacity:0;transition:opacity .34s ease .12s}
+.lap.shut .bezel{background:#0A101C;box-shadow:0 10px 26px rgba(0,0,0,.5)}
+.lap.shut .glare{opacity:.35}
+.bezel{position:relative;background:#080C16;border:1px solid #2A3450;border-radius:14px 14px 4px 4px;
+  padding:14px 10px 12px;box-shadow:0 26px 60px rgba(0,0,0,.55)}
+.cam{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:5px;height:5px;
+  border-radius:50%;background:#1B2540;box-shadow:inset 0 0 0 1px #2E3A58}
+.glare{position:absolute;inset:14px 10px 12px;border-radius:8px;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.07) 0%,transparent 38%);opacity:.9}
+.base{height:13px;border-radius:0 0 13px 13px;
+  background:linear-gradient(180deg,#2A3450,#161D30);border:1px solid #2A3450;border-top:none;
+  position:relative;box-shadow:0 14px 26px rgba(0,0,0,.45)}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:64px;height:4px;
+  border-radius:0 0 6px 6px;background:#0D1526}
+
+/* A short burst of instability, not a strobe: three small jumps and a colour
+   split. Nothing full-screen flashes, and it is skipped for reduced motion. */
+.lap.glitch .screen{animation:gl .62s steps(1,end) 1}
+@keyframes gl{
+  0%{transform:none;filter:none}
+  12%{transform:translate(-3px,1px);filter:hue-rotate(-16deg) saturate(1.5)}
+  24%{transform:translate(2px,-2px);filter:none}
+  40%{transform:translate(-2px,0);filter:hue-rotate(14deg) contrast(1.25)}
+  56%{transform:none;filter:none}
+  70%{transform:translate(3px,1px);filter:saturate(1.7)}
+  100%{transform:none;filter:none}
+}
+.lap.glitch .bezel::after{content:"";position:absolute;inset:14px 10px 12px;border-radius:8px;
+  pointer-events:none;animation:scan .62s linear 1;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px)}
+@keyframes scan{0%{opacity:0}20%{opacity:1}80%{opacity:.7}100%{opacity:0}}
+
 /* --- the "you just opened the laptop" screen --- */
-.screen{margin-top:16px;border:1px solid #26324D;border-radius:16px;overflow:hidden;
-  background:linear-gradient(155deg,#101A33 0%,#0A1020 55%,#0D1526 100%);
-  box-shadow:0 24px 60px rgba(0,0,0,.42)}
+.screen{border-radius:8px;overflow:hidden;
+  background:linear-gradient(155deg,#101A33 0%,#0A1020 55%,#0D1526 100%)}
 .mbar{display:flex;align-items:center;gap:11px;padding:8px 13px;background:rgba(255,255,255,.05);
   border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(8px)}
 .mdots{display:flex;gap:5px}
@@ -367,12 +445,14 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .track i.c{background:linear-gradient(180deg,#7C7FFF,#4B4ED8)}
 .epct{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:#98A2BC;flex-wrap:wrap}
 
-.punch{margin-top:26px;opacity:0;transform:translateY(10px);
+.punch{margin-top:26px;opacity:0;transform:translateY(26px);
   transition:opacity .5s ease,transform .5s cubic-bezier(.2,.7,.3,1)}
 .punch.in{opacity:1;transform:none}
 .punch h1{font-size:clamp(23px,4.4vw,34px);line-height:1.16;color:#fff}
 .punch .sub{font-size:14px;color:var(--panel-muted);margin-top:13px;line-height:1.6}
-.gate .go{margin-top:20px}
+.gate .go{margin-top:20px;opacity:0;transform:translateY(10px);
+  transition:opacity .5s ease .18s,transform .5s ease .18s}
+.punch.in .go{opacity:1;transform:none}
 .gate .skip{display:block;margin-top:18px;padding-bottom:8px;font-size:12.5px;color:var(--panel-muted);
   text-decoration:underline;text-underline-offset:3px}
 @media (max-width:520px){.gatein{max-width:100%}.gate{padding:22px 15px}}
@@ -804,7 +884,7 @@ button.ctrow:hover{background:var(--surface-2)}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 </style>
 
-<div class="app">
+<div class="app" id="app">
   <aside class="rail">
     <div class="brand">
       <div class="lockup">
@@ -848,9 +928,16 @@ button.ctrow:hover{background:var(--surface-2)}
 
 <div class="gate" id="gate">
   <div class="gatein">
-    <p class="gintro">You open the laptop. This is what is already waiting.</p>
+    <button class="skipx" id="skip" aria-label="Skip to the platform" title="Skip to the platform">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
 
-    <div class="screen">
+    <p class="opener" id="opener">It’s Monday morning.</p>
+
+    <div class="lapwrap" id="lapwrap"><div class="lap" id="lap">
+      <div class="lid">
+        <div class="bezel">
+          <div class="screen">
       <div class="mbar">
         <span class="mdots"><i></i><i></i><i></i></span>
         <span class="mapp">Desktop</span>
@@ -918,16 +1005,22 @@ button.ctrow:hover{background:var(--surface-2)}
           </div>
         </div>
       </div>
-    </div>
+
+          </div>
+          <i class="cam"></i>
+          <i class="glare"></i>
+        </div>
+      </div>
+      <div class="base"><i class="notch"></i></div>
+    </div></div>
 
     <div class="punch" id="punch">
       <h1>Seven open loops. None of them have moved.</h1>
-      <p class="sub">You are not slow. You are the integration layer between eleven half-finished things — and that is the job the system is supposed to do.</p>
+      <p class="sub">You are not slow. You are the integration layer between eleven half-finished things — and that is the job this system is supposed to help.</p>
       <div class="go">
         <button class="btn" id="enter" style="padding:13px 22px;font-size:14.5px">Now watch the same Monday →</button>
       </div>
     </div>
-    <button class="skip" id="skip">Skip to the platform</button>
   </div>
 </div>
 <div class="scrim" id="scrim"></div>
@@ -2527,29 +2620,89 @@ const theme=()=>{const c=document.documentElement.getAttribute('data-theme');
   document.documentElement.setAttribute('data-theme',c?(c==='dark'?'light':'dark'):(d?'light':'dark'))};
 el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('click',theme);
 
+/**
+ * The entry sequence.
+ *
+ * Beat by beat: the line, the laptop opening, the morning landing on it, a
+ * short burst of instability, the lid closing, then the point rising out of
+ * the shut laptop. Every step is a class toggle so the whole thing can be
+ * skipped, and `prefers-reduced-motion` jumps straight to the end state.
+ */
 (function gateSeq(){
-  // Ordered by when each thing actually landed, not by DOM position: on a
-  // desktop the windows and the notification rail are separate columns.
   const items=[...document.querySelectorAll('#feed .gi')]
     .sort((a,b)=>(+a.style.getPropertyValue('--o')||0)-(+b.style.getPropertyValue('--o')||0));
-  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const n=el('loopn'), clock=el('clock'), punch=el('punch');
+  const lap=el('lap'), opener=el('opener'), wrap=el('lapwrap');
+  // The lid is rotated, and a transform does not shrink a layout box, so the
+  // wrapper's height is animated alongside it. Without this a shut laptop
+  // still reserves a screen's worth of empty space.
+  const SHUT_H=118;
+  // Measured with the clip released, otherwise the wrapper reports the
+  // height it already has rather than the height it needs.
+  const openHeight=()=>{
+    const prev=wrap.style.height;
+    wrap.style.height='auto';
+    const h=wrap.scrollHeight;
+    wrap.style.height=prev;
+    return h;
+  };
+  const collapse=()=>{wrap.style.height=SHUT_H+'px'};
+  const expand=()=>{wrap.style.height=openHeight()+'px'};
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const timers=[];
+  const at=(ms,fn)=>timers.push(setTimeout(fn,ms));
+  // Anything that ends the gate early has to stop the rest of the reel, or a
+  // stray timer repaints a screen the visitor has already left.
+  window.stopGateSeq=()=>timers.forEach(clearTimeout);
+
+  const settle=()=>{
+    items.forEach(i=>i.classList.add('in'));
+    n.textContent=items.length; clock.textContent='9:14';
+    lap.classList.add('shown','open');
+    wrap.style.height='auto';
+    punch.classList.add('in');
+  };
+  if(reduce){ opener.classList.add('in'); settle(); return }
+  collapse();
+
+  at(220,()=>opener.classList.add('in'));
+  at(1500,()=>opener.classList.add('out'));
+  at(1750,()=>lap.classList.add('shown'));
+  at(1850,()=>{lap.classList.add('open');expand()});
+
   let mins=7;
-  const revealAll=()=>{items.forEach(i=>i.classList.add('in'));n.textContent=items.length;
-    clock.textContent='9:14';punch.classList.add('in')};
-  if(reduce){revealAll();return}
-  items.forEach((it,i)=>setTimeout(()=>{
+  items.forEach((it,i)=>at(2650+i*430,()=>{
     it.classList.add('in');
+    expand();  // each arrival makes the screen taller
     n.textContent=i+1;
     mins=Math.min(14,mins+1); clock.textContent='9:'+String(mins).padStart(2,'0');
-    if(i===items.length-1) setTimeout(()=>{punch.classList.add('in');
-      try{punch.scrollIntoView({behavior:'smooth',block:'end'})}catch(e){punch.scrollIntoView(false)}},420);
-  }, 380+i*560));
+  }));
+
+  const after=2650+items.length*430;
+  at(after+320,()=>lap.classList.add('glitch'));
+  at(after+980,()=>{lap.classList.remove('glitch');lap.classList.add('shut');collapse()});
+  at(after+1620,()=>{
+    punch.classList.add('in');
+    try{punch.scrollIntoView({behavior:'smooth',block:'end'})}catch(e){punch.scrollIntoView(false)}
+  });
 })();
-el('enter').addEventListener('click',()=>{el('gate').classList.add('hide');runLoop()});
-el('skip').addEventListener('click',()=>el('gate').classList.add('hide'));
+
+/** Fade out of the gate and into the dashboard rather than cutting. */
+function leaveGate(run){
+  if(window.stopGateSeq) window.stopGateSeq();
+  const gate=el('gate'), app=el('app');
+  gate.classList.add('leaving');
+  app.classList.add('arrive');
+  setTimeout(()=>{
+    gate.classList.add('hide');
+    app.addEventListener('animationend',()=>app.classList.remove('arrive'),{once:true});
+    if(run) runLoop();
+  },520);
+}
+el('enter').addEventListener('click',()=>leaveGate(true));
+el('skip').addEventListener('click',()=>leaveGate(false));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T18:02:11Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T18:40:33Z");</script>
 </body>
 </html>
