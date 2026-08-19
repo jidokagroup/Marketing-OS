@@ -21,14 +21,19 @@ type Action = (prev: AuthState, formData: FormData) => Promise<AuthState>;
 interface AuthFormProps {
   mode: "login" | "signup";
   action: Action;
+  /** Same-origin path to land on after auth, already validated by the caller. */
+  nextPath?: string | null;
 }
 
-export function AuthForm({ mode, action }: AuthFormProps) {
+export function AuthForm({ mode, action, nextPath }: AuthFormProps) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
     null,
   );
   const isSignup = mode === "signup";
+  // Switching between sign in and sign up must not drop the destination.
+  const withNext = (path: string) =>
+    nextPath ? `${path}?next=${encodeURIComponent(nextPath)}` : path;
 
   return (
     <Card className="w-full max-w-sm">
@@ -41,6 +46,7 @@ export function AuthForm({ mode, action }: AuthFormProps) {
         </CardDescription>
       </CardHeader>
       <form action={formAction}>
+        {nextPath && <input type="hidden" name="next" value={nextPath} />}
         <CardContent className="space-y-4">
           {isSignup && (
             <div className="space-y-2">
@@ -98,14 +104,14 @@ export function AuthForm({ mode, action }: AuthFormProps) {
             {isSignup ? (
               <>
                 Already have an account?{" "}
-                <Link href="/login" className="text-foreground underline">
+                <Link href={withNext("/login")} className="text-foreground underline">
                   Sign in
                 </Link>
               </>
             ) : (
               <>
                 Need an account?{" "}
-                <Link href="/signup" className="text-foreground underline">
+                <Link href={withNext("/signup")} className="text-foreground underline">
                   Sign up
                 </Link>
               </>

@@ -23,6 +23,12 @@ const INK = "#101828";
 const MUTED = "#4A5565";
 const PAPER = "#F8FAFC";
 const CALENDAR_URL = "https://cal.read.ai/crystal-8mhiy/30-min";
+/** Shareable interactive demo. Published as an Artifact, updated in place. */
+const DEMO_URL = "https://claude.ai/code/artifact/727f0395-008f-4dd3-98bc-f80508ea0847";
+/** Opens Stripe Checkout, signing the visitor up first when needed. */
+const JOIN_URL = "/join";
+/** Founder pricing is capped at this many seats (agency brief, p2). */
+const COHORT_SEATS = 20;
 
 const WORKFLOW_STAGES = [
   "Source content",
@@ -272,12 +278,21 @@ function CtaButton({
         ? { background: INK, borderColor: INK, color: "#ffffff" }
         : { background: "#ffffff", borderColor: BORDER, color: INK };
 
+  const className =
+    "inline-flex min-h-11 items-center justify-center rounded-md border px-5 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5659F0]";
+
+  // Off-site destinations (the demo, the booking calendar) open in their own
+  // tab so a visitor mid-way down the page does not lose their place.
+  if (/^https?:/.test(href)) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer" className={className} style={styles}>
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      className="inline-flex min-h-11 items-center justify-center rounded-md border px-5 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5659F0]"
-      style={styles}
-    >
+    <Link href={href} className={className} style={styles}>
       {children}
     </Link>
   );
@@ -297,6 +312,14 @@ function MarketingLandingNav() {
           <a href="#interactive-demo" className="transition hover:text-[#101828]">
             How it works
           </a>
+          <a
+            href={DEMO_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-[#101828]"
+          >
+            View demo
+          </a>
           <a href="#ecosystem" className="transition hover:text-[#101828]">
             Ecosystem
           </a>
@@ -305,10 +328,10 @@ function MarketingLandingNav() {
           </a>
         </div>
         <Link
-          href="/signup"
+          href={JOIN_URL}
           className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#101828] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#242D40]"
         >
-          Start Free Trial
+          Join the cohort
         </Link>
       </nav>
     </header>
@@ -637,7 +660,8 @@ export default function MarketingOsPage() {
                 <h2 className="max-w-3xl text-4xl font-bold leading-tight">From long form content to the next campaign loop.</h2>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <CtaButton href="#pricing" variant="dark">Lock Founder Pricing</CtaButton>
+                <CtaButton href={DEMO_URL}>View the interactive demo</CtaButton>
+                <CtaButton href={JOIN_URL} variant="dark">Join the cohort</CtaButton>
                 <CtaButton href={CALENDAR_URL} variant="secondary">Schedule a Call</CtaButton>
               </div>
             </div>
@@ -704,6 +728,15 @@ export default function MarketingOsPage() {
               <p className="mt-4 text-base leading-relaxed" style={{ color: MUTED }}>
                 Start with a 7-day trial, then $297/month or $3,267/year with 1 month free.
               </p>
+              <p className="mt-4 text-base leading-relaxed" style={{ color: MUTED }}>
+                Founder pricing is capped at {COHORT_SEATS} seats. We are building against real
+                rosters, not demo data — {COHORT_SEATS} is as many as we can shape the loop
+                around, and it closes with the cohort.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <CtaButton href={JOIN_URL}>Join the cohort</CtaButton>
+                <CtaButton href={DEMO_URL} variant="secondary">View the interactive demo</CtaButton>
+              </div>
             </div>
             <div className="mt-10">
               <MarketingRoiCalculator />
