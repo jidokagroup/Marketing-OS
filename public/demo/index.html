@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T19:31:05Z">
+<meta name="demo-build" content="2026-08-19T19:52:12Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -77,14 +77,13 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .rail{width:var(--rail);flex:0 0 var(--rail);background:var(--surface);border-right:1px solid var(--line);
   display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
 .brand{padding:18px 16px}
-.lockup{display:flex;align-items:center;gap:8px}
+/* Logos only: two marks and the cross between them, nothing else. */
+.lockup{display:flex;align-items:center;gap:11px}
 .mark{width:24px;height:24px;border-radius:7px;flex:0 0 24px;display:grid;place-items:center}
 .mark.c{background:#0D1726}
 .mark.j{background:linear-gradient(140deg,#6E70F5,#4245DA)}
 .mark svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.2}
-.cross{color:var(--faint);font-size:12px}
-.bn{font-size:14px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
-.bs{font-size:10.5px;color:var(--muted);margin-top:2px}
+.cross{color:#fff;font-size:12px;opacity:.85}
 
 .navwrap{padding:6px 10px 10px;flex:1}
 .navlabel{padding:14px 8px 6px}
@@ -291,7 +290,8 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 
 /* entry gate — a Monday that arrives at you */
 .gate{position:fixed;inset:0;z-index:80;background:var(--panel);color:var(--panel-ink);
-  display:flex;align-items:flex-start;justify-content:center;padding:34px 22px;overflow-y:auto}
+  display:flex;align-items:flex-start;justify-content:center;padding:34px 22px;overflow-y:auto;
+  scrollbar-gutter:stable}
 .gate.hide{display:none}
 .gate.leaving{opacity:0;transform:scale(1.015);
   transition:opacity .55s ease,transform .55s ease;pointer-events:none}
@@ -308,11 +308,13 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .gintro{font-size:13.5px;color:var(--panel-muted)}
 
 /* --- skip --- */
-.skipx{position:fixed;top:18px;right:18px;z-index:3;width:38px;height:38px;border-radius:50%;
-  display:grid;place-items:center;border:1px solid #26324D;background:rgba(20,30,51,.8);
-  backdrop-filter:blur(8px);transition:background .16s,border-color .16s,transform .16s}
-.skipx:hover{background:#1D2947;border-color:#3B4270;transform:rotate(90deg)}
-.skipx svg{width:16px;height:16px;stroke:#AEB8D6;stroke-width:2;stroke-linecap:round}
+.skipx{position:fixed;top:18px;right:34px;z-index:3;height:38px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:9px;padding:0 15px;
+  border:1px solid #26324D;background:rgba(20,30,51,.86);
+  font-size:12.5px;font-weight:600;color:#C7CFE6;
+  backdrop-filter:blur(8px);transition:background .16s,border-color .16s,color .16s}
+.skipx:hover{background:#1D2947;border-color:#3B4270;color:#fff}
+.skipx svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;stroke-linecap:round;flex:0 0 14px}
 
 /* --- opening line --- */
 .opener{font-size:clamp(20px,4vw,30px);font-weight:700;letter-spacing:-.02em;color:#fff;
@@ -673,6 +675,24 @@ button.ctrow:hover{background:var(--surface-2)}
 .posv b{color:var(--muted);font-weight:600}
 .psay{color:var(--ok)!important} .pnot{color:var(--faint)!important;text-decoration:line-through}
 
+/* --- client acquisition automations --- */
+.auto{padding:13px 16px;border-top:1px solid var(--line)}
+.auto:first-child{border-top:none}
+.ahead{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}
+.ahead b{font-size:13.5px}
+.ahead .badge{margin-left:auto}
+.ach{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 8px;border-radius:5px;flex:0 0 auto}
+.ach.out{background:var(--jidoka-soft);color:var(--jidoka)}
+.ach.in{background:var(--convia-soft);color:var(--convia)}
+.aflow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.astep{font-size:11.5px;color:var(--body);background:var(--surface-2);border:1px solid var(--line);
+  border-radius:999px;padding:4px 10px;white-space:nowrap}
+.aarw{color:var(--faint);font-style:normal;font-size:11px}
+.astats{display:flex;gap:16px;flex-wrap:wrap}
+.astat{font-size:11px;color:var(--muted)}
+.astat b{font-size:14px;font-weight:800;color:var(--ink);margin-right:4px;letter-spacing:-.02em}
+
 /* --- brand brain --- */
 .cavat{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;
   font-size:11.5px;font-weight:800;color:var(--ink)}
@@ -833,6 +853,7 @@ button.ctrow:hover{background:var(--surface-2)}
      a handset and the stack becomes a lock screen. */
   /* Clear the skip control, which is fixed to the viewport corner. */
   .gate{padding-top:70px}
+  .skipx{right:16px;font-size:12px;padding:0 13px}
   .lapwrap{height:auto!important;overflow:visible;padding:0;margin:0}
   .lap{perspective:none;margin-top:6px}
   .base,.cam,.glare{display:none}
@@ -901,6 +922,7 @@ button.ctrow:hover{background:var(--surface-2)}
   .rows .row{flex-wrap:wrap} .rows .row .rmain{flex:1 1 100%}
   .capgrid{grid-template-columns:1fr}
   .dnagrid{grid-template-columns:repeat(2,minmax(0,1fr))} .fpgrid{grid-template-columns:1fr}
+  .astats{gap:11px} .astat b{font-size:13px}
   .trendgrid{grid-template-columns:1fr} .pos{grid-template-columns:1fr;gap:6px}
   .metgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .upsell{grid-template-columns:1fr} .uparrow{justify-self:center}
@@ -950,7 +972,6 @@ button.ctrow:hover{background:var(--surface-2)}
         <div class="mark c"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cvg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CFF2EC"/><stop offset="55%" stop-color="#4FC3CE"/><stop offset="1" stop-color="#1B8FA6"/></linearGradient></defs><path d="M16.8 6.1a7.4 7.4 0 1 0 1.9 9.2l2.1 3.3-4.1-.7a7.4 7.4 0 0 1-9.4-2" fill="none" stroke="url(#cvg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.4" cy="11.6" r="1.05" fill="#CFF2EC"/><circle cx="12.6" cy="11.6" r="1.05" fill="#7FD8DC"/><circle cx="15.8" cy="11.6" r="1.05" fill="#3FB4C4"/></svg></div>
         <span class="cross">×</span>
         <div class="mark j"><svg viewBox="0 0 24 24"><path d="M5 5h14v9a5 5 0 0 1-5 5H5z"/><path d="M9 9h6"/></svg></div>
-        <div><div class="bn">Convia Pro × Jidoka</div><div class="bs">Turn conversations into authority</div></div>
       </div>
     </div>
     <nav class="navwrap" id="rail-nav"></nav>
@@ -975,7 +996,6 @@ button.ctrow:hover{background:var(--surface-2)}
     <div class="mark c"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cvg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CFF2EC"/><stop offset="55%" stop-color="#4FC3CE"/><stop offset="1" stop-color="#1B8FA6"/></linearGradient></defs><path d="M16.8 6.1a7.4 7.4 0 1 0 1.9 9.2l2.1 3.3-4.1-.7a7.4 7.4 0 0 1-9.4-2" fill="none" stroke="url(#cvg2)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.4" cy="11.6" r="1.05" fill="#CFF2EC"/><circle cx="12.6" cy="11.6" r="1.05" fill="#7FD8DC"/><circle cx="15.8" cy="11.6" r="1.05" fill="#3FB4C4"/></svg></div>
     <span class="cross">×</span>
     <div class="mark j"><svg viewBox="0 0 24 24"><path d="M5 5h14v9a5 5 0 0 1-5 5H5z"/><path d="M9 9h6"/></svg></div>
-    <div><div class="bn">Convia Pro × Jidoka</div><div class="bs">Turn conversations into authority</div></div>
   </div></div>
   <nav class="navwrap" id="drawer-nav"></nav>
   <div class="railfoot">
@@ -987,7 +1007,8 @@ button.ctrow:hover{background:var(--surface-2)}
 
 <div class="gate" id="gate">
   <div class="gatein">
-    <button class="skipx" id="skip" aria-label="Skip to the platform" title="Skip to the platform">
+    <button class="skipx" id="skip">
+      <span>Go straight to demo</span>
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
 
@@ -2031,6 +2052,30 @@ const STOP=[
  ['Posting five times a week','Cadence is not the constraint here — the top competitor by engagement posts twice a week.'],
  ['Boosting posts that are already peaking','Paid should follow proof, not chase a post that has already spent its reach.']];
 
+/* ===================== client acquisition ===================== */
+/* The get-client side of Pipeline & Money: the outbound and inbound sequences
+   that turn published work and cold lists into booked calls. Each reports
+   into the same pipeline as organic attribution. */
+const AUTOMATIONS=[
+ {name:'Email + LinkedIn, paired outbound',channel:'Email · LinkedIn',kind:'out',live:1,
+  steps:['Connection request','Profile view','Email 1 — proof asset','LinkedIn DM','Email 2 — case','Call link'],
+  stats:[['in sequence','340'],['replied','18'],['calls booked','6'],['reply rate','5.3%']]},
+ {name:'Instagram engagement → DM → call',channel:'Instagram',kind:'in',live:1,
+  steps:['Engage their post','They engage back','DM opener','Qualify','Call link'],
+  stats:[['engaged','210'],['DM threads','34'],['calls booked','4'],['DM → call','11.8%']]},
+ {name:'Comment-to-DM keyword capture',channel:'Instagram · TikTok',kind:'in',live:1,
+  steps:['Keyword comment','Auto-DM the asset','Nurture 3 days','Offer'],
+  stats:[['triggered','126'],['delivered','126'],['calls booked','3'],['opt-in','62%']]},
+ {name:'Podcast guest → their network',channel:'Guest Portal',kind:'in',live:1,
+  steps:['Guest records','Kit sent','They post','Their audience lands','Follow-up DM'],
+  stats:[['guests','2'],['reach borrowed','7.3k'],['calls booked','2'],['cost','$0']]},
+ {name:'Referral loop after a win',channel:'Email',kind:'out',live:1,
+  steps:['Result lands','Ask at the high point','Warm intro','Call'],
+  stats:[['asked','9'],['intros','4'],['calls booked','3'],['close rate','—']]},
+ {name:'Dormant lead reactivation',channel:'Email · LinkedIn',kind:'out',live:0,
+  steps:['Lead goes quiet 30d','New proof asset publishes','Re-send with it','Call link'],
+  stats:[['dormant','88'],['re-engaged','—'],['calls booked','—'],['status','next cycle']]}];
+
 const V={
  command(){ const c=C(),p=cycle>0?CYCLES[cycle-1]:null;
   // Three cycles at once, so the trajectory is the point rather than a number
@@ -2600,6 +2645,22 @@ const V={
      ${[['Attributed revenue',C().r.rev],['Open deals',cycle===0?'3':cycle===1?'5':'7'],['Avg retainer','$4.3k']]
       .map(([k,v])=>`<div class="card"><div class="ch"><span class="eyebrow">${esc(k)}</span><span class="star">★</span></div>
       <div class="kpi tnum">${esc(v)}</div><div class="ksub">${esc(C().label)}</div></div>`).join('')}</div>
+   <div class="card p0" style="margin-bottom:16px">
+     <div class="chead"><h3>Client acquisition automations</h3><span class="badge ad">★ Add-on</span></div>
+     <p class="lede" style="padding:0 16px;font-size:12.5px">Published work creates attention; these turn it into booked calls. Each one runs on its own and reports into the same pipeline, so outbound and inbound are counted together rather than in two different tools.</p>
+     <div style="padding:8px 0 4px">${AUTOMATIONS.map(a=>`
+       <div class="auto">
+         <div class="ahead">
+           <span class="ach ${esc(a.kind)}">${esc(a.channel)}</span>
+           <b>${esc(a.name)}</b>
+           <span class="badge ${a.live?'ok':'nt'}">${a.live?'Running':'Paused'}</span>
+         </div>
+         <div class="aflow">${a.steps.map((st,i)=>`
+           <span class="astep">${esc(st)}</span>${i<a.steps.length-1?'<i class="aarw">→</i>':''}`).join('')}</div>
+         <div class="astats">${a.stats.map(([k,v])=>`
+           <span class="astat"><b class="tnum">${esc(v)}</b> ${esc(k)}</span>`).join('')}</div>
+       </div>`).join('')}</div>
+   </div>
    <div class="card p0"><div class="chead"><h3>Attribution — asset to revenue</h3><span class="badge ad">★ Add-on</span></div>
      <div style="padding:6px 0">${chain.map(([a,l,d,v,b])=>`
        <div class="attr">
@@ -2704,17 +2765,42 @@ el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('c
   // wrapper's height is animated alongside it. Without this a shut laptop
   // still reserves a screen's worth of empty space.
   const SHUT_H=118;
-  // Measured with the clip released, otherwise the wrapper reports the
-  // height it already has rather than the height it needs.
-  const openHeight=()=>{
-    const prev=wrap.style.height;
-    wrap.style.height='auto';
+  // Just enough clearance for the gate's padding and a little air. Reserving
+  // room for the closing line as well pushed the scale low enough on a short
+  // window that the screen stopped being readable, which defeats the point.
+  const RESERVE=120;
+
+  // Measured with the clip released and any fit-scale removed, otherwise the
+  // wrapper reports the height it already has rather than the height it needs.
+  const naturalHeight=()=>{
+    const t=lap.style.transform, h0=wrap.style.height;
+    lap.style.transform=''; wrap.style.height='auto';
     const h=wrap.scrollHeight;
-    wrap.style.height=prev;
+    lap.style.transform=t; wrap.style.height=h0;
     return h;
   };
-  const collapse=()=>{wrap.style.height=SHUT_H+'px'};
-  const expand=()=>{wrap.style.height=openHeight()+'px'};
+
+  /**
+   * Scales the laptop down to whatever height is actually available.
+   *
+   * The desktop it renders is a fixed layout, so on a short window it simply
+   * ran past the bottom of the screen. A transform does not change the layout
+   * box, so the wrapper is set to the scaled height to match. The phone
+   * layout scrolls normally and is left alone.
+   */
+  const fitLap=()=>{
+    if(window.innerWidth<=900){ lap.style.transform=''; wrap.style.height='auto'; return }
+    const natural=naturalHeight();
+    const avail=Math.max(300,window.innerHeight-RESERVE);
+    const k=Math.min(1,avail/natural);
+    lap.style.transformOrigin='top center';
+    lap.style.transform = k<1 ? 'scale('+k.toFixed(4)+')' : '';
+    wrap.style.height = Math.round(natural*k)+'px';
+  };
+  window.addEventListener('resize',()=>{ if(lap.classList.contains('open')) fitLap() });
+
+  const collapse=()=>{lap.style.transform='';wrap.style.height=SHUT_H+'px'};
+  const expand=fitLap;
   const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const timers=[];
   const at=(ms,fn)=>timers.push(setTimeout(fn,ms));
@@ -2726,7 +2812,7 @@ el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('c
     items.forEach(i=>i.classList.add('in'));
     n.textContent=items.length; setClock('9:14');
     lap.classList.add('shown','open','glitch');
-    wrap.style.height='auto';
+    fitLap();
     punch.classList.add('in');
   };
   if(reduce){ opener.classList.add('in'); settle(); return }
@@ -2779,6 +2865,6 @@ el('enter').addEventListener('click',()=>leaveGate(true));
 el('skip').addEventListener('click',()=>leaveGate(false));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T19:31:05Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T19:52:12Z");</script>
 </body>
 </html>
