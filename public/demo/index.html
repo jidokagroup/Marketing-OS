@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T19:52:12Z">
+<meta name="demo-build" content="2026-08-19T20:17:57Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -390,9 +390,9 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .loops .lk{font-size:9px;letter-spacing:.09em;text-transform:uppercase}
 .loops .lv{font-weight:800;color:#FF8095;font-size:12px}
 
-.stage{display:flex;gap:14px;padding:14px;align-items:flex-start}
-.winzone{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px}
-.notizone{width:300px;flex:0 0 300px;display:flex;flex-direction:column;gap:9px}
+.stage{display:flex;gap:13px;padding:12px;align-items:flex-start}
+.winzone{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.notizone{width:296px;flex:0 0 296px;display:flex;flex-direction:column;gap:7px}
 
 .gi{opacity:0;transition:opacity .42s ease,transform .42s cubic-bezier(.2,.8,.3,1)}
 /* Starting offsets first, settled state last: these have equal specificity, so
@@ -404,11 +404,11 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 
 /* notification banners */
 .noti{background:rgba(30,38,60,.92);border:1px solid rgba(255,255,255,.1);border-radius:14px;
-  padding:10px 12px;backdrop-filter:blur(14px);box-shadow:0 10px 26px rgba(0,0,0,.34)}
+  padding:9px 12px;backdrop-filter:blur(14px);box-shadow:0 10px 26px rgba(0,0,0,.34)}
 .noti.alert{border-color:rgba(255,128,149,.42);background:rgba(52,30,42,.92)}
 .noti.overdue{opacity:0}
 .noti.overdue.in{opacity:.72}
-.nh{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.nh{display:flex;align-items:center;gap:7px;margin-bottom:5px}
 .nicon{width:17px;height:17px;border-radius:5px;flex:0 0 17px;display:block}
 .ic-msg{background:linear-gradient(180deg,#5BE271,#2BB84B)}
 .ic-cal{background:linear-gradient(180deg,#FF6B6B,#E23A3A)}
@@ -418,9 +418,9 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .ntime{margin-left:auto;font-size:10px;color:#7C86A4;font-family:"IBM Plex Mono",monospace}
 .ntime.over{color:#FF8095}
 .nb b{display:block;font-size:12.5px;color:#F2F5FC;margin-bottom:3px}
-.nb p{font-size:12px;line-height:1.5;color:#C3CBE0}
+.nb p{font-size:12px;line-height:1.45;color:#C3CBE0}
 .nb .nsub{font-size:11px;color:#8791AE;margin-top:4px}
-.nact{display:flex;gap:7px;margin-top:9px}
+.nact{display:flex;gap:7px;margin-top:8px}
 .nbtn{font-size:11px;font-weight:600;color:#C7CFE6;border:1px solid rgba(255,255,255,.16);
   border-radius:7px;padding:4px 12px}
 .nbtn.pri{background:#3B4270;border-color:#3B4270;color:#fff}
@@ -434,15 +434,15 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .wdots i{width:8px;height:8px;border-radius:50%;background:#FF5F57}
 .wdots i:nth-child(2){background:#FEBC2E} .wdots i:nth-child(3){background:#28C840}
 .wtitle{font-size:10.5px;color:#98A2BC;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mailhead{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.mailhead{padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
 .mrow{display:flex;gap:10px;font-size:12px;padding:2px 0}
 .ml{color:#7C86A4;flex:0 0 54px}
 .mv{color:#DDE3F2;min-width:0}
 .mv.strong{font-weight:700;color:#fff}
-.mailbody{padding:14px}
+.mailbody{padding:12px 14px}
 .mailbody p{font-size:14px;line-height:1.6;color:#EDF0F9}
 .msig{font-size:11px!important;color:#67729A!important;margin-top:12px}
-.editbody{padding:12px 14px}
+.editbody{padding:10px 14px}
 /* Capped: stretched across a full-width laptop the clips read as slabs
    rather than a timeline. */
 .track{display:flex;gap:3px;height:26px;margin-bottom:9px;max-width:430px}
@@ -2769,6 +2769,12 @@ el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('c
   // room for the closing line as well pushed the scale low enough on a short
   // window that the screen stopped being readable, which defeats the point.
   const RESERVE=120;
+  // A hard ceiling as well as a viewport-relative one. innerHeight is not
+  // always the height anyone can actually see: embedded in an iframe it is the
+  // frame's height, which can be far taller than the window around it, so a
+  // purely viewport-relative fit never triggers and the laptop runs off the
+  // screen. Capping the height outright works in both places.
+  const MAX_H=620;
 
   // Measured with the clip released and any fit-scale removed, otherwise the
   // wrapper reports the height it already has rather than the height it needs.
@@ -2791,7 +2797,7 @@ el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('c
   const fitLap=()=>{
     if(window.innerWidth<=900){ lap.style.transform=''; wrap.style.height='auto'; return }
     const natural=naturalHeight();
-    const avail=Math.max(300,window.innerHeight-RESERVE);
+    const avail=Math.max(300,Math.min(window.innerHeight-RESERVE,MAX_H));
     const k=Math.min(1,avail/natural);
     lap.style.transformOrigin='top center';
     lap.style.transform = k<1 ? 'scale('+k.toFixed(4)+')' : '';
@@ -2865,6 +2871,6 @@ el('enter').addEventListener('click',()=>leaveGate(true));
 el('skip').addEventListener('click',()=>leaveGate(false));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T19:52:12Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T20:17:57Z");</script>
 </body>
 </html>
