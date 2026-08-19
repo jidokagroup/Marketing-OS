@@ -337,6 +337,8 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .msg.them{background:var(--surface-2);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
 .msg.you{background:var(--jidoka);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
 .msg.auto{background:var(--convia-soft);color:var(--convia);border:1px dashed var(--convia);font-style:italic}
+.msg.agent{background:var(--jidoka);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg.flag{background:var(--star-soft);color:var(--star);border:1px dashed var(--star);align-self:flex-start}
 .attr{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
 .attr:first-child{border-top:none}
 .ac{display:flex;flex-direction:column;min-width:0;flex:1 1 150px}
@@ -439,6 +441,112 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .crow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .cnote{font-size:11.5px;color:var(--muted)}
 
+.bc.pk .bv{background:var(--convia);box-shadow:0 0 0 2px var(--convia-soft)}
+.pkrow{display:flex;flex-direction:column;gap:5px;margin-top:13px}
+.pk1{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;
+  border-bottom:1px solid var(--line)}
+.pk1:last-child{border-bottom:none}
+.pk1 span{color:var(--muted)} .pk1 b{font-weight:700;font-family:"IBM Plex Mono",monospace;font-size:11px}
+
+/* --- brand brain --- */
+.cavat{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;
+  font-size:11.5px;font-weight:800;color:var(--ink)}
+.row.on{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--jidoka)}
+.dnasec{margin-top:18px}
+.dnalabel{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint);display:block;margin-bottom:9px}
+.dnagrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px 18px}
+.dna{display:flex;flex-direction:column;gap:4px}
+.dnah{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.dnah span{font-size:12px;color:var(--body);text-transform:capitalize}
+.dnah b{font-size:12.5px;font-weight:700}
+.dnain{width:100%;accent-color:var(--jidoka);height:4px;cursor:pointer}
+.fpgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.fp{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+.fpv{font-size:12.5px;margin-top:3px}
+.quirks{display:flex;gap:7px;flex-wrap:wrap}
+.quirk{background:var(--jidoka-soft);border:1px solid #D9D9FB;border-radius:999px;padding:5px 12px}
+.qv{font-size:12px;color:var(--jidoka);font-weight:600;padding:0;margin:0}
+.qv:hover,.qv:focus{background:transparent;box-shadow:none}
+
+/* --- pain callout --- */
+.painbar{background:var(--star-soft);border:1px solid #EBD9AE;border-radius:14px;padding:16px 18px;margin-bottom:16px}
+.peyebrow{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--star);font-weight:700}
+.painbar p{font-size:13.5px;line-height:1.6;color:var(--body);margin-top:7px;max-width:78ch}
+.painbar .pfix{font-weight:650;color:var(--ink)}
+
+/* --- client portal --- */
+.shares{display:flex;flex-direction:column;gap:2px;margin-top:11px}
+.share{display:flex;gap:11px;align-items:flex-start;width:100%;text-align:left;padding:10px 0;
+  border-bottom:1px solid var(--line)}
+.share:last-child{border-bottom:none}
+.sw{width:34px;height:20px;flex:0 0 34px;border-radius:999px;background:var(--line-2);
+  position:relative;transition:background .18s;margin-top:1px}
+.sw i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;
+  transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.share.on .sw{background:var(--convia)}
+.share.on .sw i{transform:translateX(14px)}
+.sinfo{display:flex;flex-direction:column;gap:1px;min-width:0}
+.sinfo b{font-size:13px;font-weight:600}
+.portal{background:var(--surface-2);height:100%;display:flex;flex-direction:column}
+.phead{display:flex;gap:11px;align-items:center;padding:14px 16px;background:var(--surface);
+  border-bottom:1px solid var(--line);flex-wrap:wrap}
+.phead h3{font-size:14px}
+/* .rs is nowrap by default; the portal subtitle is a full sentence. */
+.phead .rs,.sinfo .rs,.pcard .rs{white-space:normal;overflow:visible}
+.phead>div:nth-child(2){flex:1 1 200px;min-width:0}
+.plogo{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;
+  background:var(--convia-soft);color:var(--convia);font-weight:800;font-size:12px}
+.phead .badge{margin-left:auto}
+.pbody{padding:14px 16px;display:flex;flex-direction:column;gap:9px;flex:1}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+.pval{font-size:14.5px;font-weight:700;margin:4px 0 3px;color:var(--ink)}
+
+/* --- inbox --- */
+.ibox{display:grid;grid-template-columns:320px minmax(0,1fr);border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;background:var(--surface);min-height:420px}
+.ilist{border-right:1px solid var(--line);background:var(--surface-2);display:flex;flex-direction:column}
+.ilhead{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;
+  border-bottom:1px solid var(--line);font-size:11.5px;font-weight:700;color:var(--muted)}
+.ilhead .mono{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:500;color:var(--faint)}
+.ithread{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;padding:11px 13px;
+  border-bottom:1px solid var(--line);position:relative;transition:background .14s}
+.ithread:hover{background:var(--surface)}
+.ithread.on{background:var(--surface);box-shadow:inset 3px 0 0 var(--jidoka)}
+.iav{width:32px;height:32px;flex:0 0 32px;border-radius:10px;display:grid;place-items:center;
+  font-size:11px;font-weight:700;background:var(--line);color:var(--muted)}
+.iav.instagram{background:#FCEAF3;color:#C0357E}
+.iav.linkedin{background:#E7F0FA;color:#0A66C2}
+.iav.tiktok{background:#E9EAEC;color:#111}
+.iav.facebook{background:#E8EEFB;color:#1877F2}
+.ibody{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.itop{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.itop b{font-size:13px}
+.itime{font-size:10.5px;color:var(--faint);flex:0 0 auto}
+.isub{font-size:10.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iprev{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ithread.un .itop b{font-weight:800}
+.ithread.un .iprev{color:var(--body);font-weight:500}
+.ipin{width:7px;height:7px;border-radius:50%;background:var(--star);flex:0 0 7px;margin-top:12px}
+.ipane{display:flex;flex-direction:column;min-width:0}
+.iphead{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.iphead h3{font-size:15px}
+.ithreadview{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.mtag{display:block;font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:.08em;
+  text-transform:uppercase;opacity:.7;margin-bottom:4px}
+.ifoot{border-top:1px solid var(--line);padding:12px 16px;background:var(--surface-2)}
+.istat{font-size:12px;color:var(--muted)}
+.ialert{font-size:12.5px;font-weight:600;color:var(--star);margin-bottom:9px}
+.ireply{font-size:13px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;
+  background:var(--surface);margin:0;color:var(--muted)}
+.badge.warn{background:var(--star-soft);color:var(--star)}
+.rules{display:flex;flex-direction:column;gap:0;margin-top:8px}
+.rule{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.rule:last-child{border-bottom:none}
+.rk{font-size:12px;font-weight:700;flex:0 0 128px;color:var(--ink)}
+.rv{font-size:12.5px;color:var(--muted);flex:1}
+
 /* --- three-cycle sparkline --- */
 .spark{display:flex;gap:8px;margin:13px 0 3px}
 .scol{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
@@ -498,6 +606,10 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
   .g4,.g3,.g2{grid-template-columns:repeat(2,1fr)}
   .result{grid-template-columns:repeat(2,1fr)}
   .capgrid{grid-template-columns:1fr}
+  .dnagrid{grid-template-columns:repeat(2,minmax(0,1fr))} .fpgrid{grid-template-columns:1fr}
+  .ibox{grid-template-columns:1fr;min-height:0}
+  .ilist{border-right:none;border-bottom:1px solid var(--line);max-height:250px;overflow:auto}
+  .rk{flex:0 0 100%}.rule{flex-direction:column;gap:3px}
   .cnav{display:none} .cframe{max-width:100%}
   .ctagrid{grid-template-columns:1fr} .cta{padding:18px} .cta h2{font-size:19px}
   .bigcta,.ghostcta{width:100%;justify-content:center}
@@ -661,12 +773,13 @@ const MODULES=[
  {id:'command',short:'Command',label:'Core Command',icon:'command',o:'j',g:'The loop',sub:'The compounding picture across every cycle'},
  {id:'clients',short:'Brand',label:'Clients & Brand Brain',icon:'clients',o:'j',g:'The loop',sub:'Voice DNA — the profile every piece is written from'},
  {id:'content',short:'Studio',label:'Content Studio',icon:'content',o:'j',g:'The loop',sub:'One long-form source becomes a full package'},
- {id:'scheduler',short:'Scheduler',label:'Smart Scheduler',icon:'scheduler',o:'c',addon:1,g:'The loop',sub:'Convia Pro places every asset at its peak window'},
+ {id:'scheduler',short:'Scheduler',label:'Smart Scheduler',icon:'scheduler',o:'c',g:'The loop',sub:'Convia Pro places every asset at its peak window'},
  {id:'intel',short:'Signals',label:'Market Intelligence',icon:'intel',o:'j',g:'The loop',sub:'Competitor execution, gaps, and what to own next'},
  {id:'analytics',short:'Results',label:'Analytics',icon:'analytics',o:'j',g:'The loop',sub:'Your performance against the competitor set'},
- {id:'perf',short:'Learning',label:'Performance Intelligence',icon:'perf',o:'j',addon:1,g:'Add-ons',sub:'Learns what wins, then biases the next cycle'},
- {id:'paid',short:'Paid',label:'Paid Ad Campaigns',icon:'paid',o:'j',addon:1,g:'Add-ons',sub:'Promote only what already proved itself'},
- {id:'inbox',short:'Inbox',label:'Inbox & Comments',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'Comment-to-DM capture, routed to pipeline'},
+ {id:'perf',short:'Learning',label:'Performance Intelligence',icon:'perf',o:'j',addon:1,g:'Add-ons',sub:'The upsell on Market Intelligence — deeper AI analysis of how to perform better'},
+ {id:'paid',short:'Paid',label:'Paid Ads Generator',icon:'paid',o:'j',addon:1,g:'Add-ons',sub:'Turns content that already worked into paid ad assets'},
+ {id:'inbox',short:'Inbox',label:'Combined Inbox',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'Every comment and DM from every platform in one queue'},
+ {id:'moderator',short:'Moderator',label:'Inbox Moderator',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'An agent that answers in your brand voice, and pings you when it should not'},
  {id:'guests',short:'Guests',label:'Guest Portal',icon:'guests',o:'c',addon:1,g:'Add-ons',sub:'Turn guest relationships into network reach'},
  {id:'pipeline',short:'Revenue',label:'Pipeline & Money',icon:'pipeline',o:'j',addon:1,g:'Add-ons',sub:'Revenue traced to the asset that earned it'},
  {id:'pricing',short:'Pricing',label:'Pricing & packaging',icon:'paid',o:'j',g:'Add-ons',sub:'What the platform costs and how add-ons switch on'}];
@@ -741,7 +854,7 @@ const HIGHLIGHTS=[
   icp:['Agencies','PR'],mod:'clients'},
  {fix:'Never guess a posting time again',
   pain:'“Our calendar is a guess we inherited from an intern in 2023.”',
-  icp:['Social teams','Creators'],mod:'scheduler',addon:1,cv:1},
+  icp:['Social teams','Creators'],mod:'scheduler',cv:1},
  {fix:'Monday starts with a ranked brief, not a blank page',
   pain:'“Every week begins with ‘what do we even post about?’”',
   icp:['Social teams','Agencies'],mod:'intel'},
@@ -785,7 +898,7 @@ const INS={
   what:'Where one long-form source becomes a whole campaign — a short-form script, an SEO blog, an email — each written for its own channel rather than copy-pasted between them.',
   how:'The source is mined for hooks and proof points, matched against Voice DNA, then written channel by channel with its own CTA in its own register.',
   up:[['clients','Voice DNA'],['intel','Promoted signals']],down:[['scheduler','Hands off to Convia Pro']]},
- scheduler:{kind:'Convia Pro module',o:'c',addon:1,
+ scheduler:{kind:'Convia Pro module',o:'c',
   what:'Convia Pro owns everything downstream of the finished package: splitting it into platform-native assets, writing the platform captions, building carousels, and publishing.',
   how:'It reads live follower activity per platform and places each asset in that platform’s peak window. Jidoka deliberately does not duplicate this layer.',
   up:[['content','Receives the package']],down:[['analytics','Reports results back'],['inbox','Engagement captured']]},
@@ -817,7 +930,7 @@ const INS={
   what:'Six analysis engines describing how one specific person writes: voice and cadence, beliefs, hook style, story structure, signature phrases, and business facts.',
   how:'Run once against real published work, then re-read on every generation. It is the difference between output that sounds like the client and output that sounds like a language model.',
   up:[['clients','Built from source material']],down:[['content','Read on every generation']]},
- peak:{kind:'Convia Pro capability',title:'Peak-window placement',o:'c',addon:1,
+ peak:{kind:'Convia Pro capability',title:'Peak-window placement',o:'c',
   what:'Placement against live audience behaviour. Instead of a fixed calendar, each asset lands when that platform’s followers are actually active.',
   how:'The same asset can post Tuesday on Instagram and Thursday on LinkedIn if that is where the attention is. By cycle 3 the windows are tuned by two cycles of real data.',
   up:[['scheduler','Runs inside Smart Scheduler']],down:[['analytics','Shows up in results']]},
@@ -906,6 +1019,12 @@ const OUTPUTS=[
 let view='command', cycle=0, step=-1, timer=null, icp='All', out='short', entered=false;
 // Stage the user clicked on the ring. Null means "follow the running step".
 let sel=null;
+// Which platform's activity curve the scheduler graph is showing.
+let plat='All';
+// Selected conversation in the inbox views.
+let thread=0;
+// Selected client in Brand Brain.
+let client=0;
 const el=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const C=()=>CYCLES[cycle];
@@ -1275,6 +1394,132 @@ function carouselUI(){
   </div>`;
 }
 
+/* ===================== inbox ===================== */
+/* One conversation list reused by both inbox add-ons: the Combined Inbox is
+   the queue, and the Moderator is the same queue with an agent working it. */
+const THREADS=[
+ {p:'Instagram',w:'@rachel.builds',name:'Rachel Ordonez',t:'2m',intent:1,unread:1,
+  m:[['them','How would this actually work for a 3-person team?'],
+     ['agent','Honestly — better than for a big one. Fewer approvals to route things through. Want the two-minute version?'],
+     ['them','Yes please']],
+  status:'Answered by the agent · routed to Pipeline'},
+ {p:'LinkedIn',w:'Marcus Delaney · Agency owner',name:'Marcus Delaney',t:'18m',intent:1,unread:1,
+  m:[['them','Do you do this for agencies too, or only in-house teams?'],
+     ['agent','Mostly agencies — the multi-client view exists for exactly that.'],
+     ['them','What would it cost for 12 clients?']],
+  status:'Escalated to you · pricing question',escalate:1,
+  reason:'The agent stopped here — pricing negotiation is on your always-escalate list.'},
+ {p:'TikTok',w:'@sleepnerd',name:'Devan Cole',t:'41m',intent:0,unread:0,
+  m:[['them','MARKERS'],
+     ['auto','Sent the three-panel list · keyword trigger']],
+  status:'Auto-handled · keyword trigger'},
+ {p:'Instagram',w:'@thefitpharmacist',name:'Ana Reyes',t:'1h',intent:0,unread:0,
+  m:[['them','Which episode was the insulin one?'],
+     ['agent','Ep. 41 — the six-year case starts around 31:12. Link is in the bio.']],
+  status:'Answered by the agent'},
+ {p:'Facebook',w:'Longevity Group',name:'Tom Baird',t:'3h',intent:0,unread:0,
+  m:[['them','This is just fearmongering to sell tests.'],
+     ['flag','Held for you — tone is negative and the reply would be a clinical claim.']],
+  status:'Escalated to you · needs a human',escalate:1,
+  reason:'The agent stopped here — answering would mean making a clinical claim, and the tone is hostile.'}];
+
+function inboxUI(t,agent){
+  return `<div class="ibox">
+    <div class="ilist">
+      <div class="ilhead"><span>${THREADS.filter(x=>x.unread).length} unread</span>
+        <span class="mono">${THREADS.length} conversations</span></div>
+      ${THREADS.map((x,i)=>`<button class="ithread${i===thread?' on':''}${x.unread?' un':''}" data-thread="${i}">
+        <span class="iav ${esc(x.p.toLowerCase())}">${esc(x.name.split(' ').map(w=>w[0]).join('').slice(0,2))}</span>
+        <span class="ibody">
+          <span class="itop"><b>${esc(x.name)}</b><span class="itime">${esc(x.t)}</span></span>
+          <span class="isub">${esc(x.p)} · ${esc(x.w)}</span>
+          <span class="iprev">${esc(x.m[x.m.length-1][1])}</span>
+        </span>
+        ${x.escalate?'<i class="ipin" title="Needs you"></i>':''}
+      </button>`).join('')}
+    </div>
+    <div class="ipane">
+      <div class="iphead">
+        <div><h3>${esc(t.name)}</h3><p class="rs">${esc(t.p)} · ${esc(t.w)}</p></div>
+        ${t.intent?'<span class="badge ok">Buying intent</span>':''}
+        ${t.escalate?'<span class="badge warn">Needs you</span>':'<span class="badge nt">Handled</span>'}
+      </div>
+      <div class="ithreadview">${t.m.map(([who,txt])=>
+        `<div class="msg ${who}">${who==='agent'&&agent?'<span class="mtag">Agent · brand voice</span>':''}${esc(txt)}</div>`).join('')}</div>
+      <div class="ifoot">
+        ${t.escalate
+          ? `<div class="ialert">${esc(t.reason||'The agent stopped here and passed it to you.')}</div>
+             ${editable('reply:'+thread,'Write your reply…','ireply')}`
+          : `<div class="istat">${esc(t.status)}</div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ===================== client portal sharing ===================== */
+/* Each row is a switch on the agency side and a card on the client side, so
+   the demo can show the same toggle from both ends. */
+const SHARE=[
+ {id:'sched',label:'What is scheduled next',note:'Upcoming posts, dates and platforms',
+  demo:'7 posts queued · next Tue 2:00 PM',on:1},
+ {id:'results',label:'Performance numbers',note:'Reach, saves and engagement per asset',
+  demo:'52k reach · 1,610 saves this cycle',on:1},
+ {id:'assets',label:'Finished assets',note:'Everything cut from their recording, ready to download',
+  demo:'6 assets from Ep. 41 — download all',on:1},
+ {id:'approvals',label:'Anything waiting on them',note:'Drafts needing a yes before they publish',
+  demo:'1 caption waiting for approval',on:1},
+ {id:'revenue',label:'Attributed revenue',note:'Deals traced back to published work',
+  demo:'$9.4k traced this cycle',on:0},
+ {id:'spend',label:'Ad spend and return',note:'What was spent and what came back',
+  demo:'$1.2k spend · 3.1× return',on:0}];
+const shared=Object.fromEntries(SHARE.map(x=>[x.id,!!x.on]));
+
+/* ===================== brand brain ===================== */
+/* Field names mirror the real Voice DNA schema in lib/schemas/profiles.ts —
+   tone, emotional_profile, fingerprint and quirks — so the demo shows the
+   same shape the platform actually extracts. */
+const BRANDS=[
+ {name:'Marea Wellness',industry:'Health & longevity',stage:'Cycle 3 running',score:94,
+  initials:'MW',tint:'#E2F4F7',
+  summary:'Calm clinical authority. Explains mechanism before conclusion, never oversells, and treats the reader as capable of handling detail.',
+  tone:{professional:88,casual:34,authoritative:91,educational:95,playful:12,technical:74,luxury:28,aggressive:8},
+  emotional:{confidence:86,curiosity:79,urgency:41,empathy:72,authority:90,excitement:33,humor:18,fear:26},
+  fingerprint:{vocabulary:'Clinical but unpacked — every technical term is defined the first time',
+   cadence:'Short declarative sentences, one idea each, occasional single-line paragraph for emphasis',
+   hook_style:'Contradict a common belief, then explain the mechanism behind it',
+   cta_style:'Low pressure and specific — asks for one concrete action, never urgency language',
+   storytelling_style:'One patient, one timeline, one number that changes'},
+  quirks:['“normal is not the same as optimal”','“a population statistic, not a health target”','“years before anything else moves”','“ask where it sits inside the range”']},
+ {name:'Elevator Studio',industry:'Design & brand',stage:'Cycle 2 running',score:91,
+  initials:'ES',tint:'#EFEFFE',
+  summary:'Opinionated and dry. Leads with a strong take, backs it with work, and refuses to hedge.',
+  tone:{professional:71,casual:62,authoritative:84,educational:66,playful:48,technical:44,luxury:69,aggressive:38},
+  emotional:{confidence:92,curiosity:58,urgency:36,empathy:44,authority:81,excitement:57,humor:52,fear:14},
+  fingerprint:{vocabulary:'Plain, anti-jargon, allergic to the word “solutions”',
+   cadence:'Punchy openers, long middle, hard stop',
+   hook_style:'A blunt opinion most of the industry disagrees with',
+   cta_style:'An invitation to disagree in the comments',
+   storytelling_style:'Before and after, with the reasoning in between'},
+  quirks:['“that is a logo, not a brand”','“taste is a skill”','“show the work, not the deck”']},
+ {name:'The Money Mondays',industry:'Finance media',stage:'Cycle 1 running',score:88,
+  initials:'MM',tint:'#E6F7EF',
+  summary:'Fast, numerate, conversational. Assumes the reader is smart but busy.',
+  tone:{professional:64,casual:78,authoritative:72,educational:88,playful:56,technical:61,luxury:22,aggressive:26},
+  emotional:{confidence:80,curiosity:88,urgency:62,empathy:51,authority:70,excitement:66,humor:47,fear:38},
+  fingerprint:{vocabulary:'Numbers first, jargon translated immediately',
+   cadence:'Rapid, list-heavy, frequent line breaks',
+   hook_style:'A number that sounds wrong until explained',
+   cta_style:'“Run your own numbers” — points at a tool or a template',
+   storytelling_style:'One decision, two outcomes, the maths between them'},
+  quirks:['“run the numbers yourself”','“this is not advice, it is arithmetic”','“cost of waiting”']},
+ {name:'Katya Collective',industry:'Creator / lifestyle',stage:'Onboarding',score:0,
+  initials:'KC',tint:'#FCEAF3',
+  summary:'Not built yet — needs 15 or more published pieces before a profile is worth trusting.',
+  tone:{professional:50,casual:50,authoritative:50,educational:50,playful:50,technical:50,luxury:50,aggressive:50},
+  emotional:{confidence:50,curiosity:50,urgency:50,empathy:50,authority:50,excitement:50,humor:50,fear:50},
+  fingerprint:{vocabulary:'—',cadence:'—',hook_style:'—',cta_style:'—',storytelling_style:'—'},
+  quirks:['Awaiting first upload']}];
+
 const V={
  command(){ const c=C(),p=cycle>0?CYCLES[cycle-1]:null;
   // Three cycles at once, so the trajectory is the point rather than a number
@@ -1320,18 +1565,47 @@ const V={
    ${highlights()}
    ${ctaBlock()}`},
 
- clients(){ return `<section class="sec">
-   <div class="sec-h"><h2>Brand Brain — Marea Wellness</h2><span class="badge jd">Jidoka</span></div>
-   <p class="lede">Built once from the client’s real published work, then sharpened every cycle. This is why three writers produce one voice.</p>
-   <div class="grid g4">${[['Voice & cadence',96],['Beliefs & POV',94],['Hook style',93],['Signature phrases',89]].map(([n,v])=>
-     `<button class="card" data-ins="voicedna"><div class="ch"><span class="eyebrow">${esc(n)}</span></div>
-      <div class="kpi tnum">${v}</div><div class="meter" style="margin-top:10px"><i style="width:${v}%"></i></div></button>`).join('')}</div>
-   <div class="card p0"><div class="chead"><h3>All clients</h3><span class="badge nt">4 active</span></div><div class="rows">
-     ${[['Marea Wellness','Health & longevity','Cycle 3 running',94],['Elevator Studio','Design & brand','Cycle 2 running',91],
-        ['The Money Mondays','Finance media','Cycle 1 running',88],['Katya Collective','Creator / lifestyle','Onboarding',0]]
-       .map(([n,h,s,v])=>`<div class="row"><div class="rmain"><div class="rt">${esc(n)}</div><div class="rs">${esc(h)}</div></div>
-        <span class="badge ${s==='Onboarding'?'nt':'ok'}">${esc(s)}</span><div class="rn tnum">${v?v:'—'}</div></div>`).join('')}
-   </div></div></section>`},
+ clients(){
+  const c=BRANDS[client];
+  const bar=(group,keys)=>`<div class="dnagrid">${keys.map(k=>{
+    const v=c[group][k];
+    return `<div class="dna">
+      <div class="dnah"><span>${esc(k.replace(/_/g,' '))}</span><b class="tnum" data-val="${group}.${k}">${v}</b></div>
+      <input class="dnain" type="range" min="0" max="100" value="${v}"
+        data-dna="${esc(client)}|${group}|${k}" aria-label="${esc(k.replace(/_/g,' '))}">
+    </div>`}).join('')}</div>`;
+
+  return `<section class="sec">
+   <div class="sec-h"><h2>Clients &amp; Brand Brain</h2><span class="badge jd">Jidoka</span></div>
+   <p class="lede">Built once from each client’s real published work, then sharpened every cycle. Pick a client to open their profile — every value here is editable, and every piece written for them is scored against it.</p>
+
+   <div class="card p0"><div class="chead"><h3>All clients</h3><span class="badge nt">${BRANDS.length} active</span></div>
+     <div class="rows">${BRANDS.map((b,i)=>`
+       <button class="row${i===client?' on':''}" data-client="${i}">
+         <span class="cavat" style="background:${b.tint}">${esc(b.initials)}</span>
+         <div class="rmain"><div class="rt">${esc(b.name)}</div><div class="rs">${esc(b.industry)}</div></div>
+         <span class="badge ${b.stage==='Onboarding'?'nt':'ok'}">${esc(b.stage)}</span>
+         <div class="rn tnum">${b.score||'—'}</div>${svg('chev','chev')}</button>`).join('')}</div></div>
+
+   <div class="card">
+     <div class="ch"><span class="eyebrow">${esc(c.name)} — Voice DNA</span>
+       <span class="badge jd">${c.score?`Authenticity ${c.score}`:'Not built yet'}</span></div>
+     <p class="lede" style="font-size:12.5px;margin-top:2px">${esc(c.summary)}</p>
+
+     <div class="dnasec"><span class="dnalabel">Tone</span>${bar('tone',['professional','casual','authoritative','educational','playful','technical','luxury','aggressive'])}</div>
+     <div class="dnasec"><span class="dnalabel">Emotional profile</span>${bar('emotional',['confidence','curiosity','urgency','empathy','authority','excitement','humor','fear'])}</div>
+
+     <div class="dnasec"><span class="dnalabel">Fingerprint</span>
+       <div class="fpgrid">${Object.entries(c.fingerprint).map(([k,v])=>`
+         <div class="fp"><span class="eyebrow">${esc(k.replace(/_/g,' '))}</span>
+           ${editable('dna:'+client+':fp:'+k,v,'fpv')}</div>`).join('')}</div></div>
+
+     <div class="dnasec"><span class="dnalabel">Signature language</span>
+       <div class="quirks">${c.quirks.map((q,n)=>
+         `<span class="quirk">${editable('dna:'+client+':q:'+n,q,'qv')}</span>`).join('')}</div>
+       <p class="lede" style="font-size:12px;margin-top:9px">Phrases the client actually uses. Anything written for them is checked against these, and rewritten if it drifts.</p></div>
+   </div>
+   </section>`},
 
  content(){ const c=C();
   const o=OUTPUTS.find(x=>x.id===out)||OUTPUTS[0];
@@ -1393,24 +1667,51 @@ const V={
        <h3 style="font-size:14.5px">Ready for Convia Pro</h3><p class="lede" style="font-size:12.5px;margin-top:6px">${esc(c.r.assets)} assets queued →</p></button>
    </div></section>`},
 
- scheduler(){ const peak=[['12a',18],['2a',12],['4a',9],['6a',26],['8a',44],['10a',68],['12p',54],['2p',88],['4p',62],['6p',71],['8p',49],['10p',31]];
-  const mx=Math.max(...peak.map(p=>p[1]));
+ scheduler(){
+  // Real per-platform curves: the whole argument for this module is that they
+  // do not share a peak, so one blended graph would undercut it.
+  const P={
+    Instagram:[18,12,9,26,44,68,54,88,62,71,49,31],
+    LinkedIn: [6,4,3,22,63,84,58,47,41,26,14,8],
+    TikTok:   [34,26,17,14,22,38,46,55,61,74,91,62],
+    X:        [21,14,10,29,58,72,66,54,49,58,44,30],
+    Facebook: [15,9,7,19,37,52,61,57,50,63,47,28]};
+  const HRS=['12a','2a','4a','6a','8a','10a','12p','2p','4p','6p','8p','10p'];
+  const names=Object.keys(P);
+  const series = plat==='All'
+    ? HRS.map((_,i)=>Math.round(names.reduce((a,n)=>a+P[n][i],0)/names.length))
+    : P[plat];
+  const mx=Math.max(...series);
+  const bestIx=series.indexOf(mx);
+  const best=HRS[bestIx].replace('a',' AM').replace('p',' PM');
+  const peaks=names.map(n=>[n,HRS[P[n].indexOf(Math.max(...P[n]))]]);
+
   return `<section class="sec">
-   <div class="sec-h"><h2>Smart Scheduler</h2><span class="badge cv">Convia Pro</span><span class="badge ad">★ Add-on</span></div>
-   <p class="lede">The layer Convia Pro owns. Jidoka hands over a finished package; Convia splits it into platform-native assets and places each one when that platform’s audience is actually awake.</p>
+   <div class="sec-h"><h2>Smart Scheduler</h2><span class="badge cv">Convia Pro</span></div>
+   <p class="lede">Included in the platform, not an add-on. Jidoka hands over a finished package; Convia splits it into platform-native assets and places each one when that platform’s audience is actually awake.</p>
    <div class="split">
-     <div class="card"><div class="ch"><span class="eyebrow">Follower activity — Instagram</span><i class="dot"></i></div>
-       <div class="bars">${peak.map(([h,v])=>`<div class="bc" title="${esc(h)} — ${v}% active">
-         <i class="bv" style="height:${Math.round(v/mx*100)}%"></i><span class="bl">${esc(h)}</span></div>`).join('')}</div>
-       <p class="lede" style="margin-top:12px;font-size:12.5px">Peak is <strong>2 PM</strong>, so the Reel goes at 2 PM — not whenever a calendar said.</p></div>
-     <button class="card" data-ins="peak"><div class="ch"><span class="eyebrow">Why it matters</span><span class="star">★</span></div>
+     <div class="card">
+       <div class="ch"><span class="eyebrow">Follower activity</span><i class="dot"></i></div>
+       <div class="chips" style="margin:10px 0 4px">
+         ${['All',...names].map(n=>`<button class="chip" data-plat="${esc(n)}" aria-pressed="${n===plat}">${esc(n)}</button>`).join('')}
+       </div>
+       <div class="bars">${series.map((v,i)=>`<div class="bc${i===bestIx?' pk':''}" title="${esc(HRS[i])} — ${v}% active">
+         <i class="bv" style="height:${Math.round(v/mx*100)}%"></i><span class="bl">${esc(HRS[i])}</span></div>`).join('')}</div>
+       <p class="lede" style="margin-top:12px;font-size:12.5px">${plat==='All'
+         ? `Averaged across all ${names.length} platforms, the busiest hour is <strong>${esc(best)}</strong> — but no single platform actually peaks there, which is the point.`
+         : `${esc(plat)} peaks at <strong>${esc(best)}</strong>, so that is when its asset goes out — not whenever a calendar said.`}</p>
+     </div>
+     <button class="card" data-ins="peak"><div class="ch"><span class="eyebrow">Why it matters</span></div>
        <h3 style="font-size:15px;line-height:1.35">Placement beats frequency</h3>
-       <p class="lede" style="margin-top:8px;font-size:13px">The same asset can post Tuesday on Instagram and Thursday on LinkedIn. By cycle 3 these windows are tuned by real data.</p></button>
+       <p class="lede" style="margin-top:8px;font-size:13px">Every platform peaks somewhere different. Posting one calendar across all of them means being early on some and late on the rest.</p>
+       <div class="pkrow">${peaks.map(([n,h])=>`<div class="pk1"><span>${esc(n)}</span><b>${esc(h.replace('a',' AM').replace('p',' PM'))}</b></div>`).join('')}</div>
+     </button>
    </div>
    <div class="card p0"><div class="chead"><h3>Publishing queue</h3><span class="badge cv">Convia Pro</span></div><div class="rows">
      ${[['Reel — “The bottleneck nobody names”','Instagram','Tue 2:00 PM','88%'],
         ['Carousel — Implementation checklist','LinkedIn','Thu 9:00 AM','81%'],
         ['Short — Founder proof clip','TikTok','Tue 7:30 PM','76%'],
+        ['Thread — Three markers','X','Wed 8:00 AM','69%'],
         ['Email — Your process is leaking revenue','Newsletter','Wed 10:00 AM','64%']]
       .map(([t,p,w,pk])=>`<button class="row" data-ins="peak"><div class="rmain"><div class="rt">${esc(t)}</div><div class="rs">${esc(p)}</div></div>
         <span class="badge nt mono">${esc(w)}</span><div class="rn tnum" style="color:var(--convia)">${esc(pk)}</div>${svg('chev','chev')}</button>`).join('')}
@@ -1527,25 +1828,38 @@ const V={
     ['Blog — chaos to campaign loop','Below organic bar — not promoted','nt']])},
 
  inbox(){
-  const th=[{p:'Instagram',w:'@rachel.builds',intent:1,
-    m:[['them','How would this actually work for a 3-person team?'],
-       ['you','Honestly — better than for a big one. Fewer approvals. Want the 2-minute version?'],
-       ['them','Yes please']]},
-   {p:'LinkedIn',w:'Marcus Delaney · Agency owner',intent:1,
-    m:[['them','Do you do this for agencies too, or only in-house teams?'],
-       ['you','Mostly agencies. That is the whole reason the multi-client view exists.']]},
-   {p:'TikTok',w:'@sleepnerd',intent:0,
-    m:[['them','MARKERS'],['auto','Auto-replied with the three-panel list · keyword trigger']]}];
+  const t=THREADS[Math.min(thread,THREADS.length-1)];
   return `<section class="sec">
-   <div class="sec-h"><h2>Inbox &amp; Comments</h2>${own('c',1)}</div>
-   <p class="lede">Every comment and DM across connected platforms in one queue. Keyword triggers fire automatically; anything showing buying intent is routed to the pipeline instead of dying in a notifications tab.</p>
-   <div class="grid g3">${th.map(t=>`
-     <div class="card"><div class="ch"><span class="eyebrow">${esc(t.p)} · ${esc(t.w)}</span>
-       ${t.intent?'<span class="badge ok">Intent</span>':'<span class="badge nt">Auto</span>'}</div>
-       <div class="thread">${t.m.map(([who,txt])=>`
-         <div class="msg ${who}">${esc(txt)}</div>`).join('')}</div></div>`).join('')}</div>
-   <button class="card" data-ins="inbox" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
-     <h3 style="font-size:15px">See where these conversations go →</h3></button></section>`},
+   <div class="sec-h"><h2>Combined Inbox</h2>${own('c',1)}</div>
+   <p class="lede">Every comment and DM from every connected platform in one queue, so nobody has to check six apps to find the person asking how to buy.</p>
+   ${inboxUI(t,false)}
+   <button class="card" data-nav="moderator" style="border-style:dashed"><div class="ch"><span class="eyebrow">Add-on that sits on top</span><span class="star">★</span></div>
+     <h3 style="font-size:15px">Inbox Moderator answers these for you →</h3>
+     <p class="lede" style="font-size:12.5px;margin-top:6px">Same inbox, with an agent drafting replies in your brand voice and escalating what it should not touch.</p></button></section>`},
+
+ moderator(){
+  const t=THREADS[Math.min(thread,THREADS.length-1)];
+  const handled=cycle===0?21:cycle===1?38:52;
+  return `<section class="sec">
+   <div class="sec-h"><h2>Inbox Moderator</h2>${own('c',1)}</div>
+   <p class="lede">A chatbot for every inbox at once, writing in the client’s Brand Brain voice. It answers what it can, and the moment a message needs a human it stops and pings you rather than guessing.</p>
+   <div class="grid g3">
+     <div class="card"><div class="ch"><span class="eyebrow">Answered by the agent</span></div>
+       <div class="kpi tnum">${handled}</div><div class="ksub">this cycle, no human touched them</div></div>
+     <div class="card"><div class="ch"><span class="eyebrow">Escalated to you</span></div>
+       <div class="kpi tnum">${cycle===0?'4':cycle===1?'6':'7'}</div><div class="ksub">pricing, complaints, anything clinical</div></div>
+     <button class="card" data-ins="voicedna"><div class="ch"><span class="eyebrow">Voice match on replies</span></div>
+       <div class="kpi tnum">${C().auth-2}</div><div class="ksub">scored against the Brand Brain</div></button>
+   </div>
+   ${inboxUI(t,true)}
+   <div class="card"><div class="ch"><span class="eyebrow">Escalation rules</span><span class="star">★</span></div>
+     <div class="rules">${[
+       ['Always escalate','Pricing negotiation, refunds, complaints, anything clinical or legal'],
+       ['Answer directly','Format questions, where to find something, links, hours, “what is this?”'],
+       ['Answer then flag','Buying intent — the agent replies, then routes the person to Pipeline'],
+       ['Never send','Anything the Brand Brain scores under 80 for voice match']]
+       .map(([k,v])=>`<div class="rule"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}</div></div>
+   </section>`},
 
  _inboxOld(){ return addon('inbox','Inbox & Comments',
    [['Open conversations',cycle===0?'16':cycle===1?'24':'29'],['Auto-handled',cycle===0?'21':cycle===1?'38':'52'],['Routed to pipeline',C().r.leads]],
@@ -1624,19 +1938,57 @@ const V={
    ['MR','Marcus Reed','Sleep researcher','Recorded · 5 assets cut','3.1k',1],
    ['PN','Priya Nair','Nutrition lead','Scheduled next week','—',0],
    ['—','Open slot','Outreach in progress','Not booked','—',0]];
+
+  // The client-facing side. Everything here is what the guest or client sees
+  // when they open their link — which is the point of the toggles above it.
+  const clientView=`<div class="portal">
+    <div class="phead">
+      <div class="plogo">MW</div>
+      <div><h3>Marea Wellness · client portal</h3>
+        <p class="rs">What Dr. Sana Whitfield sees when she opens her link — live, no login, always current</p></div>
+      <span class="badge ok">Updated 4 min ago</span>
+    </div>
+    <div class="pbody">
+      ${SHARE.filter(x=>shared[x.id]).map(x=>`<div class="pcard">
+        <span class="eyebrow">${esc(x.label)}</span>
+        <div class="pval">${esc(x.demo)}</div>
+        <p class="rs">${esc(x.note)}</p></div>`).join('') ||
+        '<p class="lede">Nothing is shared yet — switch something on above and it appears here instantly.</p>'}
+    </div>
+  </div>`;
+
   return `<section class="sec">
-   <div class="sec-h"><h2>Guest Portal</h2>${own('c',1)}</div>
-   <p class="lede">Every guest is both a source of content and a distribution channel. They record with you, then get a ready-made kit to post to their own audience — so one conversation reaches two networks.</p>
-   <div class="grid g2">${g.map(([in_,n,r,st,reach,ok])=>`
-     <div class="card guest"><div class="gav ${ok?'on':''}">${esc(in_)}</div>
-       <div style="flex:1;min-width:0">
-         <div class="rt">${esc(n)}</div><div class="rs">${esc(r)}</div>
-         <div style="display:flex;align-items:center;gap:8px;margin-top:9px;flex-wrap:wrap">
-           <span class="badge ${ok?'ok':'nt'}">${esc(st)}</span>
-           ${reach!=='—'?`<span class="rs">${esc(reach)} reach via their audience</span>`:''}
-         </div></div></div>`).join('')}</div>
-   <button class="card" data-ins="guests" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
-     <h3 style="font-size:15px">See how guests feed the loop →</h3></button></section>`},
+   <div class="sec-h"><h2>Guest &amp; Client Portal</h2>${own('c',1)}</div>
+   <div class="painbar">
+     <span class="peyebrow">The headache this removes</span>
+     <p>“Can you send me the numbers?” … “Did that post go out?” … “What are we doing next week?”
+     Three emails a week, per client, for information that already exists in the system. Multiply that
+     by twelve clients and it is most of a day, every week, spent copying things into emails.</p>
+     <p class="pfix">Give them a link instead. It never goes stale, and you choose exactly what is on it.</p>
+   </div>
+
+   <div class="split">
+     <div class="card">
+       <div class="ch"><span class="eyebrow">What this client can see</span><span class="star">★</span></div>
+       <p class="lede" style="font-size:12.5px;margin-top:2px">Per client. Switch something on and it appears in their portal immediately — switch it off and it is gone.</p>
+       <div class="shares">${SHARE.map(x=>`
+         <button class="share${shared[x.id]?' on':''}" data-share="${esc(x.id)}" role="switch" aria-checked="${!!shared[x.id]}">
+           <span class="sw"><i></i></span>
+           <span class="sinfo"><b>${esc(x.label)}</b><span class="rs">${esc(x.note)}</span></span>
+         </button>`).join('')}</div>
+     </div>
+     <div class="card" style="padding:0;overflow:hidden">${clientView}</div>
+   </div>
+
+   <div class="card p0"><div class="chead"><h3>Guests &amp; clients</h3><span class="badge cv">Convia Pro</span></div>
+     <div class="rows">${g.map(([in_,n,r,st,reach,ok])=>`
+       <button class="row" data-ins="guests">
+         <span class="gav ${ok?'on':''}" style="width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;font-size:12px;font-weight:700">${esc(in_)}</span>
+         <div class="rmain"><div class="rt">${esc(n)}</div><div class="rs">${esc(r)}</div></div>
+         <span class="badge ${ok?'ok':'nt'}">${esc(st)}</span>
+         ${reach!=='—'?`<span class="rs" style="flex:0 0 auto">${esc(reach)} via their audience</span>`:''}
+         ${svg('chev','chev')}</button>`).join('')}</div></div>
+   </section>`},
 
  _guestsOld(){ return addon('guests','Guest Portal',
    [['Guests booked',cycle===0?'2':cycle===1?'3':'4'],['Kits delivered',cycle===0?'2':cycle===1?'3':'4'],['Reach via guests',cycle===0?'6k':cycle===1?'9k':'12k']],
@@ -1712,6 +2064,10 @@ document.addEventListener('click',e=>{
   const s=e.target.closest('[data-stage]'); if(s){go(s.dataset.stage);return}
   const cy=e.target.closest('[data-cyc]'); if(cy){setCycle(+cy.dataset.cyc);return}
   if(e.target.closest('[data-next]')){ setCycle(Math.min(cycle+1,2)); runLoop(); return }
+  const pl=e.target.closest('[data-plat]'); if(pl){plat=pl.dataset.plat;paint();return}
+  const th2=e.target.closest('[data-thread]'); if(th2){thread=+th2.dataset.thread;paint();return}
+  const sh=e.target.closest('[data-share]'); if(sh){const k=sh.dataset.share;shared[k]=!shared[k];paint();return}
+  const cl=e.target.closest('[data-client]'); if(cl){client=+cl.dataset.client;paint();return}
   const ic=e.target.closest('[data-icp]'); if(ic){icp=ic.dataset.icp;paint();return}
   const ou=e.target.closest('[data-out]'); if(ou){out=ou.dataset.out;slideIx=0;paint();return}
   const st=e.target.closest('[data-slide-step]');
@@ -1724,6 +2080,15 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#more')){el('drawer').classList.add('open');el('scrim').classList.add('open')}
 });
 document.addEventListener('input',e=>{
+  const dna=e.target.closest('[data-dna]');
+  if(dna){
+    const [ci,group,key]=dna.dataset.dna.split('|');
+    BRANDS[+ci][group][key]=+dna.value;
+    const out=document.querySelector(`[data-val="${group}.${key}"]`);
+    if(out) out.textContent=dna.value;
+    flashSaved();
+    return;
+  }
   const ed=e.target.closest('[data-edit]'); if(!ed) return;
   const key=ed.dataset.edit;
   saveEdit(key,ed.innerText);
