@@ -5,7 +5,9 @@ import { useActionState } from "react";
 
 import { type AuthState } from "@/app/(auth)/actions";
 import {
+  EMAIL_CONSENT_LABEL,
   EMAIL_CONSENT_TEXT,
+  SMS_CONSENT_LABEL,
   SMS_CONSENT_TEXT,
 } from "@/lib/marketing-os/consent";
 import { Button } from "@/components/ui/button";
@@ -38,22 +40,34 @@ function ConsentCheckbox({
   id,
   name,
   label,
+  detail,
 }: {
   id: string;
   name: string;
   label: string;
+  detail: string;
 }) {
   return (
-    <div className="flex gap-2.5">
+    <div className="flex items-baseline gap-2.5">
       <input
         id={id}
         name={name}
         type="checkbox"
-        className="mt-0.5 size-4 shrink-0 rounded border-input accent-primary"
+        className="size-4 shrink-0 self-start rounded border-input accent-primary"
       />
-      <Label htmlFor={id} className="text-xs font-normal leading-relaxed">
-        {label}
-      </Label>
+      <div className="min-w-0">
+        <Label htmlFor={id} className="text-sm font-normal">
+          {label}
+        </Label>
+        {/* The full disclosure stays one click away rather than off the page:
+            it is what the consent log records, so it has to be readable here. */}
+        <details className="group mt-0.5">
+          <summary className="cursor-pointer list-none text-xs text-muted-foreground underline decoration-dotted underline-offset-2 group-open:hidden">
+            Read more
+          </summary>
+          <p className="text-xs leading-relaxed text-muted-foreground">{detail}</p>
+        </details>
+      </div>
     </div>
   );
 }
@@ -139,12 +153,14 @@ export function AuthForm({ mode, action, nextPath }: AuthFormProps) {
                 <ConsentCheckbox
                   id="consent_email"
                   name="consent_email"
-                  label={EMAIL_CONSENT_TEXT}
+                  label={EMAIL_CONSENT_LABEL}
+                  detail={EMAIL_CONSENT_TEXT}
                 />
                 <ConsentCheckbox
                   id="consent_sms"
                   name="consent_sms"
-                  label={SMS_CONSENT_TEXT}
+                  label={SMS_CONSENT_LABEL}
+                  detail={SMS_CONSENT_TEXT}
                 />
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   These are optional. Read our{" "}

@@ -5,7 +5,7 @@ import { signup } from "@/app/(auth)/actions";
 import { LOGIN_DISABLED } from "@/lib/auth-mode";
 import { safeNextPath } from "@/lib/safe-redirect";
 
-export const metadata = { title: "Sign up · Jidoka Marketing Team OS" };
+export const metadata = { title: "Join the cohort · Convia Pro x Jidoka" };
 
 export default async function SignupPage({
   searchParams,
