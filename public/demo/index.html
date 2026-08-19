@@ -448,6 +448,92 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .pk1:last-child{border-bottom:none}
 .pk1 span{color:var(--muted)} .pk1 b{font-weight:700;font-family:"IBM Plex Mono",monospace;font-size:11px}
 
+/* --- team picker --- */
+.picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pick{display:flex;flex-direction:column;gap:6px;text-align:left;padding:18px 18px 15px;
+  border:1px solid var(--line);border-radius:15px;background:var(--surface);
+  transition:transform .15s,box-shadow .15s,border-color .15s}
+.pick:hover{transform:translateY(-2px);border-color:var(--jidoka);
+  box-shadow:0 12px 30px rgba(86,89,240,.13)}
+.pickn{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.pickb{font-size:12.5px;line-height:1.55;color:var(--muted);flex:1}
+.picka{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--jidoka);margin-top:6px}
+.picka .chev{stroke:var(--jidoka)}
+
+/* --- performance intelligence --- */
+.upsell{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin-bottom:16px}
+.upl,.upr{border:1px solid var(--line);border-radius:13px;padding:14px 15px;background:var(--surface-2)}
+.upr{border-color:var(--star);background:var(--star-soft)}
+.upl p,.upr p{font-size:12.5px;line-height:1.55;color:var(--body);margin:7px 0 9px}
+.uparrow{align-self:center;font-size:20px;font-weight:800;color:var(--faint)}
+.play{display:grid;grid-template-columns:34px minmax(0,1fr) 150px;gap:13px;align-items:start;
+  padding:13px 16px;border-top:1px solid var(--line)}
+.play:first-child{border-top:none}
+.prank{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--jidoka);
+  color:#fff;font-weight:800;font-size:12px;font-family:"IBM Plex Mono",monospace}
+.pev{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pev span{font-size:10.5px;color:var(--muted);background:var(--surface-2);border:1px solid var(--line);
+  border-radius:999px;padding:3px 9px}
+.pimp{display:flex;flex-direction:column;gap:3px;text-align:right;align-items:flex-end}
+.pimp b{font-size:14px;font-weight:800;color:var(--ok)}
+.conf{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+.conf.high{background:#E6F7EF;color:#0B7A4B}
+.conf.medium{background:var(--star-soft);color:var(--star)}
+
+/* --- analytics dashboard --- */
+.platblock{border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:11px;background:var(--surface-2)}
+.platblock:last-child{margin-bottom:0}
+.platblock.other{opacity:.75;border-style:dashed}
+.pbh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:11px}
+.pbh .rs{white-space:normal;flex:1;min-width:120px}
+.pbh .badge{flex:0 0 auto}
+.pf.tiktok{background:#E9EAEC;color:#111}
+.pf.facebook{background:#E8EEFB;color:#1877F2}
+.pf.email{background:#EAF6EE;color:#0B7A4B}
+.pf.web{background:#EEF0F6;color:#4A5565}
+.pf.meta{background:#E8EEFB;color:#1877F2}
+.pf.google{background:#FDECEA;color:#C5382B}
+.pf.other{background:var(--line);color:var(--muted)}
+.metgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px}
+.met{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;
+  display:flex;flex-direction:column;gap:2px;min-width:0}
+.mk{font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.met b{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.md{font-size:10.5px;font-weight:700}
+.md.up{color:var(--ok)} .md.dn{color:#D2465C}
+
+/* --- market intelligence --- */
+.ctable{display:flex;flex-direction:column}
+.ctrow{display:grid;grid-template-columns:1.7fr .8fr 1.3fr .8fr .9fr;gap:12px;align-items:center;
+  padding:11px 4px;border-bottom:1px solid var(--line);text-align:left;width:100%;font-size:12.5px}
+.ctrow:last-of-type{border-bottom:none}
+.ctrow.chd{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--faint);border-bottom:1px solid var(--line-2)}
+button.ctrow:hover{background:var(--surface-2)}
+.cname{display:flex;flex-direction:column;min-width:0}
+.cname b{font-size:13px} .cname i{font-style:normal;font-size:10.5px;color:var(--faint)}
+.mix{display:flex;height:7px;border-radius:99px;overflow:hidden;background:var(--line);min-width:70px}
+.mix i{display:block;height:100%}
+.mxreel{background:var(--jidoka)} .mxcarousel{background:var(--convia)} .mxstatic{background:var(--line-2)}
+.up{color:var(--ok);font-weight:700} .down{color:#D2465C;font-weight:700} .flat2{color:var(--faint)}
+.srcnote{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.5}
+.trendgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.trend{border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--surface-2)}
+.th{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:7px}
+.trend h4{font-size:13.5px;line-height:1.35}
+.trend .rs{white-space:normal;margin-top:5px;font-size:12px;line-height:1.5}
+.tfoot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:10.5px;color:var(--muted)}
+.meter.sm{flex:1;height:5px}
+.tfoot b{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--body)}
+.posbox{display:flex;flex-direction:column;gap:11px}
+.poshead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pos{display:grid;grid-template-columns:200px minmax(0,1fr);gap:16px;padding:13px 0;border-top:1px solid var(--line)}
+.posk{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.35}
+.posv p{font-size:12.5px;line-height:1.6;color:var(--body);margin-bottom:5px}
+.posv b{color:var(--muted);font-weight:600}
+.psay{color:var(--ok)!important} .pnot{color:var(--faint)!important;text-decoration:line-through}
+
 /* --- brand brain --- */
 .cavat{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:grid;place-items:center;
   font-size:11.5px;font-weight:800;color:var(--ink)}
@@ -593,7 +679,8 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 /* ---------------- responsive ---------------- */
 .mob{display:none}
 .tabbar{display:none}
-@media (max-width:1180px){ .g4{grid-template-columns:repeat(2,1fr)}
+@media (max-width:1400px){ .metgrid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:1180px){ .g4{grid-template-columns:repeat(2,1fr)} .picker{grid-template-columns:repeat(2,minmax(0,1fr))}
   .orbit{grid-template-columns:330px minmax(0,1fr);gap:18px} .ring{max-width:330px} .nl{width:72px}
   .result{grid-template-columns:repeat(3,1fr)} }
 @media (max-width:1000px){ .split{grid-template-columns:1fr} .g3{grid-template-columns:repeat(2,1fr)}
@@ -607,6 +694,13 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
   .result{grid-template-columns:repeat(2,1fr)}
   .capgrid{grid-template-columns:1fr}
   .dnagrid{grid-template-columns:repeat(2,minmax(0,1fr))} .fpgrid{grid-template-columns:1fr}
+  .trendgrid{grid-template-columns:1fr} .pos{grid-template-columns:1fr;gap:6px}
+  .metgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .upsell{grid-template-columns:1fr} .uparrow{justify-self:center}
+  .picker{grid-template-columns:1fr}
+  .play{grid-template-columns:28px minmax(0,1fr)} .pimp{grid-column:2;text-align:left;align-items:flex-start;flex-direction:row;gap:8px;align-items:center}
+  .ctrow{grid-template-columns:1.4fr .9fr .9fr;gap:8px}
+  .ctrow>*:nth-child(3),.ctrow>*:nth-child(5){display:none}
   .ibox{grid-template-columns:1fr;min-height:0}
   .ilist{border-right:none;border-bottom:1px solid var(--line);max-height:250px;overflow:auto}
   .rk{flex:0 0 100%}.rule{flex-direction:column;gap:3px}
@@ -844,41 +938,51 @@ const COHORT={seats:20,monthly:'$297',annual:'$3,267',trialDays:7,
 const COHORT_FOR=['Agencies','Streamers','PR firms','Social media teams','Marketing teams','Podcasters'];
 
 /* ===================== ICP pain points ===================== */
-const ICPS=['All','Agencies','Creators','PR','Social teams'];
+/* The six audiences the cohort is sold to. Each highlight is tagged to the
+   ones it genuinely lands with — four per audience, so choosing a team shows
+   a readable set rather than everything at once. */
+const ICPS=['Agencies','Streamers','PR firms','Social media teams','Marketing teams','Podcasters'];
+const ICP_BLURB={
+ 'Agencies':'One operating picture across every client roster, and a voice that holds whoever is writing.',
+ 'Streamers':'Hours of live footage become a week of short form instead of a VOD nobody re-watches.',
+ 'PR firms':'Earned coverage and founder interviews turn into owned assets, with the market read attached.',
+ 'Social media teams':'Peak-window placement and a ranked brief on Monday instead of a blank calendar.',
+ 'Marketing teams':'Campaigns that benchmark against the market, not against your own last post.',
+ 'Podcasters':'Every episode ships as clips, carousels, a blog, a newsletter and chapters — from one upload.'};
 const HIGHLIGHTS=[
  {fix:'One source becomes a month of content',
   pain:'“A great 47-minute interview turns into one clip and then dies in a folder.”',
-  icp:['Agencies','Creators'],mod:'content'},
+  icp:['Agencies','Streamers','Podcasters'],mod:'content'},
  {fix:'The voice holds, whoever is writing',
   pain:'“Three writers, three voices — and the client notices before we do.”',
-  icp:['Agencies','PR'],mod:'clients'},
+  icp:['Agencies','PR firms'],mod:'clients'},
  {fix:'Never guess a posting time again',
   pain:'“Our calendar is a guess we inherited from an intern in 2023.”',
-  icp:['Social teams','Creators'],mod:'scheduler',cv:1},
+  icp:['Social media teams','Streamers','Podcasters'],mod:'scheduler',cv:1},
  {fix:'Monday starts with a ranked brief, not a blank page',
   pain:'“Every week begins with ‘what do we even post about?’”',
-  icp:['Social teams','Agencies'],mod:'intel'},
+  icp:['Social media teams','Marketing teams'],mod:'intel'},
  {fix:'Buying intent stops dying in the comments',
   pain:'“Someone asked how to buy — three weeks ago, in a reply we never saw.”',
-  icp:['Social teams','Creators'],mod:'inbox',addon:1,cv:1},
+  icp:['Social media teams','Streamers','Podcasters'],mod:'inbox',addon:1,cv:1},
  {fix:'Answer “what did the retainer get us?” in one screen',
   pain:'“Every month we rebuild the same report by hand to justify the fee.”',
-  icp:['Agencies','PR'],mod:'pipeline',addon:1},
+  icp:['Agencies','PR firms'],mod:'pipeline',addon:1},
  {fix:'The system remembers what worked',
   pain:'“We keep re-running things that already flopped, because nothing tracks it.”',
-  icp:['Agencies','Creators'],mod:'perf',addon:1},
+  icp:['Streamers','Marketing teams'],mod:'perf',addon:1},
  {fix:'Every guest becomes a second audience',
   pain:'“We book great guests, then never ask them to share the episode.”',
-  icp:['Creators','PR'],mod:'guests',addon:1,cv:1},
+  icp:['Podcasters','PR firms'],mod:'guests',addon:1,cv:1},
  {fix:'Twelve clients, one operating picture',
   pain:'“Twelve clients means twelve logins and twelve spreadsheets.”',
-  icp:['Agencies','Social teams'],mod:'command'},
+  icp:['Agencies','Social media teams'],mod:'command'},
  {fix:'Spend follows evidence, not a hunch',
   pain:'“We boost posts and hope. Nobody can say which spend actually returned.”',
-  icp:['Agencies','PR'],mod:'paid',addon:1},
+  icp:['Marketing teams','Agencies'],mod:'paid',addon:1},
  {fix:'Prove you beat the competitive set, not just last month',
   pain:'“Our numbers went up — but did we actually gain ground on anyone?”',
-  icp:['PR','Agencies'],mod:'analytics'}];
+  icp:['PR firms','Marketing teams'],mod:'analytics'}];
 
 /* ===================== inspector copy ===================== */
 const INS={
@@ -1016,7 +1120,7 @@ const OUTPUTS=[
 ];
 
 /* ===================== state ===================== */
-let view='command', cycle=0, step=-1, timer=null, icp='All', out='short', entered=false;
+let view='command', cycle=0, step=-1, timer=null, icp=null, out='short', entered=false;
 // Stage the user clicked on the ring. Null means "follow the running step".
 let sel=null;
 // Which platform's activity curve the scheduler graph is showing.
@@ -1025,6 +1129,10 @@ let plat='All';
 let thread=0;
 // Selected client in Brand Brain.
 let client=0;
+// Which Market Intelligence pane is open.
+let intelTab='competitors';
+// Analytics pane and the social platform filter inside it.
+let anaTab='social', soc='All';
 const el=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const C=()=>CYCLES[cycle];
@@ -1171,19 +1279,35 @@ const num=s=>{const m=/([\d.]+)\s*([km]?)/i.exec(String(s).replace(/[$,]/g,''));
 
 /* ===================== views ===================== */
 function highlights(){
-  const list=HIGHLIGHTS.filter(h=>icp==='All'||h.icp.includes(icp));
-  return `<section class="sec">
+  if(!icp) return `<section class="sec">
     <div class="sec-h"><h2>The problems this actually solves</h2></div>
-    <p class="lede">Pick the kind of team you run — every card below is a complaint we hear constantly, and the part of the system that answers it.</p>
-    <div class="chips">${ICPS.map(t=>`<button class="chip" data-icp="${esc(t)}" aria-pressed="${icp===t}">${esc(t)}</button>`).join('')}</div>
-    <div class="grid g3">${list.map(h=>`
+    <p class="lede">Rather than list all of them, tell us what kind of team you run and we will show the four complaints we hear most from people like you.</p>
+    <div class="picker">${ICPS.map(t=>`
+      <button class="pick" data-icp="${esc(t)}">
+        <span class="pickn">${esc(t)}</span>
+        <span class="pickb">${esc(ICP_BLURB[t])}</span>
+        <span class="picka">Show these problems ${svg('chev','chev')}</span>
+      </button>`).join('')}</div>
+  </section>`;
+
+  const list=HIGHLIGHTS.filter(h=>h.icp.includes(icp));
+  return `<section class="sec">
+    <div class="sec-h"><h2>What we hear from ${esc(icp.toLowerCase())}</h2>
+      <span class="badge nt">${list.length} of ${HIGHLIGHTS.length}</span></div>
+    <p class="lede">${esc(ICP_BLURB[icp])}</p>
+    <div class="chips">
+      <button class="chip" data-icp="">‹ Different team</button>
+      ${ICPS.filter(t=>t!==icp).map(t=>`<button class="chip" data-icp="${esc(t)}">${esc(t)}</button>`).join('')}
+    </div>
+    <div class="grid g2">${list.map(h=>`
       <button class="card hl" data-nav="${h.mod}">
-        <div class="ch"><span class="eyebrow">${esc(h.icp.join(' · '))}</span>
+        <div class="ch"><span class="eyebrow">${esc(M[h.mod].label)}</span>
           ${h.cv?'<i class="dot"></i>':''}${h.addon?'<span class="star">★</span>':''}</div>
         <p class="pain">${esc(h.pain)}</p>
         <div class="fix">${esc(h.fix)}</div>
-        <div class="foot"><span class="tag">${esc(M[h.mod].label)}</span>${svg('chev','chev')}</div>
-      </button>`).join('')}</div></section>`;
+        <div class="foot"><span class="tag">Open ${esc(M[h.mod].short)}</span>${svg('chev','chev')}</div>
+      </button>`).join('')}</div>
+  </section>`;
 }
 
 /**
@@ -1520,6 +1644,130 @@ const BRANDS=[
   fingerprint:{vocabulary:'—',cadence:'—',hook_style:'—',cta_style:'—',storytelling_style:'—'},
   quirks:['Awaiting first upload']}];
 
+/* ===================== market intelligence ===================== */
+/* Mirrors what lib/ai/competitor-scan.ts actually returns: per-competitor
+   execution, trend tracking, positioning guidance and ranked signals. */
+const COMPETITORS=[
+ {name:'@thelongevitylab',platform:'Instagram · API',cadence:'5.1×/wk',eng:'3.4%',dir:1,delta:'0.6pt',
+  mix:[['reel',62],['carousel',24],['static',14]]},
+ {name:'Peak Health Co',platform:'YouTube · API',cadence:'2.0×/wk',eng:'5.1%',dir:1,delta:'1.2pt',
+  mix:[['reel',71],['carousel',0],['static',29]]},
+ {name:'@drmetabolic',platform:'Instagram · API',cadence:'4.2×/wk',eng:'2.8%',dir:0,delta:'0.1pt',
+  mix:[['reel',48],['carousel',37],['static',15]]},
+ {name:'@biomarkerbrief',platform:'TikTok · estimated',cadence:'6.4×/wk',eng:'4.0%',dir:-1,delta:'0.9pt',
+  mix:[['reel',94],['carousel',0],['static',6]]},
+ {name:'Optimal Range',platform:'Instagram · API',cadence:'3.0×/wk',eng:'2.1%',dir:-1,delta:'0.4pt',
+  mix:[['reel',35],['carousel',18],['static',47]]}];
+
+const TRENDS=[
+ {topic:'“Normal vs optimal” lab ranges',heat:'Rising',window:'last 30d',sat:34,
+  detail:'Volume up sharply, but almost all of it is outcome claims. Nobody is showing the reasoning, which is the opening.'},
+ {topic:'Fasting insulin explainers',heat:'Rising',window:'last 30d',sat:41,
+  detail:'Three competitors started covering this in the last fortnight. Still shallow — no one has published a request script.'},
+ {topic:'Continuous glucose monitors',heat:'Cooling',window:'last 90d',sat:88,
+  detail:'Saturated and declining. Engagement per post has halved since the spring. Not worth entering.'},
+ {topic:'Save-heavy checklist carousels',heat:'Rising',window:'last 14d',sat:22,
+  detail:'Format, not topic. Saves per post run 2.3× static in this niche and almost nobody in the set is using it.'},
+ {topic:'“Ask your doctor for…” scripts',heat:'Emerging',window:'last 7d',sat:11,
+  detail:'Comments keep asking for exact wording. No competitor has published one.'},
+ {topic:'Longevity supplement stacks',heat:'Cooling',window:'last 90d',sat:79,
+  detail:'Crowded and increasingly regulated. High risk, falling return.'}];
+
+const POSITIONING=[
+ {move:'Own the mechanism, not the outcome',
+  because:'Every account in the set posts results. None of them explain why the result happens, and comments keep asking.',
+  say:'Here is why the number moves before anything gets flagged — and what to do with that.',
+  avoid:'Optimise your biomarkers and transform your health.'},
+ {move:'Lead with the patient timeline',
+  because:'Proof-led hooks outperformed education hooks on saves in both cycles measured.',
+  say:'Six years of normal glucose. Her insulin was climbing the whole time.',
+  avoid:'Did you know most bloodwork is misleading?'},
+ {move:'Publish the request script nobody has',
+  because:'“Ask your doctor for…” is emerging at 11% saturation with unanswered comment demand.',
+  say:'Bring these three, word for word, to your next appointment.',
+  avoid:'Talk to your doctor about advanced testing.'},
+ {move:'Stay out of supplements and CGMs',
+  because:'Both are saturated above 78% and cooling. Entering costs reach and invites regulatory friction.',
+  say:'—',
+  avoid:'Our recommended longevity stack.'}];
+
+const SIGNALS=[
+ ['Nobody explains implementation, only outcomes','Content gap','High','promoted to cycle 2 brief'],
+ ['Proof-led hooks outperforming education posts','Hook pattern','High','promoted to cycle 2 brief'],
+ ['Comments repeatedly ask “what do I fix first?”','Comment theme','High','promoted to cycle 3 brief'],
+ ['Save-heavy checklist format is under-used','Format','Medium','used in cycle 2 carousels'],
+ ['Competitors post 4.2×/wk, 68% short-form','Execution','Medium','no action — cadence is not the gap'],
+ ['Two competitors added consulting offers','Offer tracker','Medium','watching'],
+ ['CGM content cooling across the set','Trend','Low','avoided deliberately']];
+
+/* ===================== analytics ===================== */
+/* Metric names are the ones each platform actually exposes, so the demo does
+   not promise a number the API cannot return. */
+const SOCIAL=[
+ {name:'Instagram',live:1,note:'Graph API · business account',
+  metrics:[['Reach','21.4k','+18%'],['Engagement rate','4.1%','+0.6pt'],['Saves','1,610','+36%'],
+   ['Shares','412','+22%'],['Profile visits','2,180','+14%'],['Follows from posts','268','+31%']]},
+ {name:'TikTok',live:1,note:'Display API · organic only',
+  metrics:[['Video views','18.2k','+27%'],['Avg watch time','11.4s','+1.2s'],['Completion rate','38%','+4pt'],
+   ['Shares','604','+40%'],['Comments','233','+12%'],['New followers','341','+19%']]},
+ {name:'LinkedIn',live:1,note:'Marketing API · company page',
+  metrics:[['Impressions','9.8k','+11%'],['Engagement rate','5.4%','+0.9pt'],['Reactions','486','+16%'],
+   ['Comments','97','+8%'],['Reposts','54','+25%'],['Page followers','+143','+9%']]},
+ {name:'X',live:1,note:'API v2 · basic tier',
+  metrics:[['Impressions','7.1k','+6%'],['Engagement rate','2.2%','-0.3pt'],['Bookmarks','188','+14%'],
+   ['Reposts','76','+4%'],['Replies','41','-6%'],['Profile clicks','512','+7%']]},
+ {name:'Facebook',live:0,note:'Pages API · connect to enable',
+  metrics:[['Reach','—',''],['Engagement rate','—',''],['Shares','—',''],
+   ['Link clicks','—',''],['Page likes','—',''],['Video views','—','']]}];
+
+const EMAILM=[['Sent','3,200',''],['Open rate','42.6%','+3.1pt'],['Click-through','7.8%','+1.4pt'],
+ ['Click-to-open','18.3%','+1.9pt'],['Bounce rate','1.2%','-0.4pt'],['Unsubscribes','0.3%','-0.1pt']];
+const EMAIL_CAMPAIGNS=[
+ ['The six years nobody got back','3,200','44.1%','8.9%','0.9%'],
+ ['Three markers most panels bury','3,140','41.8%','7.2%','1.1%'],
+ ['What “normal” is actually measuring','3,090','39.4%','6.1%','2.4%']];
+
+const WEBM=[['Sessions','12.4k','+22%'],['New users','8.9k','+26%'],['Avg engagement','2m 41s','+18s'],
+ ['Conversion rate','3.2%','+0.5pt'],['Bookings started','214','+29%'],['Organic clicks','5.6k','+31%']];
+const WEB_SOURCES=[['Organic search','5,610','3.8%'],['Instagram','2,940','4.1%'],
+ ['Newsletter','1,880','6.2%'],['LinkedIn','1,120','2.9%'],['Direct','870','2.1%']];
+
+const PAID=[
+ {name:'Meta',key:'meta',live:1,note:'Ads API · Instagram + Facebook',
+  metrics:[['Spend','$620',''],['ROAS','3.4×','+0.6'],['CPC','$0.84','-12%'],['CTR','2.1%','+0.3pt']]},
+ {name:'Google',key:'google',live:1,note:'Google Ads API · search + YouTube',
+  metrics:[['Spend','$410',''],['ROAS','2.8×','+0.2'],['CPC','$1.42','-6%'],['Conv. rate','4.4%','+0.7pt']]},
+ {name:'TikTok',key:'tiktok',live:1,note:'TikTok Ads API',
+  metrics:[['Spend','$180',''],['ROAS','2.1×','-0.3'],['CPM','$4.60','+8%'],['CTR','1.4%','-0.2pt']]},
+ {name:'LinkedIn',key:'linkedin',live:0,note:'Ads API · available on request'}];
+
+/* ===================== performance intelligence ===================== */
+/* The upsell layer: Market Intelligence reports the market, this ranks what
+   to do about it against what has already worked for this client. */
+const PLAYS=[
+ {do:'Open the next three posts with a patient timeline, not a claim',
+  why:'Proof-led hooks beat education hooks on saves in both measured cycles, and the gap widened in cycle 2.',
+  evidence:['+36% saves, cycle 2','holds across 11 posts','matches Brand Brain hook_style'],
+  lift:'+18–24% saves',conf:'High'},
+ {do:'Publish the “ask your doctor for” request script as a carousel',
+  why:'Emerging topic at 11% saturation with repeated comment demand, in the format this audience saves most.',
+  evidence:['0 competitors have published one','carousels 2.3× static on saves','34 comments asking'],
+  lift:'+1 high-intent lead',conf:'Medium'},
+ {do:'Move the LinkedIn slot to Thursday 9 AM',
+  why:'LinkedIn peaks four hours earlier than Instagram and is currently sharing Instagram’s window.',
+  evidence:['84% activity at 10a','current slot lands at 47%','13 posts of data'],
+  lift:'+9–14% impressions',conf:'High'},
+ {do:'Cut the newsletter from weekly to fortnightly',
+  why:'Open rate is strong but unsubscribes tick up in the second send each fortnight; the list is being over-mailed.',
+  evidence:['0.3% unsub, rising','42.6% open','3 cycles of data'],
+  lift:'protects 42% open rate',conf:'Medium'}];
+
+const STOP=[
+ ['Long-form cuts over 10 minutes','Tested in cycle 2 and it flopped. The data says do not retry it in this niche.'],
+ ['CGM and supplement topics','Saturated above 78% and cooling. Entering costs reach and invites regulatory friction.'],
+ ['Posting five times a week','Cadence is not the constraint here — the top competitor by engagement posts twice a week.'],
+ ['Boosting posts that are already peaking','Paid should follow proof, not chase a post that has already spent its reach.']];
+
 const V={
  command(){ const c=C(),p=cycle>0?CYCLES[cycle-1]:null;
   // Three cycles at once, so the trajectory is the point rather than a number
@@ -1717,52 +1965,137 @@ const V={
         <span class="badge nt mono">${esc(w)}</span><div class="rn tnum" style="color:var(--convia)">${esc(pk)}</div>${svg('chev','chev')}</button>`).join('')}
    </div></div></section>`},
 
- intel(){ return `<section class="sec">
-   <div class="sec-h"><h2>Market Intelligence</h2><span class="badge jd">Jidoka</span></div>
-   <p class="lede">Where a platform exposes real data it is used directly; where it does not, the gap is reported rather than guessed at.</p>
-   <div class="grid g3">
-     ${[['Opportunity score',cycle===0?'68':cycle===1?'74':'77'],['Content gaps found',cycle===0?'4':cycle===1?'5':'5'],['Accounts scanned',cycle===0?'12':cycle===1?'14':'16']]
-      .map(([k,v])=>`<div class="card"><div class="ch"><span class="eyebrow">${esc(k)}</span></div><div class="kpi tnum">${esc(v)}</div>
-        <div class="ksub"><span class="delta ${cycle?'':'flat'}">${cycle?'up this cycle':'baseline'}</span></div></div>`).join('')}
-   </div>
-   <div class="card p0"><div class="chead"><h3>Signals this cycle</h3><span class="badge jd">Jidoka</span></div><div class="rows">
-     ${[['Nobody explains implementation, only outcomes','Content gap','High'],
-        ['Proof-led hooks outperforming education posts','Hook pattern','High'],
-        ['Save-heavy checklist format is under-used','Format','Medium'],
-        ['Comments repeatedly ask “what do I fix first?”','Comment theme','High'],
-        ['Competitors post 4.2×/wk, 68% short-form','Execution','Medium']]
-      .map(([t,ty,w])=>`<button class="row" data-ins="intel"><div class="rmain"><div class="rt">${esc(t)}</div><div class="rs">${esc(ty)}</div></div>
+ intel(){
+  const sc=cycle===0?68:cycle===1?74:77, gaps=cycle===0?4:5, acc=cycle===0?12:cycle===1?14:16;
+  const tab=intelTab;
+  const panes={
+    competitors:`<div class="ctable">
+      <div class="ctrow chd"><span>Account</span><span>Cadence</span><span>Format mix</span><span>Median eng.</span><span>Trend</span></div>
+      ${COMPETITORS.map(c=>`<button class="ctrow" data-ins="intel">
+        <span class="cname"><b>${esc(c.name)}</b><i>${esc(c.platform)}</i></span>
+        <span>${esc(c.cadence)}</span>
+        <span class="mix">${c.mix.map(([lbl,pct])=>`<i style="width:${pct}%" class="mx${lbl}" title="${esc(lbl)} ${pct}%"></i>`).join('')}</span>
+        <span class="tnum">${esc(c.eng)}</span>
+        <span class="${c.dir>0?'up':c.dir<0?'down':'flat2'}">${c.dir>0?'▲':c.dir<0?'▼':'—'} ${esc(c.delta)}</span>
+      </button>`).join('')}
+      <p class="srcnote">Instagram and YouTube figures come from the platform APIs. TikTok has no commercial API, so those rows are web-research estimates and are labelled as such in the report.</p>
+    </div>`,
+    trends:`<div class="trendgrid">${TRENDS.map(t=>`
+      <div class="trend">
+        <div class="th"><span class="badge ${t.heat==='Rising'?'ok':t.heat==='Cooling'?'nt':'warn'}">${esc(t.heat)}</span>
+          <span class="mono rs">${esc(t.window)}</span></div>
+        <h4>${esc(t.topic)}</h4>
+        <p class="rs">${esc(t.detail)}</p>
+        <div class="tfoot"><span>Saturation</span><div class="meter sm"><i style="width:${t.sat}%"></i></div><b>${t.sat}%</b></div>
+      </div>`).join('')}</div>`,
+    positioning:`<div class="posbox">
+      <div class="poshead"><span class="eyebrow">AI positioning layer</span>
+        <span class="badge jd">Written from the scan + this client’s Brand Brain</span></div>
+      ${POSITIONING.map(p=>`<div class="pos">
+        <div class="posk">${esc(p.move)}</div>
+        <div class="posv">
+          <p class="pbecause"><b>Because:</b> ${esc(p.because)}</p>
+          <p class="psay"><b>Say it like this:</b> “${esc(p.say)}”</p>
+          <p class="pnot"><b>Not:</b> “${esc(p.avoid)}”</p>
+        </div>
+      </div>`).join('')}
+      <button class="mini2" data-nav="content" style="margin-top:12px">Promote this into the next package →</button>
+    </div>`,
+    signals:`<div class="rows">
+      ${SIGNALS.map(([t,ty,w,act])=>`<button class="row" data-ins="intel">
+        <div class="rmain"><div class="rt">${esc(t)}</div><div class="rs">${esc(ty)} · ${esc(act)}</div></div>
         <span class="badge ${w==='High'?'ok':'nt'}">${esc(w)}</span>${svg('chev','chev')}</button>`).join('')}
-   </div></div>
-   <button class="card" data-nav="content" style="border-style:dashed">
-     <div class="ch"><span class="eyebrow">Next step</span></div>
-     <h3 style="font-size:15px">Promote a signal into the next package →</h3>
-     <p class="lede" style="margin-top:7px;font-size:13px">This is stage 8 becoming stage 1. It is exactly how cycle 2 avoided the blank page.</p></button></section>`},
+    </div>`};
 
- analytics(){ const f=[['Carousel',cycle===0?36:cycle===1?48:53,41],['Short video',cycle===0?61:cycle===1?68:72,66],
-   ['Static post',31,38],['Long-form',cycle===0?34:cycle===1?29:31,35]];
   return `<section class="sec">
-   <div class="sec-h"><h2>You vs the competitive set</h2><span class="badge jd">Jidoka</span></div>
-   <p class="lede">Your results beside competitor medians from the same window, split by format — the version of the number that tells you what to change.</p>
-   <div class="card">
-     <div style="display:flex;gap:16px;margin-bottom:16px;font-size:12px;color:var(--muted)">
+   <div class="sec-h"><h2>Market Intelligence</h2><span class="badge jd">Jidoka</span></div>
+   <p class="lede">A standing read on the competitive set: who is executing what, which topics are moving, and how to position against them. Where a platform exposes real data it is used directly; where it does not, the gap is reported rather than guessed at.</p>
+   <div class="grid g4">
+     ${[['Opportunity score',sc,'higher means more open ground'],
+        ['Content gaps found',gaps,'topics nobody is covering well'],
+        ['Accounts scanned',acc,'across 4 platforms'],
+        ['Signals promoted',cycle===0?2:cycle===1?3:3,'you chose these at stage 07']]
+      .map(([k,v,note])=>`<div class="card"><div class="ch"><span class="eyebrow">${esc(k)}</span></div><div class="kpi tnum">${esc(String(v))}</div>
+        <div class="ksub"><span class="delta ${cycle?'':'flat'}">${cycle?'up this cycle':'baseline'}</span> ${esc(note)}</div></div>`).join('')}
+   </div>
+   <div class="chips">${[['competitors','Competitor analysis'],['trends','Trend tracker'],['positioning','AI positioning'],['signals','All signals']]
+     .map(([id,l])=>`<button class="chip" data-intel="${id}" aria-pressed="${id===tab}">${esc(l)}</button>`).join('')}</div>
+   <div class="card p0"><div class="chead"><h3>${esc({competitors:'Competitor execution',trends:'What is moving in this niche',positioning:'How to position against them',signals:'Signals this cycle'}[tab])}</h3>
+     <span class="badge jd">Jidoka</span></div>
+     <div style="padding:15px">${panes[tab]}</div></div>
+   <button class="card" data-nav="perf" style="border-style:dashed">
+     <div class="ch"><span class="eyebrow">Goes deeper</span><span class="star">★</span></div>
+     <h3 style="font-size:15px">Performance Intelligence turns this into instructions →</h3>
+     <p class="lede" style="margin-top:7px;font-size:13px">Market Intelligence tells you what the market is doing. The add-on tells you what to change, ranked, based on what has already worked for this client.</p></button></section>`},
+
+ analytics(){
+  const t=anaTab;
+  const pane={
+    social:`<div class="chips" style="margin-bottom:13px">${['All',...SOCIAL.map(x=>x.name)]
+        .map(n=>`<button class="chip" data-soc="${esc(n)}" aria-pressed="${n===soc}">${esc(n)}</button>`).join('')}</div>
+      ${(soc==='All'?SOCIAL:SOCIAL.filter(x=>x.name===soc)).map(x=>`
+        <div class="platblock">
+          <div class="pbh"><span class="pf ${esc(x.name.toLowerCase())}">${esc(x.name)}</span>
+            <span class="rs">${esc(x.note)}</span>
+            <span class="badge ${x.live?'ok':'nt'}">${x.live?'Connected':'Connect to enable'}</span></div>
+          <div class="metgrid">${x.metrics.map(([k,v,d])=>`<div class="met">
+            <span class="mk">${esc(k)}</span><b class="tnum">${esc(v)}</b>
+            ${d?`<span class="md ${d.startsWith('-')?'dn':'up'}">${esc(d)}</span>`:''}</div>`).join('')}</div>
+        </div>`).join('')}`,
+    email:`<div class="platblock">
+      <div class="pbh"><span class="pf email">Email</span>
+        <span class="rs">Instantly · connected via API key</span><span class="badge ok">Connected</span></div>
+      <div class="metgrid">${EMAILM.map(([k,v,d])=>`<div class="met"><span class="mk">${esc(k)}</span>
+        <b class="tnum">${esc(v)}</b>${d?`<span class="md ${d.startsWith('-')?'dn':'up'}">${esc(d)}</span>`:''}</div>`).join('')}</div>
+      <div class="rows" style="margin-top:11px">${EMAIL_CAMPAIGNS.map(([n,sent,open,click,b])=>`
+        <div class="row"><div class="rmain"><div class="rt">${esc(n)}</div><div class="rs">${esc(sent)} sent</div></div>
+          <span class="badge nt mono">${esc(open)} open</span><span class="badge nt mono">${esc(click)} click</span>
+          <span class="badge ${parseFloat(b)>2?'warn':'ok'}">${esc(b)} bounce</span></div>`).join('')}</div>
+      <p class="srcnote">Also supports Mailchimp, Klaviyo, Beehiiv and Resend. Anything with a public API — ask and it gets added.</p></div>`,
+    web:`<div class="platblock">
+      <div class="pbh"><span class="pf web">Website</span>
+        <span class="rs">GA4 + Search Console</span><span class="badge ok">Connected</span></div>
+      <div class="metgrid">${WEBM.map(([k,v,d])=>`<div class="met"><span class="mk">${esc(k)}</span>
+        <b class="tnum">${esc(v)}</b>${d?`<span class="md ${d.startsWith('-')?'dn':'up'}">${esc(d)}</span>`:''}</div>`).join('')}</div>
+      <div class="rows" style="margin-top:11px">${WEB_SOURCES.map(([src,sess,conv])=>`
+        <div class="row"><div class="rmain"><div class="rt">${esc(src)}</div><div class="rs">${esc(sess)} sessions</div></div>
+          <div class="rn tnum">${esc(conv)}</div></div>`).join('')}</div>
+      <p class="srcnote">Traffic is matched against publishing times, so a spike lines up with the asset that caused it rather than sitting in a separate tab.</p></div>`,
+    paid:`${PAID.map(x=>`<div class="platblock">
+        <div class="pbh"><span class="pf ${esc(x.key)}">${esc(x.name)}</span>
+          <span class="rs">${esc(x.note)}</span>
+          <span class="badge ${x.live?'ok':'nt'}">${x.live?'Connected':'Available'}</span></div>
+        ${x.live?`<div class="metgrid">${x.metrics.map(([k,v,d])=>`<div class="met"><span class="mk">${esc(k)}</span>
+          <b class="tnum">${esc(v)}</b>${d?`<span class="md ${d.startsWith('-')?'dn':'up'}">${esc(d)}</span>`:''}</div>`).join('')}</div>`:''}
+      </div>`).join('')}
+      <div class="platblock other"><div class="pbh"><span class="pf other">Other</span>
+        <span class="rs">Pinterest, Reddit, Snap, programmatic — anything with an ads API</span>
+        <span class="badge nt">Upon request</span></div></div>`,
+    vs:`<div style="display:flex;gap:16px;margin-bottom:16px;font-size:12px;color:var(--muted)">
        <span style="display:flex;align-items:center;gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:var(--jidoka)"></i>Marea Wellness</span>
        <span style="display:flex;align-items:center;gap:6px"><i style="width:9px;height:9px;border-radius:3px;background:var(--line-2)"></i>Competitor median</span></div>
      <div style="display:flex;flex-direction:column;gap:15px">
-       ${f.map(([n,you,them])=>`<div>
+       ${[['Carousel',cycle===0?36:cycle===1?48:53,41],['Short video',cycle===0?61:cycle===1?68:72,66],
+          ['Static post',31,38],['Long-form',cycle===0?34:cycle===1?29:31,35]]
+        .map(([n,you,them])=>`<div>
          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
            <strong>${esc(n)}</strong><span class="tnum" style="font-weight:700;color:${you>them?'var(--ok)':'var(--crit)'}">${you>them?'+':''}${you-them}</span></div>
          <div class="meter" style="height:9px"><i style="width:${you}%"></i></div>
          <div class="meter" style="height:4px;margin-top:4px"><i style="width:${them}%;background:var(--line-2)"></i></div></div>`).join('')}
-     </div></div>
-   <div class="grid g3">
-     <button class="card" data-ins="perf"><div class="ch"><span class="eyebrow">Winning hook</span><span class="star">★</span></div>
-       <h3 style="font-size:15px">Proof-led</h3><p class="lede" style="font-size:12.5px;margin-top:6px">Consistently ahead of education hooks on saves.</p></button>
-     <button class="card" data-ins="peak"><div class="ch"><span class="eyebrow">Best window</span><i class="dot"></i></div>
-       <h3 style="font-size:15px">Tue 2:00 PM</h3><p class="lede" style="font-size:12.5px;margin-top:6px">Placed by Convia Pro against live activity.</p></button>
-     <button class="card" data-nav="intel"><div class="ch"><span class="eyebrow">Feeds</span></div>
-       <h3 style="font-size:15px">Back into Intelligence →</h3><p class="lede" style="font-size:12.5px;margin-top:6px">Results become next cycle’s benchmark.</p></button>
-   </div></section>`},
+     </div>`};
+
+  return `<section class="sec">
+   <div class="sec-h"><h2>Analytics</h2><span class="badge jd">Jidoka</span></div>
+   <p class="lede">Every marketing effort in one place — social, email, website and paid — so nobody has to keep six tabs open to answer one question.</p>
+   <div class="grid g4">
+     ${[['Total reach',C().r.reach,'across all platforms'],['Attributed revenue',C().r.rev,'traced to published work'],
+        ['Blended CAC','$126','paid + organic'],['Sources connected','9','of 14 available']]
+      .map(([k,v,n])=>`<div class="card"><div class="ch"><span class="eyebrow">${esc(k)}</span></div>
+        <div class="kpi tnum">${esc(v)}</div><div class="ksub">${esc(n)}</div></div>`).join('')}</div>
+   <div class="chips">${[['social','Social platforms'],['email','Email campaigns'],['web','Website'],['paid','Paid ads'],['vs','vs competitors']]
+     .map(([id,l])=>`<button class="chip" data-ana="${id}" aria-pressed="${id===t}">${esc(l)}</button>`).join('')}</div>
+   <div class="card">${pane[t]}</div>
+   </section>`},
 
  perf(){
   const log=[['Cycle 1','Proof-led hooks edge out education','Observed','Applied in cycle 2',1],
@@ -1771,17 +2104,42 @@ const V={
    ['Cycle 3','Implementation detail lifts saves','Observed','Writing into Brand Brain',1]];
   return `<section class="sec">
    <div class="sec-h"><h2>Performance Intelligence</h2>${own('j',1)}</div>
-   <p class="lede">The system's memory. Every published asset is scored against its result, and anything clearing the confidence bar is written back into the Brand Brain — which is why cycle 3 starts ahead of cycle 1.</p>
-   <div class="tl">${log.map(([c,t,st,ap,ok])=>`
-     <div class="tli ${ok?'':'no'}">
-       <div class="tld"></div>
-       <div class="tlb">
-         <div class="tlh"><span class="badge nt">${esc(c)}</span><span class="badge ${ok?'ok':'nt'}">${esc(st)}</span></div>
-         <div class="rt" style="white-space:normal;margin-top:7px">${esc(t)}</div>
-         <div class="rs" style="white-space:normal;margin-top:3px">${esc(ap)}</div>
-       </div></div>`).join('')}</div>
-   <button class="card" data-ins="perf" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
-     <h3 style="font-size:15px">See what feeds Performance Intelligence →</h3></button></section>`},
+   <div class="upsell">
+     <div class="upl"><span class="eyebrow">Market Intelligence</span>
+       <p>Tells you what the market is doing — who is publishing what, which topics are moving, where the gaps are.</p>
+       <button class="mini2" data-nav="intel">Open it →</button></div>
+     <div class="uparrow">+</div>
+     <div class="upr"><span class="eyebrow">Performance Intelligence <span class="star">★</span></span>
+       <p>Takes that, crosses it with what has already worked <em>for this client</em>, and returns ranked instructions with expected effect.</p></div>
+   </div>
+
+   <div class="card p0"><div class="chead"><h3>Do these next, in this order</h3><span class="badge ad">★ Add-on</span></div>
+     <div style="padding:6px 0">${PLAYS.map((p,n)=>`
+       <div class="play">
+         <div class="prank">${n+1}</div>
+         <div class="pmain">
+           <div class="rt" style="white-space:normal">${esc(p.do)}</div>
+           <p class="rs" style="white-space:normal;margin-top:4px">${esc(p.why)}</p>
+           <div class="pev">${p.evidence.map(e=>`<span>${esc(e)}</span>`).join('')}</div>
+         </div>
+         <div class="pimp"><span class="mk">Expected</span><b>${esc(p.lift)}</b>
+           <span class="conf ${p.conf.toLowerCase()}">${esc(p.conf)} confidence</span></div>
+       </div>`).join('')}</div></div>
+
+   <div class="split">
+     <div class="card"><div class="ch"><span class="eyebrow">Stop doing</span></div>
+       <div class="rows" style="margin-top:6px">${STOP.map(([t,w])=>`
+         <div class="row"><div class="rmain"><div class="rt">${esc(t)}</div><div class="rs" style="white-space:normal">${esc(w)}</div></div></div>`).join('')}</div></div>
+     <div class="card"><div class="ch"><span class="eyebrow">What the system has learned</span></div>
+       <div class="tl" style="margin-top:8px">${log.map(([c,t,st,ap,ok])=>`
+         <div class="tli ${ok?'':'no'}">
+           <div class="tld"></div>
+           <div class="tlb">
+             <div class="tlh"><span class="badge nt">${esc(c)}</span><span class="badge ${ok?'ok':'nt'}">${esc(st)}</span></div>
+             <div class="rt" style="white-space:normal;margin-top:7px">${esc(t)}</div>
+             <div class="rs" style="white-space:normal;margin-top:3px">${esc(ap)}</div>
+           </div></div>`).join('')}</div></div>
+   </div></section>`},
 
  _perfOld(){ return addon('perf','Performance Intelligence',
    [['Patterns learned',cycle===0?'3':cycle===1?'7':'9'],['Saves lift vs baseline',cycle===0?'—':cycle===1?'+22%':'+31%'],['Cycles remembered',String(cycle+1)]],
@@ -2068,7 +2426,10 @@ document.addEventListener('click',e=>{
   const th2=e.target.closest('[data-thread]'); if(th2){thread=+th2.dataset.thread;paint();return}
   const sh=e.target.closest('[data-share]'); if(sh){const k=sh.dataset.share;shared[k]=!shared[k];paint();return}
   const cl=e.target.closest('[data-client]'); if(cl){client=+cl.dataset.client;paint();return}
-  const ic=e.target.closest('[data-icp]'); if(ic){icp=ic.dataset.icp;paint();return}
+  const it=e.target.closest('[data-intel]'); if(it){intelTab=it.dataset.intel;paint();return}
+  const an=e.target.closest('[data-ana]'); if(an){anaTab=an.dataset.ana;paint();return}
+  const sc2=e.target.closest('[data-soc]'); if(sc2){soc=sc2.dataset.soc;paint();return}
+  const ic=e.target.closest('[data-icp]'); if(ic){icp=ic.dataset.icp||null;paint();return}
   const ou=e.target.closest('[data-out]'); if(ou){out=ou.dataset.out;slideIx=0;paint();return}
   const st=e.target.closest('[data-slide-step]');
   if(st){ const n=CAROUSEL().length;
