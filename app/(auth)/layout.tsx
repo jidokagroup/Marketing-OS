@@ -10,7 +10,7 @@ export default function AuthLayout({
       <div className="mb-8 text-center">
         <Link href="/" className="inline-flex flex-col items-center gap-1">
           <span className="text-2xl font-bold tracking-tight">
-            Jidoka Marketing Team OS
+            Welcome to Convia Pro x Jidoka
           </span>
         </Link>
       </div>

@@ -10,6 +10,15 @@
 
 export const BRAND_NAME = "Convia Pro × Jidoka Group";
 
+/**
+ * The checkbox itself carries a short label; the full disclosure sits behind a
+ * "Read more" beside it. What gets written to `marketing_os_consent_events` is
+ * always the FULL text below, never the short label — the record has to be the
+ * whole thing that was available to read, not the summary.
+ */
+export const EMAIL_CONSENT_LABEL = "Yes, email me";
+export const SMS_CONSENT_LABEL = "Yes, text me";
+
 export const EMAIL_CONSENT_TEXT =
   `Yes, email me about ${BRAND_NAME} — product updates, cohort news and ` +
   "onboarding. You can unsubscribe from any email at any time.";

@@ -10,6 +10,19 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# The demo is a static HTML file, so a browser will happily keep serving an
+# old copy after a deploy. Force a revalidation on every load: the file is
+# ~180KB and changes often, and a stale demo is worse than a re-fetch.
+[[headers]]
+  for = "/demo"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/demo/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 [[headers]]
   for = "/*"
   [headers.values]
