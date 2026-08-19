@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T20:42:04Z">
+<meta name="demo-build" content="2026-08-19T20:56:02Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -81,7 +81,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .lockup{display:flex;align-items:center;gap:11px}
 .mark{width:24px;height:24px;border-radius:7px;flex:0 0 24px;display:grid;place-items:center}
 .mark.c{background:#0D1726}
-.mark.j{background:linear-gradient(140deg,#6E70F5,#4245DA)}
+/* The Jidoka mark is a two-tone filled logo, so the chip goes light and
+   the stroke-based icon styling is switched off for it. */
+.mark.j{background:#EDF1F8}
+.mark.j svg{stroke:none;width:17px;height:17px}
 .mark svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.2}
 .cross{color:#fff;font-size:12px;opacity:.85}
 
@@ -971,7 +974,7 @@ button.ctrow:hover{background:var(--surface-2)}
       <div class="lockup">
         <div class="mark c"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cvg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CFF2EC"/><stop offset="55%" stop-color="#4FC3CE"/><stop offset="1" stop-color="#1B8FA6"/></linearGradient></defs><path d="M16.8 6.1a7.4 7.4 0 1 0 1.9 9.2l2.1 3.3-4.1-.7a7.4 7.4 0 0 1-9.4-2" fill="none" stroke="url(#cvg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.4" cy="11.6" r="1.05" fill="#CFF2EC"/><circle cx="12.6" cy="11.6" r="1.05" fill="#7FD8DC"/><circle cx="15.8" cy="11.6" r="1.05" fill="#3FB4C4"/></svg></div>
         <span class="cross">×</span>
-        <div class="mark j"><svg viewBox="0 0 24 24"><path d="M5 5h14v9a5 5 0 0 1-5 5H5z"/><path d="M9 9h6"/></svg></div>
+        <div class="mark j"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.7 2.2 1.3 21.8h5.6L14.5 7.0z" fill="#2F6FBF"/><path d="M13.3 5.3 22.7 21.8H8.6l2.7-4.7h4.9l-2.7-4.6z" fill="#333A46"/></svg></div>
       </div>
     </div>
     <nav class="navwrap" id="rail-nav"></nav>
@@ -995,7 +998,7 @@ button.ctrow:hover{background:var(--surface-2)}
   <div class="brand"><div class="lockup">
     <div class="mark c"><svg viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cvg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#CFF2EC"/><stop offset="55%" stop-color="#4FC3CE"/><stop offset="1" stop-color="#1B8FA6"/></linearGradient></defs><path d="M16.8 6.1a7.4 7.4 0 1 0 1.9 9.2l2.1 3.3-4.1-.7a7.4 7.4 0 0 1-9.4-2" fill="none" stroke="url(#cvg2)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9.4" cy="11.6" r="1.05" fill="#CFF2EC"/><circle cx="12.6" cy="11.6" r="1.05" fill="#7FD8DC"/><circle cx="15.8" cy="11.6" r="1.05" fill="#3FB4C4"/></svg></div>
     <span class="cross">×</span>
-    <div class="mark j"><svg viewBox="0 0 24 24"><path d="M5 5h14v9a5 5 0 0 1-5 5H5z"/><path d="M9 9h6"/></svg></div>
+    <div class="mark j"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11.7 2.2 1.3 21.8h5.6L14.5 7.0z" fill="#2F6FBF"/><path d="M13.3 5.3 22.7 21.8H8.6l2.7-4.7h4.9l-2.7-4.6z" fill="#333A46"/></svg></div>
   </div></div>
   <nav class="navwrap" id="drawer-nav"></nav>
   <div class="railfoot">
@@ -2909,6 +2912,6 @@ el('enter').addEventListener('click',()=>leaveGate(true));
 el('skip').addEventListener('click',()=>leaveGate(false));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T20:42:04Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T20:56:02Z");</script>
 </body>
 </html>
