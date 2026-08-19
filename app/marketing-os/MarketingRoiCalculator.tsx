@@ -120,10 +120,12 @@ export default function MarketingRoiCalculator() {
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {/* /join rather than /signup: it creates the account and carries
-                straight on to checkout, instead of ending on the dashboard. */}
-            <Link href="/join" className="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 py-3 text-[0.74rem] font-semibold leading-none text-[#0F172B] transition hover:bg-[#F4F3FF] sm:text-xs">
+                straight on to checkout, instead of ending on the dashboard.
+                A plain anchor, not next/link — /join is a Route Handler that
+                redirects to Stripe, and the client router cannot follow that. */}
+            <a href="/join" className="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 py-3 text-[0.74rem] font-semibold leading-none text-[#0F172B] transition hover:bg-[#F4F3FF] sm:text-xs">
               Join the cohort
-            </Link>
+            </a>
             <Link href="https://cal.read.ai/crystal-8mhiy/30-min" className="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-md border border-white/18 px-3 py-3 text-[0.74rem] font-semibold leading-none text-white transition hover:bg-white/10 sm:text-xs">
               Schedule a Call
             </Link>

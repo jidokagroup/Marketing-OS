@@ -285,12 +285,21 @@ function CtaButton({
   const className =
     "inline-flex min-h-11 items-center justify-center rounded-md border px-5 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5659F0]";
 
-  // Anything that leaves this page — the booking calendar, and the demo,
-  // which is a standalone static document rather than an app route — opens in
-  // its own tab so a visitor mid-way down the page does not lose their place.
-  if (/^https?:/.test(href) || href === DEMO_URL) {
+  // Neither destination is a page, so next/link must not handle them: it
+  // navigates by fetching an RSC payload, and /join is a Route Handler that
+  // answers with a redirect to Stripe while /demo is a static document. Both
+  // need a real browser navigation.
+  if (/^https?:/.test(href) || href === DEMO_URL || href === JOIN_URL) {
+    // Off-site reading material opens in its own tab; checkout stays in this
+    // one, because sending someone to pay in a background tab loses them.
+    const newTab = href !== JOIN_URL;
     return (
-      <a href={href} target="_blank" rel="noreferrer" className={className} style={styles}>
+      <a
+        href={href}
+        {...(newTab ? { target: "_blank", rel: "noreferrer" } : {})}
+        className={className}
+        style={styles}
+      >
         {children}
       </a>
     );
@@ -332,12 +341,12 @@ function MarketingLandingNav() {
             Pricing
           </a>
         </div>
-        <Link
+        <a
           href={JOIN_URL}
           className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#101828] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#242D40]"
         >
           Join the cohort
-        </Link>
+        </a>
       </nav>
     </header>
   );
@@ -355,9 +364,9 @@ function MarketingLandingFooter() {
           <Link href="/terms" className="transition hover:text-[#101828]">
             Terms
           </Link>
-          <Link href={JOIN_URL} className="transition hover:text-[#101828]">
+          <a href={JOIN_URL} className="transition hover:text-[#101828]">
             Join the cohort
-          </Link>
+          </a>
           <a
             href={DEMO_URL}
             target="_blank"
