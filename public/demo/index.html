@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T20:17:57Z">
+<meta name="demo-build" content="2026-08-19T20:42:04Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -297,7 +297,7 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
   transition:opacity .55s ease,transform .55s ease;pointer-events:none}
 .app.arrive{animation:arrive .7s cubic-bezier(.2,.7,.3,1) both}
 @keyframes arrive{from{opacity:0;transform:translateY(10px) scale(.995)}to{opacity:1;transform:none}}
-.gatein{max-width:1120px;width:100%;padding-bottom:96px}
+.gatein{max-width:1120px;width:100%;padding-bottom:44px}
 .ghead{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .gate .eyebrow{color:#6C78A0}
 .loops{display:flex;align-items:center;gap:8px;background:#141E33;border:1px solid #26324D;
@@ -2799,14 +2799,49 @@ el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('c
     const natural=naturalHeight();
     const avail=Math.max(300,Math.min(window.innerHeight-RESERVE,MAX_H));
     const k=Math.min(1,avail/natural);
-    lap.style.transformOrigin='top center';
+    // Scale about the hinge, not the top. The wrapper pins the laptop to its
+    // bottom edge so the lid can swing on it, so scaling from the top pushed
+    // the box above the wrapper and the overflow clip cut the screen's head
+    // off — which is what "it's cut off" was.
+    lap.style.transformOrigin='bottom center';
     lap.style.transform = k<1 ? 'scale('+k.toFixed(4)+')' : '';
     wrap.style.height = Math.round(natural*k)+'px';
   };
-  window.addEventListener('resize',()=>{ if(lap.classList.contains('open')) fitLap() });
+  window.addEventListener('resize',()=>{
+    if(!lap.classList.contains('open')) return;
+    punch.classList.contains('in') ? fitWithPunch() : fitLap();
+  });
 
   const collapse=()=>{lap.style.transform='';wrap.style.height=SHUT_H+'px'};
   const expand=fitLap;
+
+  /**
+   * The final frame has to hold the laptop AND the closing line at once.
+   *
+   * Scrolling the button into view instead pushed the top of the laptop off
+   * the screen, which is what "it's cut off" actually was. So the laptop is
+   * shrunk until the whole thing fits, and scrolling is a last resort for
+   * windows too short for even the floor scale.
+   */
+  const FLOOR=0.55;
+  const fitWithPunch=()=>{
+    if(window.innerWidth<=900) return;   // the phone scrolls, as phones do
+    const natural=naturalHeight();
+    // Everything in the gate that is not the laptop — the line, the button,
+    // the padding — measured rather than estimated. Guessing it left the
+    // laptop a hair too tall and the page still scrolled.
+    const gate=el('gate');
+    const other=gate.scrollHeight-wrap.getBoundingClientRect().height;
+    const room=window.innerHeight-other;
+    const k=Math.max(FLOOR,Math.min(1,Math.min(room,MAX_H)/natural));
+    // Scale about the hinge, not the top. The wrapper pins the laptop to its
+    // bottom edge so the lid can swing on it, so scaling from the top pushed
+    // the box above the wrapper and the overflow clip cut the screen's head
+    // off — which is what "it's cut off" was.
+    lap.style.transformOrigin='bottom center';
+    lap.style.transform = k<1 ? 'scale('+k.toFixed(4)+')' : '';
+    wrap.style.height = Math.round(natural*k)+'px';
+  };
   const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const timers=[];
   const at=(ms,fn)=>timers.push(setTimeout(fn,ms));
@@ -2845,12 +2880,15 @@ el('theme-1').addEventListener('click',theme); el('theme-2').addEventListener('c
   at(after+900,()=>lap.classList.add('glitch'));
   at(after+1750,()=>{
     punch.classList.add('in');
-    // Scroll to the button, not the block, and only once it has finished
-    // moving — the line settles into place after the reveal, so scrolling to
-    // its pre-animation position leaves the button under the fold.
     setTimeout(()=>{
+      fitWithPunch();
+      // Only scroll if it genuinely does not fit, and never past the top of
+      // the laptop — a visible button is not worth a decapitated screen.
       const cta=el('enter');
-      try{cta.scrollIntoView({behavior:'smooth',block:'end'})}catch(e){cta.scrollIntoView(false)}
+      const r=cta.getBoundingClientRect();
+      if(r.bottom>window.innerHeight){
+        try{cta.scrollIntoView({behavior:'smooth',block:'end'})}catch(e){cta.scrollIntoView(false)}
+      }
     },700);
   });
 })();
@@ -2871,6 +2909,6 @@ el('enter').addEventListener('click',()=>leaveGate(true));
 el('skip').addEventListener('click',()=>leaveGate(false));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T20:17:57Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T20:42:04Z");</script>
 </body>
 </html>
