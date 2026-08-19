@@ -40,6 +40,10 @@ const description =
   "Interactive demo: one recording becomes every asset, across three " +
   "compounding cycles.";
 
+// A visible build stamp, so "is this the new one?" has an answer that does not
+// depend on spotting a copy change.
+const build = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+
 writeFileSync(
   out,
   `<!doctype html>
@@ -49,6 +53,7 @@ writeFileSync(
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="${description}">
 <meta name="robots" content="index, follow">
+<meta name="demo-build" content="${build}">
 <meta property="og:type" content="website">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
@@ -59,9 +64,10 @@ body{margin:0}img,svg,video{max-width:100%}</style>
 </head>
 <body>
 ${body.trim()}
+<script>console.info("Convia Pro \u00d7 Jidoka demo \u2014 build ${build}");</script>
 </body>
 </html>
 `,
 );
 
-console.log(`wrote ${out} — ${head.length} head tags lifted, ${body.length} bytes of body`);
+console.log(`wrote ${out} — build ${build}, ${head.length} head tags lifted, ${body.length} bytes of body`);
