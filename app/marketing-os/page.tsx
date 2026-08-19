@@ -23,8 +23,13 @@ const INK = "#101828";
 const MUTED = "#4A5565";
 const PAPER = "#F8FAFC";
 const CALENDAR_URL = "https://cal.read.ai/crystal-8mhiy/30-min";
-/** Shareable interactive demo. Published as an Artifact, updated in place. */
-const DEMO_URL = "https://claude.ai/code/artifact/727f0395-008f-4dd3-98bc-f80508ea0847";
+/**
+ * The interactive demo, served from this site's own public/demo/index.html.
+ * It is deliberately not the Artifact URL: that is a claude.ai page, so a
+ * visitor without a Claude account gets bounced to Claude's sign-up instead
+ * of the demo.
+ */
+const DEMO_URL = "/demo";
 /** Opens Stripe Checkout, signing the visitor up first when needed. */
 const JOIN_URL = "/join";
 /** Founder pricing is capped at this many seats (agency brief, p2). */
@@ -281,9 +286,10 @@ function CtaButton({
   const className =
     "inline-flex min-h-11 items-center justify-center rounded-md border px-5 py-3 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5659F0]";
 
-  // Off-site destinations (the demo, the booking calendar) open in their own
-  // tab so a visitor mid-way down the page does not lose their place.
-  if (/^https?:/.test(href)) {
+  // Anything that leaves this page — the booking calendar, and the demo,
+  // which is a standalone static document rather than an app route — opens in
+  // its own tab so a visitor mid-way down the page does not lose their place.
+  if (/^https?:/.test(href) || href === DEMO_URL) {
     return (
       <a href={href} target="_blank" rel="noreferrer" className={className} style={styles}>
         {children}
@@ -350,9 +356,17 @@ function MarketingLandingFooter() {
           <Link href="/terms" className="transition hover:text-[#101828]">
             Terms
           </Link>
-          <Link href="/signup" className="transition hover:text-[#101828]">
-            Start Free Trial
+          <Link href={JOIN_URL} className="transition hover:text-[#101828]">
+            Join the cohort
           </Link>
+          <a
+            href={DEMO_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-[#101828]"
+          >
+            View demo
+          </a>
         </div>
       </div>
     </footer>
@@ -613,7 +627,8 @@ export default function MarketingOsPage() {
                   Convia Pro turns long form content into cohesive multi-channel campaigns. Jidoka sharpens the competitive edge through market intelligence, social signals, and integrated workflow layers. Together, they turn every signal into your next campaign.
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <CtaButton href="#workflow">See How It Works</CtaButton>
+                  <CtaButton href={JOIN_URL}>Join the cohort</CtaButton>
+                  <CtaButton href={DEMO_URL} variant="dark">View the interactive demo</CtaButton>
                   <CtaButton href={CALENDAR_URL} variant="secondary">
                     Schedule a Call
                   </CtaButton>

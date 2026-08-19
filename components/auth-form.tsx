@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { type AuthState } from "@/app/(auth)/actions";
+import {
+  EMAIL_CONSENT_TEXT,
+  SMS_CONSENT_TEXT,
+} from "@/lib/marketing-os/consent";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,6 +29,35 @@ interface AuthFormProps {
   nextPath?: string | null;
 }
 
+/**
+ * Opt-in checkbox. Unticked by default and never required — pre-ticking a
+ * marketing consent box is not consent, and making it a condition of signup
+ * is not allowed for SMS.
+ */
+function ConsentCheckbox({
+  id,
+  name,
+  label,
+}: {
+  id: string;
+  name: string;
+  label: string;
+}) {
+  return (
+    <div className="flex gap-2.5">
+      <input
+        id={id}
+        name={name}
+        type="checkbox"
+        className="mt-0.5 size-4 shrink-0 rounded border-input accent-primary"
+      />
+      <Label htmlFor={id} className="text-xs font-normal leading-relaxed">
+        {label}
+      </Label>
+    </div>
+  );
+}
+
 export function AuthForm({ mode, action, nextPath }: AuthFormProps) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
@@ -41,7 +74,7 @@ export function AuthForm({ mode, action, nextPath }: AuthFormProps) {
         <CardTitle>{isSignup ? "Create your account" : "Welcome back"}</CardTitle>
         <CardDescription>
           {isSignup
-            ? "Start building client-specific writing agents."
+            ? "Takes a minute. You can verify your email after checkout."
             : "Sign in to your agency workspace."}
         </CardDescription>
       </CardHeader>
@@ -86,6 +119,47 @@ export function AuthForm({ mode, action, nextPath }: AuthFormProps) {
               placeholder="••••••••"
             />
           </div>
+          {isSignup && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  autoComplete="tel"
+                  placeholder="+1 555 123 4567"
+                />
+              </div>
+              <fieldset className="space-y-3 rounded-lg border p-3">
+                <legend className="px-1 text-xs font-medium text-muted-foreground">
+                  How we can reach you
+                </legend>
+                <ConsentCheckbox
+                  id="consent_email"
+                  name="consent_email"
+                  label={EMAIL_CONSENT_TEXT}
+                />
+                <ConsentCheckbox
+                  id="consent_sms"
+                  name="consent_sms"
+                  label={SMS_CONSENT_TEXT}
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  These are optional. Read our{" "}
+                  <Link href="/privacy" className="underline">
+                    privacy policy
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/terms" className="underline">
+                    terms
+                  </Link>
+                  .
+                </p>
+              </fieldset>
+            </>
+          )}
           {state?.error && (
             <p className="text-sm text-destructive" role="alert">
               {state.error}
