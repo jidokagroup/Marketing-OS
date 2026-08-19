@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T17:41:24Z">
+<meta name="demo-build" content="2026-08-19T18:02:11Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -397,7 +397,7 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .attr:first-child{border-top:none}
 .ac{display:flex;flex-direction:column;min-width:0;flex:1 1 150px}
 .al{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-.av{font-size:12.5px;font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.av{font-size:12.5px;font-weight:600;margin-top:2px;line-height:1.4}
 .arw{color:var(--faint);flex:0 0 auto}
 .card.guest{display:flex;gap:13px;align-items:flex-start}
 .gav{width:42px;height:42px;border-radius:12px;flex:0 0 42px;display:grid;place-items:center;
@@ -459,10 +459,10 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .lnks{display:flex;flex-direction:column;gap:7px;margin-top:5px}
 .lnk{display:flex;gap:9px;align-items:center;flex-wrap:wrap;background:var(--surface-2);
   border:1px solid var(--line);border-radius:10px;padding:8px 11px}
-.lk{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;
+.lkind{font-size:9px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;
   border-radius:5px;background:var(--jidoka-soft);color:var(--jidoka);flex:0 0 auto}
-.lk.podcast{background:var(--convia-soft);color:var(--convia)}
-.lk.cta{background:#E6F7EF;color:#0B7A4B}
+.lkind.podcast{background:var(--convia-soft);color:var(--convia)}
+.lkind.cta{background:#E6F7EF;color:#0B7A4B}
 .lkl{flex:1;min-width:140px;font-size:13px;font-weight:600;color:var(--ink)}
 .lku{font-size:11.5px;font-family:"IBM Plex Mono",monospace;color:var(--muted);min-width:120px}
 
@@ -552,7 +552,7 @@ button.card:hover{border-color:var(--line-2);transform:translateY(-2px);box-shad
 .met{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;
   display:flex;flex-direction:column;gap:2px;min-width:0}
 .mk{font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;
-  color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  color:var(--faint);line-height:1.3}
 .met b{font-size:16px;font-weight:800;letter-spacing:-.02em}
 .md{font-size:10.5px;font-weight:700}
 .md.up{color:var(--ok)} .md.dn{color:#D2465C}
@@ -755,6 +755,11 @@ button.ctrow:hover{background:var(--surface-2)}
   .topbar{padding:11px 14px;gap:10px} .crumb h1{font-size:15px} .crumb p{display:none}
   .g4,.g3,.g2{grid-template-columns:repeat(2,1fr)}
   .result{grid-template-columns:repeat(2,1fr)}
+  /* A clipped client or asset name tells you nothing; subtitles can still clip. */
+  .rt{white-space:normal;overflow:visible}
+  /* Rows carrying an avatar, two badges and a chevron have no room left
+     on a phone; let them wrap instead of squeezing the subtitle to dots. */
+  .rows .row{flex-wrap:wrap} .rows .row .rmain{flex:1 1 100%}
   .capgrid{grid-template-columns:1fr}
   .dnagrid{grid-template-columns:repeat(2,minmax(0,1fr))} .fpgrid{grid-template-columns:1fr}
   .trendgrid{grid-template-columns:1fr} .pos{grid-template-columns:1fr;gap:6px}
@@ -1117,6 +1122,11 @@ const INS={
   what:'Paid amplification for content that already proved itself organically, so budget follows evidence instead of a hunch.',
   how:'Assets clearing an organic engagement threshold become promotion candidates, with spend and cost-per-result tracked against the campaign that produced them.',
   up:[['analytics','Organic winners']],down:[['pipeline','Attributed spend']]},
+ moderator:{kind:'Add-on module',title:'Inbox Moderator',o:'c',addon:1,
+  what:'An agent working the combined inbox. It answers what it can in the client\u2019s Brand Brain voice, and stops the moment a message needs a person.',
+  how:'Escalation is rule-based, not a guess: pricing, refunds, complaints and anything clinical or legal always go to a human, and nothing sends if it scores under 80 for voice match. Buying intent gets answered and then routed to Pipeline.',
+  up:[['inbox','Works the Combined Inbox queue'],['clients','Writes in the Brand Brain voice']],
+  down:[['pipeline','Routes buying intent'],['analytics','Response volume and escalation rate']]},
  inbox:{kind:'Add-on module',o:'c',addon:1,
   what:'Every comment, DM and reply across connected platforms in one queue — captured by Convia Pro, worked by your team.',
   how:'Keyword triggers fire comment-to-DM automatically, and anything showing buying intent is routed into the pipeline as a lead rather than dying in a notifications tab.',
@@ -1954,7 +1964,7 @@ const V={
   const o=OUTPUTS.find(x=>x.id===out)||OUTPUTS[0];
 
   const linkRow=([label,url,kind],n)=>`<div class="lnk">
-      <span class="lk ${esc(kind)}">${esc(kind)}</span>
+      <span class="lkind ${esc(kind)}">${esc(kind)}</span>
       ${editable(o.id+':link:'+n+':label',label,'lkl')}
       ${editable(o.id+':link:'+n+':url',url,'lku')}</div>`;
 
@@ -2236,15 +2246,6 @@ const V={
            </div></div>`).join('')}</div></div>
    </div></section>`},
 
- _perfOld(){ return addon('perf','Performance Intelligence',
-   [['Patterns learned',cycle===0?'3':cycle===1?'7':'9'],['Saves lift vs baseline',cycle===0?'—':cycle===1?'+22%':'+31%'],['Cycles remembered',String(cycle+1)]],
-   'Learning log — written back into the Brand Brain',
-   [['Proof-led hooks edge out education','Applied in cycle 2','ok'],
-    ['Carousels outperform static posts','Applied in cycle 3','ok'],
-    ['Implementation detail lifts saves','Applied in cycle 3','ok'],
-    ['12-min long-form cut underperformed','Tested in cycle 2 — dropped','nt'],
-    ['Intros over 20s lose retention','Watching — needs more data','wn']])},
-
  paid(){
   const camps=[['Reel — “The bottleneck nobody names”',1400,4900,'Live'],
    ['Carousel — Implementation checklist',1100,3200,'Live'],
@@ -2272,14 +2273,6 @@ const V={
    <button class="card" data-ins="paid" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
      <h3 style="font-size:15px">See what feeds Paid Ad Campaigns →</h3></button></section>`},
 
- _paidOld(){ return addon('paid','Paid Ad Campaigns',
-   [['Active campaigns',cycle===0?'1':cycle===1?'2':'3'],['Spend',cycle===0?'$1.4k':cycle===1?'$2.6k':'$3.9k'],['Cost per result',cycle===0?'$6.10':cycle===1?'$5.40':'$4.80']],
-   'Promoting only what already won organically',
-   [['Reel — “The bottleneck nobody names”','Live · top organic saver','ok'],
-    ['Carousel — Implementation checklist','Live · best share rate','ok'],
-    ['Founder proof clip','Queued for approval','wn'],
-    ['Blog — chaos to campaign loop','Below organic bar — not promoted','nt']])},
-
  inbox(){
   const t=THREADS[Math.min(thread,THREADS.length-1)];
   return `<section class="sec">
@@ -2305,6 +2298,8 @@ const V={
        <div class="kpi tnum">${C().auth-2}</div><div class="ksub">scored against the Brand Brain</div></button>
    </div>
    ${inboxUI(t,true)}
+   <button class="card" data-ins="moderator" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
+     <h3 style="font-size:15px">See what feeds Inbox Moderator →</h3></button>
    <div class="card"><div class="ch"><span class="eyebrow">Escalation rules</span><span class="star">★</span></div>
      <div class="rules">${[
        ['Always escalate','Pricing negotiation, refunds, complaints, anything clinical or legal'],
@@ -2313,14 +2308,6 @@ const V={
        ['Never send','Anything the Brand Brain scores under 80 for voice match']]
        .map(([k,v])=>`<div class="rule"><span class="rk">${esc(k)}</span><span class="rv">${esc(v)}</span></div>`).join('')}</div></div>
    </section>`},
-
- _inboxOld(){ return addon('inbox','Inbox & Comments',
-   [['Open conversations',cycle===0?'16':cycle===1?'24':'29'],['Auto-handled',cycle===0?'21':cycle===1?'38':'52'],['Routed to pipeline',C().r.leads]],
-   'Buying intent caught before it disappeared',
-   [['“How would this work for a 3-person team?”','Instagram · routed to pipeline','ok'],
-    ['“Do you do this for agencies too?”','LinkedIn · routed to pipeline','ok'],
-    ['“What does it cost?”','TikTok · auto-replied with link','nt'],
-    ['“Can you send the checklist?”','Instagram · keyword triggered DM','nt']],'c')},
 
  pricing(){
   const base=[['Everything in the loop','Core Command, Brand Brain, Content Studio, Market Intelligence, Analytics'],
@@ -2443,14 +2430,6 @@ const V={
          ${svg('chev','chev')}</button>`).join('')}</div></div>
    </section>`},
 
- _guestsOld(){ return addon('guests','Guest Portal',
-   [['Guests booked',cycle===0?'2':cycle===1?'3':'4'],['Kits delivered',cycle===0?'2':cycle===1?'3':'4'],['Reach via guests',cycle===0?'6k':cycle===1?'9k':'12k']],
-   'Guests this cycle — each one is a source and a channel',
-   [['Dr. Sana Whitfield — longevity clinician','Recorded · 6 assets cut · kit sent','ok'],
-    ['Marcus Reed — sleep researcher','Recorded · 5 assets cut · kit sent','ok'],
-    ['Priya Nair — nutrition lead','Scheduled for next week','wn'],
-    ['Open slot','Outreach in progress','nt']],'c')},
-
  pipeline(){
   const chain=[['Reel — “The bottleneck nobody names”','Comment from @rachel.builds','Marea — retainer expansion','$1.1k/mo','ok'],
    ['Carousel — Implementation checklist','LinkedIn DM from Marcus D.','Elevator Studio — new retainer','$3.8k/mo','ok'],
@@ -2476,29 +2455,8 @@ const V={
    <button class="card" data-ins="pipeline" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
      <h3 style="font-size:15px">See what feeds Pipeline &amp; Money →</h3></button></section>`},
 
- _pipelineOld(){ return addon('pipeline','Pipeline & Money',
-   [['Attributed revenue',C().r.rev],['Open deals',cycle===0?'3':cycle===1?'5':'7'],['Avg retainer','$4.3k']],
-   'Every deal traced to the asset that sourced it',
-   [['Marea Wellness — retainer expansion','$1.1k/mo · from a Reel comment','ok'],
-    ['Elevator Studio — new retainer','$3.8k/mo · from LinkedIn carousel','ok'],
-    ['PR firm, 12 clients','Discovery booked · from the blog','wn'],
-    ['Creator agency — 4 seats','Proposal sent · from the newsletter','wn']])}
 };
 
-function addon(id,title,kpis,listTitle,rows,o){
-  const ow=o||'j';
-  return `<section class="sec">
-   <div class="sec-h"><h2>${esc(title)}</h2>${own(ow,1)}</div>
-   <p class="lede">${esc(M[id].sub)}. This is an add-on — the core loop runs without it, and it switches on per client.</p>
-   <div class="grid g3">${kpis.map(([k,v])=>`<div class="card"><div class="ch"><span class="eyebrow">${esc(k)}</span><span class="star">★</span></div>
-     <div class="kpi tnum">${esc(v)}</div><div class="ksub">${esc(C().label)}</div></div>`).join('')}</div>
-   <div class="card p0"><div class="chead"><h3>${esc(listTitle)}</h3></div><div class="rows">
-     ${rows.map(([t,s,b])=>`<button class="row" data-ins="${id}"><div class="rmain"><div class="rt">${esc(t)}</div><div class="rs">${esc(s)}</div></div>
-       <span class="badge ${b}">${b==='ok'?'Active':b==='wn'?'Pending':'Idle'}</span>${svg('chev','chev')}</button>`).join('')}
-   </div></div>
-   <button class="card" data-ins="${id}" style="border-style:dashed"><div class="ch"><span class="eyebrow">How this connects</span><span class="star">★</span></div>
-     <h3 style="font-size:15px">See what feeds ${esc(title)} →</h3></button></section>`;
-}
 function paint(){ el('canvas').innerHTML=(V[view]||V.command)();
   // Canvases come back empty from innerHTML, so the slide art is drawn after
   // every render rather than once.
@@ -2592,6 +2550,6 @@ el('enter').addEventListener('click',()=>{el('gate').classList.add('hide');runLo
 el('skip').addEventListener('click',()=>el('gate').classList.add('hide'));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T17:41:24Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T18:02:11Z");</script>
 </body>
 </html>
