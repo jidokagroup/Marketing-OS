@@ -22,7 +22,6 @@ const BORDER = "#E2E8F0";
 const INK = "#101828";
 const MUTED = "#4A5565";
 const PAPER = "#F8FAFC";
-const CALENDAR_URL = "https://cal.read.ai/crystal-8mhiy/30-min";
 /**
  * The interactive demo, served from this site's own public/demo/index.html.
  * It is deliberately not the Artifact URL: that is a claude.ai page, so a
@@ -628,10 +627,7 @@ export default function MarketingOsPage() {
                 </p>
                 <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                   <CtaButton href={JOIN_URL}>Join the cohort</CtaButton>
-                  <CtaButton href={DEMO_URL} variant="dark">View the interactive demo</CtaButton>
-                  <CtaButton href={CALENDAR_URL} variant="secondary">
-                    Schedule a Call
-                  </CtaButton>
+                  <CtaButton href={DEMO_URL} variant="dark">View Demo</CtaButton>
                 </div>
               </div>
 
@@ -675,9 +671,8 @@ export default function MarketingOsPage() {
                 <h2 className="max-w-3xl text-4xl font-bold leading-tight">From long form content to the next campaign loop.</h2>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <CtaButton href={DEMO_URL}>View the interactive demo</CtaButton>
+                <CtaButton href={DEMO_URL}>View Demo</CtaButton>
                 <CtaButton href={JOIN_URL} variant="dark">Join the cohort</CtaButton>
-                <CtaButton href={CALENDAR_URL} variant="secondary">Schedule a Call</CtaButton>
               </div>
             </div>
             <HowItWorksPreview />
@@ -750,7 +745,7 @@ export default function MarketingOsPage() {
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <CtaButton href={JOIN_URL}>Join the cohort</CtaButton>
-                <CtaButton href={DEMO_URL} variant="secondary">View the interactive demo</CtaButton>
+                <CtaButton href={DEMO_URL} variant="secondary">View Demo</CtaButton>
               </div>
             </div>
             <div className="mt-10">
