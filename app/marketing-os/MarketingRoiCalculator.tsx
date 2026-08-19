@@ -119,8 +119,10 @@ export default function MarketingRoiCalculator() {
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Link href="/signup" className="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 py-3 text-[0.74rem] font-semibold leading-none text-[#0F172B] transition hover:bg-[#F4F3FF] sm:text-xs">
-              Start 7-Day Trial
+            {/* /join rather than /signup: it creates the account and carries
+                straight on to checkout, instead of ending on the dashboard. */}
+            <Link href="/join" className="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-md bg-white px-3 py-3 text-[0.74rem] font-semibold leading-none text-[#0F172B] transition hover:bg-[#F4F3FF] sm:text-xs">
+              Join the cohort
             </Link>
             <Link href="https://cal.read.ai/crystal-8mhiy/30-min" className="inline-flex min-h-11 min-w-0 items-center justify-center whitespace-nowrap rounded-md border border-white/18 px-3 py-3 text-[0.74rem] font-semibold leading-none text-white transition hover:bg-white/10 sm:text-xs">
               Schedule a Call
