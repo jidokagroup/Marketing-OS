@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
 <meta name="robots" content="index, follow">
-<meta name="demo-build" content="2026-08-19T21:16:02Z">
+<meta name="demo-build" content="2026-08-20T19:34:07Z">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convia Pro × Jidoka">
 <meta property="og:description" content="Interactive demo: one recording becomes every asset, across three compounding cycles.">
@@ -107,6 +107,18 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   stroke-linecap:round;stroke-linejoin:round}
 .navtxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .star{color:var(--star);font-size:10px;flex:0 0 auto}
+/* Build status. Only "soon" is flagged in the rail -- badging all eleven live
+   modules would be noise, and the header states it either way. */
+.soonpill{font-size:8.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
+  padding:2px 4px;border-radius:4px;background:var(--star-soft);color:var(--star);flex:0 0 auto}
+.navitem.tight{gap:7px}
+.stb{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:20px;
+  font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;flex:0 0 auto}
+.stb.live{background:var(--ok-soft);color:var(--ok)}
+.stb.soon{background:var(--star-soft);color:var(--star)}
+.stb i{width:5px;height:5px;border-radius:50%;background:currentColor}
+.crumb .ttl{display:flex;align-items:center;gap:8px;min-width:0}
+.crumb .ttl h1{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dot{width:5px;height:5px;border-radius:50%;background:var(--convia);flex:0 0 5px}
 .railfoot{padding:10px}
 .ghost{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:8px;
@@ -993,7 +1005,7 @@ button.ctrow:hover{background:var(--surface-2)}
   <div class="main">
     <header class="topbar">
       <button class="ib mob" id="menu" aria-label="Open menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-      <div class="crumb"><h1 id="vtitle">Core Command</h1><p id="vsub"></p></div>
+      <div class="crumb"><div class="ttl"><h1 id="vtitle">Core Command</h1><span class="stb live" id="vstatus"><i></i>Live</span></div><p id="vsub"></p></div>
       <button class="btn" id="run"><svg viewBox="0 0 24 24"><path d="M5 3.5v17l14-8.5z" fill="currentColor" stroke="none"/></svg><span class="lbl">Run this cycle</span></button>
     </header>
     <main class="canvas" id="canvas"></main>
@@ -1159,13 +1171,13 @@ const MODULES=[
  {id:'scheduler',short:'Scheduler',label:'Smart Scheduler',icon:'scheduler',o:'c',g:'The loop',sub:'Convia Pro places every asset at its peak window'},
  {id:'intel',short:'Signals',label:'Market Intelligence',icon:'intel',o:'j',g:'The loop',sub:'Competitor execution, gaps, and what to own next'},
  {id:'analytics',short:'Results',label:'Analytics',icon:'analytics',o:'j',g:'The loop',sub:'Your performance against the competitor set'},
- {id:'perf',short:'Learning',label:'Performance Intelligence',icon:'perf',o:'j',addon:1,g:'Add-ons',sub:'The upsell on Market Intelligence — deeper AI analysis of how to perform better'},
- {id:'paid',short:'Paid',label:'Paid Ads Generator',icon:'paid',o:'j',addon:1,g:'Add-ons',sub:'Turns content that already worked into paid ad assets'},
+ {id:'perf',st:'soon',short:'Learning',label:'Performance Intelligence',icon:'perf',o:'j',addon:1,g:'Add-ons',sub:'The upsell on Market Intelligence — deeper AI analysis of how to perform better'},
+ {id:'paid',st:'soon',short:'Paid',label:'Paid Ads Generator',icon:'paid',o:'j',addon:1,g:'Add-ons',sub:'Turns content that already worked into paid ad assets'},
  {id:'inbox',short:'Inbox',label:'Combined Inbox',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'Every comment and DM from every platform in one queue'},
- {id:'moderator',short:'Moderator',label:'Inbox Moderator',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'An agent that answers in your brand voice, and pings you when it should not'},
- {id:'guests',short:'Guests',label:'Guest Portal',icon:'guests',o:'c',addon:1,g:'Add-ons',sub:'Turn guest relationships into network reach'},
- {id:'pipeline',short:'Revenue',label:'Pipeline & Money',icon:'pipeline',o:'j',addon:1,g:'Add-ons',sub:'Revenue traced to the asset that earned it'},
- {id:'pricing',short:'Pricing',label:'Pricing & packaging',icon:'paid',o:'j',g:'Add-ons',sub:'What the platform costs and how add-ons switch on'}];
+ {id:'moderator',st:'soon',short:'Moderator',label:'Inbox Moderator',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'An agent that answers in your brand voice, and pings you when it should not'},
+ {id:'guests',st:'soon',short:'Guests',label:'Guest Portal',icon:'guests',o:'c',addon:1,g:'Add-ons',sub:'Turn guest relationships into network reach'},
+ {id:'pipeline',st:'soon',short:'Revenue',label:'Pipeline & Money',icon:'pipeline',o:'j',addon:1,g:'Add-ons',sub:'Revenue traced to the asset that earned it'},
+ {id:'pricing',st:'none',short:'Pricing',label:'Pricing & packaging',icon:'paid',o:'j',g:'Add-ons',sub:'What the platform costs and how add-ons switch on'}];
 const M=Object.fromEntries(MODULES.map(m=>[m.id,m]));
 
 /* ===================== the client story: 3 cycles ===================== */
@@ -1436,9 +1448,9 @@ const own=(o,a)=>`${o==='c'?'<span class="badge cv">Convia Pro</span>':'<span cl
 function nav(t){
   const gs=[...new Set(MODULES.map(m=>m.g))];
   t.innerHTML=gs.map(g=>`<div><div class="navlabel eyebrow">${esc(g)}</div>
-    ${MODULES.filter(m=>m.g===g).map(m=>`<button class="navitem ${m.o==='c'?'cv':''}" data-nav="${m.id}" aria-current="${view===m.id}">
+    ${MODULES.filter(m=>m.g===g).map(m=>`<button class="navitem ${m.o==='c'?'cv':''} ${m.st==='soon'?'tight':''}" data-nav="${m.id}" aria-current="${view===m.id}">
       ${svg(m.icon)}<span class="navtxt">${esc(m.label)}</span>
-      ${m.o==='c'?'<i class="dot"></i>':''}${m.addon?'<span class="star">★</span>':''}</button>`).join('')}</div>`).join('');
+      ${m.o==='c'?'<i class="dot"></i>':''}${m.st==='soon'?'<span class="soonpill">Soon</span>':(m.addon?'<span class="star">★</span>':'')}</button>`).join('')}</div>`).join('');
 }
 function tabs(){
   const ids=['command','content','scheduler','intel','analytics'];
@@ -1448,7 +1460,12 @@ function tabs(){
     +`<button class="tab" id="more"><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>More</span></button>`;
 }
 function go(id){ view=id; nav(el('rail-nav')); nav(el('drawer-nav')); tabs();
-  el('vtitle').textContent=M[id].label; el('vsub').textContent=M[id].sub; paint();
+  el('vtitle').textContent=M[id].label; el('vsub').textContent=M[id].sub;
+  const st=el('vstatus'), sv=M[id].st;
+  st.hidden = sv==='none';
+  st.className = 'stb '+(sv==='soon'?'soon':'live');
+  st.innerHTML = '<i></i>'+(sv==='soon'?'Coming soon':'Live');
+  paint();
   el('drawer').classList.remove('open'); if(!el('ins').classList.contains('open')) el('scrim').classList.remove('open');
   window.scrollTo({top:0,behavior:'instant'}); }
 
@@ -2026,13 +2043,15 @@ const WEBM=[['Sessions','12.4k','+22%'],['New users','8.9k','+26%'],['Avg engage
 const WEB_SOURCES=[['Organic search','5,610','3.8%'],['Instagram','2,940','4.1%'],
  ['Newsletter','1,880','6.2%'],['LinkedIn','1,120','2.9%'],['Direct','870','2.1%']];
 
+/* Reading spend and ROAS needs read access to each ad account, which is a
+   separate integration per network and is not built on either side yet. The
+   figures that used to sit here were invented, so they are gone rather than
+   hidden -- the panel now says what it is. Writing the ads is unaffected: the
+   Paid Ads Generator works off organic performance data that already exists. */
 const PAID=[
- {name:'Meta',key:'meta',live:1,note:'Ads API · Instagram + Facebook',
-  metrics:[['Spend','$620',''],['ROAS','3.4×','+0.6'],['CPC','$0.84','-12%'],['CTR','2.1%','+0.3pt']]},
- {name:'Google',key:'google',live:1,note:'Google Ads API · search + YouTube',
-  metrics:[['Spend','$410',''],['ROAS','2.8×','+0.2'],['CPC','$1.42','-6%'],['Conv. rate','4.4%','+0.7pt']]},
- {name:'TikTok',key:'tiktok',live:1,note:'TikTok Ads API',
-  metrics:[['Spend','$180',''],['ROAS','2.1×','-0.3'],['CPM','$4.60','+8%'],['CTR','1.4%','-0.2pt']]},
+ {name:'Meta',key:'meta',live:0,note:'Ads API · Instagram + Facebook'},
+ {name:'Google',key:'google',live:0,note:'Google Ads API · search + YouTube'},
+ {name:'TikTok',key:'tiktok',live:0,note:'TikTok Ads API'},
  {name:'LinkedIn',key:'linkedin',live:0,note:'Ads API · available on request'}];
 
 /* ===================== performance intelligence ===================== */
@@ -2379,12 +2398,11 @@ const V={
         <div class="row"><div class="rmain"><div class="rt">${esc(src)}</div><div class="rs">${esc(sess)} sessions</div></div>
           <div class="rn tnum">${esc(conv)}</div></div>`).join('')}</div>
       <p class="srcnote">Traffic is matched against publishing times, so a spike lines up with the asset that caused it rather than sitting in a separate tab.</p></div>`,
-    paid:`${PAID.map(x=>`<div class="platblock">
+    paid:`<p class="srcnote" style="margin:0 0 12px">Spend and return pull from each ad account directly, so paid sits beside organic instead of in its own tab. That connection is in build — the Paid Ads Generator does not wait on it, because it writes from organic performance you already have.</p>
+      ${PAID.map(x=>`<div class="platblock">
         <div class="pbh"><span class="pf ${esc(x.key)}">${esc(x.name)}</span>
           <span class="rs">${esc(x.note)}</span>
-          <span class="badge ${x.live?'ok':'nt'}">${x.live?'Connected':'Available'}</span></div>
-        ${x.live?`<div class="metgrid">${x.metrics.map(([k,v,d])=>`<div class="met"><span class="mk">${esc(k)}</span>
-          <b class="tnum">${esc(v)}</b>${d?`<span class="md ${d.startsWith('-')?'dn':'up'}">${esc(d)}</span>`:''}</div>`).join('')}</div>`:''}
+          <span class="badge ad">Coming soon</span></div>
       </div>`).join('')}
       <div class="platblock other"><div class="pbh"><span class="pf other">Other</span>
         <span class="rs">Pinterest, Reddit, Snap, programmatic — anything with an ads API</span>
@@ -2919,6 +2937,6 @@ el('enter').addEventListener('click',()=>leaveGate(true));
 el('skip').addEventListener('click',()=>leaveGate(false));
 tabs(); go('command');
 </script>
-<script>console.info("Convia Pro × Jidoka demo — build 2026-08-19T21:16:02Z");</script>
+<script>console.info("Convia Pro × Jidoka demo — build 2026-08-20T19:34:07Z");</script>
 </body>
 </html>
