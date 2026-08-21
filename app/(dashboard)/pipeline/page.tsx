@@ -13,6 +13,7 @@ import {
   type LeadRow,
 } from "@/lib/marketing-os/operations";
 import { EmptyState } from "@/components/empty-state";
+import { OutreachGenerateButton } from "@/components/outreach-generate-button";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +43,7 @@ export default async function PipelinePage() {
 
   const leadsResult = await opsTable(supabase, "marketing_os_leads")
     .select(
-      "id, campaign_id, client_id, lead_name, email, status, source_channel, estimated_value, actual_value, converted_at, created_at",
+      "id, campaign_id, client_id, lead_name, email, status, source_channel, estimated_value, actual_value, converted_at, created_at, outreach_stage, next_attempt_at",
     )
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
@@ -63,8 +64,38 @@ export default async function PipelinePage() {
         LeadRow & {
           source_channel: string | null;
           converted_at: string | null;
+          outreach_stage: string | null;
+          next_attempt_at: string | null;
         }
       >(leadsResult.data);
+
+  // Attempt counts drive the "Draft #N" label, so the button always offers the
+  // next touch rather than repeating one that already exists.
+  const attemptsResult =
+    leads.length > 0
+      ? await opsTable(supabase, "marketing_os_acquisition_attempts")
+          .select("lead_id, attempt_no, channel, status, verification")
+          .eq("owner_id", user.id)
+          .in(
+            "lead_id",
+            leads.map((lead) => lead.id),
+          )
+      : { data: null, error: null };
+  const attempts = isOpsSchemaMissing(attemptsResult.error)
+    ? []
+    : asRows<{
+        lead_id: string;
+        attempt_no: number;
+        channel: string;
+        status: string;
+        verification: { verdict?: string; issues?: string[] } | null;
+      }>(attemptsResult.data);
+  const attemptsByLead = new Map<string, typeof attempts>();
+  for (const attempt of attempts) {
+    const list = attemptsByLead.get(attempt.lead_id) ?? [];
+    list.push(attempt);
+    attemptsByLead.set(attempt.lead_id, list);
+  }
   const campaigns = schemaMissing ? [] : asRows<CampaignRow>(campaignsResult.data);
   const clients = (clientsResult.data ?? []) as ClientOption[];
   const campaignById = new Map(campaigns.map((item) => [item.id, item]));
@@ -162,6 +193,36 @@ export default async function PipelinePage() {
                             {formatMoney(lead.status === "customer" ? lead.actual_value : lead.estimated_value)}
                           </p>
                           <p className="text-xs text-muted-foreground">{formatDate(lead.created_at)}</p>
+                          {(() => {
+                            const leadAttempts = attemptsByLead.get(lead.id) ?? [];
+                            const held = leadAttempts.filter(
+                              (a) => a.verification?.verdict === "rejected",
+                            ).length;
+                            return (
+                              <div className="space-y-1.5 border-t pt-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <Badge variant="outline" className="font-normal">
+                                    {titleCase(lead.outreach_stage ?? "Daily Queue")}
+                                  </Badge>
+                                  {held > 0 && (
+                                    <Badge variant="destructive">{held} held</Badge>
+                                  )}
+                                </div>
+                                {lead.next_attempt_at && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Next touch {formatDate(lead.next_attempt_at)}
+                                  </p>
+                                )}
+                                {lead.client_id && (
+                                  <OutreachGenerateButton
+                                    leadId={lead.id}
+                                    channel={lead.email ? "email" : "linkedin"}
+                                    attemptNo={leadAttempts.length + 1}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
                         </CardContent>
                       </Card>
                     );
