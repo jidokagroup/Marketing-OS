@@ -180,13 +180,23 @@ export default async function ClientsPage() {
                     <Brain className="mr-1 h-3.5 w-3.5" />
                     Brand Brain
                   </ButtonLink>
-                  <ButtonLink
-                    href={`/agents/new?client_id=${c.id}`}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Create Writing Agent
-                  </ButtonLink>
+                  {(agentsByClient.get(c.id) ?? [])[0] ? (
+                    <ButtonLink
+                      href={`/agents/${(agentsByClient.get(c.id) ?? [])[0].id}`}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Open Writing Agent
+                    </ButtonLink>
+                  ) : (
+                    <ButtonLink
+                      href={`/agents/new?client_id=${c.id}`}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Create Writing Agent
+                    </ButtonLink>
+                  )}
                 </div>
 
                 <form action={deleteClientAction} className="pt-1">

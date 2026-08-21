@@ -14,6 +14,21 @@ export const str = (description?: string): Schema => ({
   ...(description ? { description } : {}),
 });
 
+/**
+ * A string restricted to a fixed set of values.
+ *
+ * Worth preferring over `str("One of: a, b, c.")` wherever a zod `z.enum`
+ * validates the same field: describing the options in prose leaves the model
+ * free to answer "Low" or "moderate", which the API happily returns and the
+ * zod validator then rejects -- turning a cosmetic drift into a thrown
+ * request. Declaring the enum makes the API constrain the output instead.
+ */
+export const enumStr = (values: readonly string[], description?: string): Schema => ({
+  type: "string",
+  enum: [...values],
+  ...(description ? { description } : {}),
+});
+
 export const num = (description?: string): Schema => ({
   type: "number",
   ...(description ? { description } : {}),

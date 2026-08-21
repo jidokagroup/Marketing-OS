@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { getAuthContext } from "@/lib/auth";
+import { AGENT_EXISTS_FOR_CLIENT_ERROR, existingAgentForClient } from "@/lib/agent-per-client";
 
 export const runtime = "nodejs";
 
@@ -58,20 +59,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Client not found." }, { status: 404 });
   }
 
-  const { data: existing, error: existingError } = await supabase
-    .from("marketing_os_writing_agents")
-    .select("id")
-    .eq("owner_id", user.id)
-    .eq("client_id", clientId)
-    .ilike("name", name)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingError) {
-    return NextResponse.json({ error: existingError.message }, { status: 500 });
-  }
-  if (existing?.id) {
-    return NextResponse.json({ id: existing.id, existing: true });
+  const existingId = await existingAgentForClient(supabase, user.id, clientId);
+  if (existingId) {
+    return NextResponse.json({
+      id: existingId,
+      existing: true,
+      message: AGENT_EXISTS_FOR_CLIENT_ERROR,
+    });
   }
 
   const { data, error } = await supabase

@@ -466,3 +466,43 @@ export function runFallbackGeneration(
     belowThreshold: score.overall < MIN_ACCEPTABLE_SCORE,
   };
 }
+
+
+/**
+ * Fetch the six Voice DNA profiles for an agent, in the DnaInput shape.
+ * Shared by every caller that needs Brand Voice DNA context for generation --
+ * previously duplicated inline in the background generation worker; other
+ * generators (paid ads, performance intelligence) need the identical fetch.
+ */
+export async function loadDnaInput(
+  supabase: unknown,
+  agentId: string,
+): Promise<DnaInput> {
+  const db = supabase as {
+    from: (table: string) => {
+      select: (columns: string) => {
+        eq: (
+          column: string,
+          value: string,
+        ) => { maybeSingle: () => PromiseLike<{ data: unknown }> };
+      };
+    };
+  };
+  const [voice, belief, hooks, story, phrase, knowledge] = await Promise.all([
+    db.from("marketing_os_voice_profiles").select("*").eq("agent_id", agentId).maybeSingle(),
+    db.from("marketing_os_belief_profiles").select("*").eq("agent_id", agentId).maybeSingle(),
+    db.from("marketing_os_hook_libraries").select("*").eq("agent_id", agentId).maybeSingle(),
+    db.from("marketing_os_story_frameworks").select("*").eq("agent_id", agentId).maybeSingle(),
+    db.from("marketing_os_phrase_libraries").select("*").eq("agent_id", agentId).maybeSingle(),
+    db.from("marketing_os_knowledge_graphs").select("*").eq("agent_id", agentId).maybeSingle(),
+  ]);
+
+  return {
+    voice: voice.data as VoiceProfileData | null,
+    belief: belief.data as BeliefProfileData | null,
+    hooks: hooks.data as HookLibraryData | null,
+    story: story.data as StoryFrameworksData | null,
+    phrase: phrase.data as PhraseLibraryData | null,
+    knowledge: knowledge.data as KnowledgeGraphData | null,
+  };
+}
