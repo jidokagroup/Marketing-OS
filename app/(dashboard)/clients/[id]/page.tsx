@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Bot, Inbox, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, Inbox, Share2, Sparkles } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { asRows, opsTable } from "@/lib/marketing-os/operations";
 import { reviewInboxThreadAction } from "./inbox-actions";
+import { createShareLinkAction, revokeShareLinkAction } from "./share-actions";
 import { PageHeader } from "@/components/page-header";
 import { BrandBrainForm } from "@/components/brand-brain-form";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,21 @@ export default async function ClientDetailPage({
     .maybeSingle();
 
   if (!client) notFound();
+
+  const shareLinksResult = await opsTable(supabase, "marketing_os_client_share_links")
+    .select("id, label, scope, token, expires_at, last_accessed_at, revoked_at, created_at")
+    .eq("client_id", id)
+    .order("created_at", { ascending: false });
+  const shareLinks = asRows<{
+    id: string;
+    label: string | null;
+    scope: string;
+    token: string;
+    expires_at: string | null;
+    last_accessed_at: string | null;
+    revoked_at: string | null;
+    created_at: string;
+  }>(shareLinksResult.data);
 
   const { data: agents } = await supabase
     .from("marketing_os_writing_agents")
@@ -291,6 +308,8 @@ export default async function ClientDetailPage({
           }))}
         />
       </div>
+
+      <GuestPortalSection clientId={client.id} links={shareLinks} />
     </div>
   );
 }
@@ -592,5 +611,134 @@ function ActivityList({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+
+type ShareLink = {
+  id: string;
+  label: string | null;
+  scope: string;
+  token: string;
+  expires_at: string | null;
+  last_accessed_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+};
+
+const SHARE_SCOPE_LABELS: Record<string, string> = {
+  approval: "Content approvals",
+  calendar: "Publishing calendar",
+  content_library: "Content library",
+  analytics: "Analytics",
+};
+
+function shareLinkStatus(link: ShareLink) {
+  if (link.revoked_at) return { label: "Revoked", variant: "destructive" as const };
+  if (link.expires_at && new Date(link.expires_at) < new Date()) {
+    return { label: "Expired", variant: "outline" as const };
+  }
+  return { label: "Active", variant: "default" as const };
+}
+
+function GuestPortalSection({
+  clientId,
+  links,
+}: {
+  clientId: string;
+  links: ShareLink[];
+}) {
+  return (
+    <section id="guest-portal" className="space-y-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold">Guest Portal</h2>
+        <p className="text-sm text-muted-foreground">
+          Give this client a link into exactly what you choose to share &mdash; nothing
+          more. Each link is scoped to one view and can be revoked at any time.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Create a link</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={createShareLinkAction} className="grid gap-3 sm:grid-cols-[1fr_1fr_140px_auto]">
+            <input type="hidden" name="client_id" value={clientId} />
+            <select
+              name="scope"
+              defaultValue="approval"
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {Object.entries(SHARE_SCOPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <input
+              name="label"
+              placeholder="Label (optional)"
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            <select
+              name="expires_in_days"
+              defaultValue="30"
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="7">Expires in 7 days</option>
+              <option value="30">Expires in 30 days</option>
+              <option value="90">Expires in 90 days</option>
+              <option value="">Never expires</option>
+            </select>
+            <Button type="submit">
+              <Share2 className="mr-1 h-4 w-4" />
+              Create link
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {links.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No guest links yet. Create one above to let this client see their own
+          approvals, calendar, content, or analytics without a login.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {links.map((link) => {
+            const status = shareLinkStatus(link);
+            const url = `/share/${link.token}`;
+            return (
+              <Card key={link.id}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">
+                        {link.label || SHARE_SCOPE_LABELS[link.scope] || link.scope}
+                      </span>
+                      <Badge variant="secondary">{SHARE_SCOPE_LABELS[link.scope] ?? link.scope}</Badge>
+                      <Badge variant={status.variant}>{status.label}</Badge>
+                    </div>
+                    <Link href={url} target="_blank" className="block truncate text-xs text-muted-foreground hover:underline">
+                      {url}
+                    </Link>
+                  </div>
+                  {!link.revoked_at && (
+                    <form action={revokeShareLinkAction}>
+                      <input type="hidden" name="id" value={link.id} />
+                      <input type="hidden" name="client_id" value={clientId} />
+                      <Button type="submit" variant="outline" size="sm">
+                        Revoke
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }

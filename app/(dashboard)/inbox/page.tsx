@@ -16,9 +16,11 @@ import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { updateInboxThreadStatusAction } from "./actions";
+import { setModeratorSettingAction } from "./moderator-actions";
+import { InboxModeratorRunButton } from "@/components/inbox-moderator-run-button";
 
 export const metadata = { title: "Inbox · Jidoka Marketing Team OS" };
 
@@ -70,7 +72,7 @@ export default async function InboxPage({
     .order("updated_at", { ascending: false });
   const schemaMissing = isOpsSchemaMissing(threadsResult.error);
 
-  const [fallbackThreads, campaignsResult, clientsResult] = await Promise.all([
+  const [fallbackThreads, campaignsResult, clientsResult, agentsResult, moderatorSettingsResult] = await Promise.all([
     schemaMissing
       ? opsTable(supabase, "marketing_os_inbox_threads")
           .select("id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at")
@@ -87,6 +89,13 @@ export default async function InboxPage({
     supabase
       .from("marketing_os_clients")
       .select("id, name, industry")
+      .eq("owner_id", user.id),
+    supabase
+      .from("marketing_os_writing_agents")
+      .select("id, name, status")
+      .order("created_at", { ascending: false }),
+    opsTable(supabase, "marketing_os_inbox_moderator_settings")
+      .select("agent_id, enabled, auto_approve_low_risk")
       .eq("owner_id", user.id),
   ]);
 
@@ -117,6 +126,19 @@ export default async function InboxPage({
     ? []
     : asRows<CampaignRow>(campaignsResult.data);
   const clients = (clientsResult.data ?? []) as ClientOption[];
+  const moderatorAgents = (agentsResult.data ?? []) as {
+    id: string;
+    name: string;
+    status: string;
+  }[];
+  const moderatorSettings = isOpsSchemaMissing(moderatorSettingsResult.error)
+    ? []
+    : asRows<{ agent_id: string; enabled: boolean; auto_approve_low_risk: boolean }>(
+        moderatorSettingsResult.data,
+      );
+  const moderatorSettingByAgent = new Map(
+    moderatorSettings.map((setting) => [setting.agent_id, setting]),
+  );
   const campaignById = new Map(campaigns.map((item) => [item.id, item]));
   const clientById = new Map(clients.map((item) => [item.id, item]));
 
@@ -128,6 +150,60 @@ export default async function InboxPage({
       />
 
       {schemaMissing && <OpsSchemaNotice title="Campaign inbox links need migration 0016" />}
+
+      {moderatorAgents.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Inbox Moderator</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              An agent that drafts replies in the brand&rsquo;s voice for every open thread, and pings you
+              only for the ones it flags. Nothing is ever sent to a platform automatically &mdash; sending
+              still happens below, the same way it always has.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {moderatorAgents.map((agent) => {
+              const setting = moderatorSettingByAgent.get(agent.id);
+              return (
+                <div
+                  key={agent.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                >
+                  <form
+                    action={setModeratorSettingAction}
+                    className="flex flex-wrap items-center gap-4"
+                  >
+                    <input type="hidden" name="agent_id" value={agent.id} />
+                    <span className="text-sm font-medium">{agent.name}</span>
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        name="enabled"
+                        defaultChecked={setting?.enabled ?? false}
+                        className="h-4 w-4"
+                      />
+                      On for this agent
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        name="auto_approve_low_risk"
+                        defaultChecked={setting?.auto_approve_low_risk ?? false}
+                        className="h-4 w-4"
+                      />
+                      Auto-approve low-risk drafts
+                    </label>
+                    <Button type="submit" size="sm" variant="outline">
+                      Save
+                    </Button>
+                  </form>
+                  <InboxModeratorRunButton agentId={agent.id} />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[220px_220px_auto]">
         <select
