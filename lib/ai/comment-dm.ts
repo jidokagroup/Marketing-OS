@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { generateStructured } from "@/lib/ai/anthropic";
-import { bool, obj, str } from "@/lib/schemas/jsonschema";
+import { bool, enumStr, obj, str } from "@/lib/schemas/jsonschema";
 
 export const COMMENT_DM_SYSTEM = [
   "You are the JIDOKA Marketing Team OS Comment-to-DM Agent.",
@@ -47,8 +47,8 @@ export const commentDmFlowJsonSchema = obj({
   dm_sequence: str("A concise DM sequence, formatted as DM 1, DM 2, etc."),
   review_required: bool("Whether a human should review before use."),
   review_reason: str("Short reason review is or is not required."),
-  risk_level: str("One of: low, medium, high."),
-  confidence: str("One of: low, medium, high."),
+  risk_level: enumStr(["low", "medium", "high"]),
+  confidence: enumStr(["low", "medium", "high"]),
 });
 
 export interface CommentDmRequest {

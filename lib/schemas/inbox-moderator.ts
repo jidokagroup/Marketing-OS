@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { bool, obj, str } from "@/lib/schemas/jsonschema";
+import { bool, enumStr, obj, str } from "@/lib/schemas/jsonschema";
 
 /**
  * Inbox Moderator's per-message output.
@@ -26,5 +26,5 @@ export const inboxReplyJsonSchema = obj({
     "True if a person should read this before it goes out -- unclear intent, a complaint, anything medical/legal/financial, hostility, or a request the brand brief does not cover.",
   ),
   reason: str("One short sentence: why a human is or is not needed."),
-  risk_level: str("One of: low, medium, high."),
+  risk_level: enumStr(["low", "medium", "high"], "How risky this reply is to send unreviewed."),
 });

@@ -65,6 +65,20 @@ type ModeratorMessage = {
 
 type ModeratorSupabase = Parameters<typeof opsTable>[0];
 
+/** Roles that represent a real person writing in -- eligible for a reply. */
+const INBOUND_ROLES = new Set(["commenter", "user", "human"]);
+/** Roles that represent a reply already drafted, by this agent or another. */
+const ASSISTANT_ROLES = new Set(["assistant", "ai"]);
+
+/**
+ * Ceiling on threads answered per pass. Each one is a sequential Claude
+ * call, and both callers run under a wall-clock budget (300s for the cron
+ * sweep, 120s for the on-demand button). A backlog is worked through over
+ * successive passes rather than risking the whole pass timing out and
+ * committing nothing.
+ */
+const MAX_THREADS_PER_PASS = 15;
+
 /**
  * One pass over one agent's inbox: draft a reply for every thread that is
  * still waiting on one, then either leave it for a human (needs_human, or
@@ -99,12 +113,20 @@ export async function runModeratorPassForAgent(
     .order("created_at", { ascending: true });
   const messages = (messagesResult.data ?? []) as ModeratorMessage[];
 
+  // Role sets match how the Inbox page itself reads a thread (see
+  // app/(dashboard)/inbox/page.tsx). Both matter:
+  //   - "ai" counts as an existing draft, or a thread the Comment-to-DM flow
+  //     already answered would get a second, duplicate reply.
+  //   - only genuine inbound roles are eligible to be replied to. Treating
+  //     "everything that is not 'assistant'" as inbound would let the agent
+  //     reply to an "ai" draft or a "system" note -- that is, to itself.
+  const inbound = messages.filter((m) => INBOUND_ROLES.has(m.role));
   const alreadyDrafted = new Set(
-    messages.filter((m) => m.role === "assistant").map((m) => m.thread_id),
+    messages.filter((m) => ASSISTANT_ROLES.has(m.role)).map((m) => m.thread_id),
   );
+  // Ordered ascending by created_at, so the last write per thread wins.
   const latestInbound = new Map<string, ModeratorMessage>();
-  for (const message of messages) {
-    if (message.role === "assistant") continue;
+  for (const message of inbound) {
     latestInbound.set(message.thread_id, message);
   }
 
@@ -119,10 +141,13 @@ export async function runModeratorPassForAgent(
   let drafted = 0;
   let flagged = 0;
 
-  for (const thread of threads) {
-    if (alreadyDrafted.has(thread.id)) continue;
-    const inbound = latestInbound.get(thread.id);
-    if (!inbound) continue;
+  const pending = threads
+    .filter((thread) => !alreadyDrafted.has(thread.id) && latestInbound.has(thread.id))
+    .slice(0, MAX_THREADS_PER_PASS);
+
+  for (const thread of pending) {
+    const inboundMessage = latestInbound.get(thread.id);
+    if (!inboundMessage) continue;
 
     const result = await draftInboxReply({
       brandBrief,
@@ -130,7 +155,7 @@ export async function runModeratorPassForAgent(
       platform: thread.platform,
       channel: thread.channel,
       participant: thread.participant_username,
-      messageBody: inbound.body,
+      messageBody: inboundMessage.body,
     });
 
     const needsHuman = result.needs_human || result.risk_level !== "low";

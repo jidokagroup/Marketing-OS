@@ -82,12 +82,21 @@ export default async function GuestSharePage({
 
 type ScopeProps = { admin: ReturnType<typeof createAdminClient>; link: ShareLink };
 
-async function agentIdsForClient(admin: ScopeProps["admin"], clientId: string | null) {
-  if (!clientId) return [] as string[];
+/**
+ * The agents belonging to this link's client.
+ *
+ * Filtered on owner_id as well as client_id even though the link supplies
+ * both from the same row: this page reads through the service-role client,
+ * which bypasses RLS entirely, so every query has to carry its own scope
+ * rather than relying on the database to enforce one.
+ */
+async function agentIdsForClient(admin: ScopeProps["admin"], link: ShareLink) {
+  if (!link.client_id) return [] as string[];
   const { data } = await admin
     .from("marketing_os_writing_agents")
     .select("id")
-    .eq("client_id", clientId);
+    .eq("owner_id", link.owner_id)
+    .eq("client_id", link.client_id);
   return (data ?? []).map((row) => row.id as string);
 }
 
@@ -135,13 +144,14 @@ async function ApprovalScope({ admin, link }: ScopeProps) {
 }
 
 async function CalendarScope({ admin, link }: ScopeProps) {
-  const agentIds = await agentIdsForClient(admin, link.client_id);
+  const agentIds = await agentIdsForClient(admin, link);
   if (agentIds.length === 0) {
     return <p className="text-sm text-muted-foreground">Nothing scheduled yet.</p>;
   }
   const { data } = await admin
     .from("marketing_os_scheduled_posts")
     .select("id, title, platform, status, scheduled_time")
+    .eq("owner_id", link.owner_id)
     .in("agent_id", agentIds)
     .in("status", ["scheduled", "posting", "posted"])
     .order("scheduled_time", { ascending: true })
@@ -173,13 +183,14 @@ async function CalendarScope({ admin, link }: ScopeProps) {
 }
 
 async function ContentLibraryScope({ admin, link }: ScopeProps) {
-  const agentIds = await agentIdsForClient(admin, link.client_id);
+  const agentIds = await agentIdsForClient(admin, link);
   if (agentIds.length === 0) {
     return <p className="text-sm text-muted-foreground">Nothing published yet.</p>;
   }
   const { data } = await admin
     .from("marketing_os_generated_content")
     .select("id, title, topic, platform, created_at")
+    .eq("owner_id", link.owner_id)
     .in("agent_id", agentIds)
     .order("created_at", { ascending: false })
     .limit(30);
@@ -210,9 +221,17 @@ function last30DaysDate(): string {
 }
 
 async function AnalyticsScope({ admin, link }: ScopeProps) {
+  // Scoped to this client's agents, not just the owner. A link is issued to
+  // one client, and an owner running several clients would otherwise be
+  // showing each of them every other client's numbers on a public page.
+  const agentIds = await agentIdsForClient(admin, link);
+  if (agentIds.length === 0) {
+    return <p className="text-sm text-muted-foreground">No analytics recorded in the last 30 days yet.</p>;
+  }
   const result = await opsTable(admin, "marketing_os_platform_analytics")
     .select("platform, views, impressions, likes, comments, shares, performance_score, date")
     .eq("owner_id", link.owner_id)
+    .in("agent_id", agentIds)
     .gte("date", last30DaysDate())
     .order("date", { ascending: false })
     .limit(500);
