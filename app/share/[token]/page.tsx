@@ -57,11 +57,9 @@ export default async function GuestSharePage({
     .update({ last_accessed_at: new Date().toISOString() })
     .eq("id", link.id);
 
-  const { data: client } = await admin
-    .from("marketing_os_clients")
-    .select("name")
-    .eq("id", link.client_id ?? "")
-    .maybeSingle();
+  const { data: client } = link.client_id
+    ? await admin.from("marketing_os_clients").select("name").eq("id", link.client_id).maybeSingle()
+    : { data: null };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
@@ -94,12 +92,14 @@ async function agentIdsForClient(admin: ScopeProps["admin"], clientId: string | 
 }
 
 async function ApprovalScope({ admin, link }: ScopeProps) {
-  const result = await opsTable(admin, "marketing_os_approval_requests")
-    .select("id, message, status, due_at, created_at")
-    .eq("owner_id", link.owner_id)
-    .eq("client_id", link.client_id ?? "")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  const result = link.client_id
+    ? await opsTable(admin, "marketing_os_approval_requests")
+        .select("id, message, status, due_at, created_at")
+        .eq("owner_id", link.owner_id)
+        .eq("client_id", link.client_id)
+        .order("created_at", { ascending: false })
+        .limit(20)
+    : { data: null };
   const requests = asRows<{
     id: string;
     message: string | null;
