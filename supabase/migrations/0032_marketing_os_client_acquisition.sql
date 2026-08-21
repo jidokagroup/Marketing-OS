@@ -88,6 +88,7 @@ begin
   end loop;
 end $$;
 
+drop trigger if exists marketing_os_acquisition_attempts_set_updated_at on public.marketing_os_acquisition_attempts;
 create trigger marketing_os_acquisition_attempts_set_updated_at
   before update on public.marketing_os_acquisition_attempts
   for each row execute function public.marketing_os_set_updated_at();
