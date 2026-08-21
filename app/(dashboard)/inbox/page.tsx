@@ -28,6 +28,7 @@ export const metadata = { title: "Inbox · Jidoka Marketing Team OS" };
 
 type InboxThread = {
   id: string;
+  scheduled_post_id?: string | null;
   campaign_id?: string | null;
   client_id: string | null;
   agent_id: string | null;
@@ -61,6 +62,26 @@ function latestMessage(
   );
 }
 
+/**
+ * Pick a draft by what it IS, not by when it was written.
+ *
+ * A Comment-to-DM flow stores two assistant messages — the public comment
+ * reply and the DM sequence — and the messages are read newest-first, so
+ * taking the most recent one surfaced the DM sequence as the public reply.
+ * Sending that would have posted "Reply 1… Reply 2… Reply 3…" as a public
+ * Instagram comment.
+ */
+function messageOfType(
+  messages: InboxMessage[],
+  threadId: string,
+  messageType: string,
+) {
+  return messages.find(
+    (message) =>
+      message.thread_id === threadId && message.message_type === messageType,
+  );
+}
+
 export default async function InboxPage({
   searchParams,
 }: {
@@ -69,7 +90,7 @@ export default async function InboxPage({
   const { platform = "all", review = "all" } = await searchParams;
   const { user, supabase } = await requireUser();
   const threadsResult = await opsTable(supabase, "marketing_os_inbox_threads")
-    .select("id, campaign_id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at")
+    .select("id, campaign_id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at, scheduled_post_id")
     .eq("owner_id", user.id)
     .order("updated_at", { ascending: false });
   const schemaMissing = isOpsSchemaMissing(threadsResult.error);
@@ -77,7 +98,7 @@ export default async function InboxPage({
   const [fallbackThreads, campaignsResult, clientsResult, agentsResult, moderatorSettingsResult] = await Promise.all([
     schemaMissing
       ? opsTable(supabase, "marketing_os_inbox_threads")
-          .select("id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at")
+          .select("id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at, scheduled_post_id")
           .eq("owner_id", user.id)
           .order("updated_at", { ascending: false })
       : Promise.resolve({ data: null }),
@@ -258,10 +279,16 @@ export default async function InboxPage({
               "user",
               "human",
             ]);
-            const assistantDraft = latestMessage(messages, thread.id, [
-              "assistant",
-              "ai",
-            ]);
+            // A thread tied to a scheduled post is not an inbound message: it
+            // is a pre-publish review of the Comment-to-DM flow configured for
+            // that post. The "message" is the client's own caption, so it has
+            // to be labelled as such rather than as something a stranger sent.
+            const isFlowReview = Boolean(thread.scheduled_post_id);
+            const publicReply = messageOfType(messages, thread.id, "public_reply");
+            const dmSequence = messageOfType(messages, thread.id, "dm");
+            const assistantDraft =
+              publicReply ??
+              latestMessage(messages, thread.id, ["assistant", "ai"]);
             const campaign = thread.campaign_id
               ? campaignById.get(thread.campaign_id)
               : null;
@@ -278,10 +305,12 @@ export default async function InboxPage({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold">
-                        {thread.participant_username ??
-                          campaign?.name ??
-                          client?.name ??
-                          "Inbox thread"}
+                        {isFlowReview
+                          ? `Comment-to-DM flow${client?.name ? ` · ${client.name}` : ""}`
+                          : thread.participant_username ??
+                            campaign?.name ??
+                            client?.name ??
+                            "Inbox thread"}
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {titleCase(thread.platform)} · {titleCase(thread.channel)} ·{" "}
@@ -304,26 +333,44 @@ export default async function InboxPage({
                     </Badge>
                   </div>
 
-                  {thread.review_reason && (
+                  {isFlowReview ? (
                     <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
-                      {thread.review_reason}
+                      Nobody has commented yet. This is the Comment-to-DM flow set up for this
+                      post &mdash; approve the public reply and DM sequence before it goes live.
                     </p>
+                  ) : (
+                    thread.review_reason && (
+                      <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+                        {thread.review_reason}
+                      </p>
+                    )
                   )}
 
                   <div className="grid gap-3 lg:grid-cols-2">
                     <div className="rounded-lg border p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Message
+                        {isFlowReview ? "Your post caption" : "Message"}
                       </p>
                       <p className="mt-2 text-sm">
-                        {customerMessage?.body ?? "No inbound body saved yet."}
+                        {customerMessage?.body ??
+                          (isFlowReview
+                            ? "No caption saved on this post yet."
+                            : "No inbound body saved yet.")}
                       </p>
                     </div>
                     <div className="rounded-lg border p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Suggested reply
+                        {isFlowReview ? "Public comment reply" : "Suggested reply"}
                       </p>
                       <p className="mt-2 text-sm">{suggestedReply}</p>
+                      {isFlowReview && dmSequence && (
+                        <>
+                          <p className="mt-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            DM sequence
+                          </p>
+                          <p className="mt-2 whitespace-pre-line text-sm">{dmSequence.body}</p>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -356,7 +403,7 @@ export default async function InboxPage({
                     />
                     <div className="flex flex-wrap gap-2">
                       <Button type="submit" name="status" value="posted">
-                        Send reply
+                        {isFlowReview ? "Approve flow" : "Send reply"}
                       </Button>
                       <Button
                         type="submit"
