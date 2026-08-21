@@ -20,7 +20,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { updateInboxThreadStatusAction } from "./actions";
 import { setModeratorSettingAction } from "./moderator-actions";
+import { trainedAgentIds } from "@/lib/agent-readiness";
 import { InboxModeratorRunButton } from "@/components/inbox-moderator-run-button";
+import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
 
 export const metadata = { title: "Inbox · Jidoka Marketing Team OS" };
 
@@ -136,6 +138,10 @@ export default async function InboxPage({
     : asRows<{ agent_id: string; enabled: boolean; auto_approve_low_risk: boolean }>(
         moderatorSettingsResult.data,
       );
+  const trainedAgents = await trainedAgentIds(
+    supabase,
+    moderatorAgents.map((agent) => agent.id),
+  );
   const moderatorSettingByAgent = new Map(
     moderatorSettings.map((setting) => [setting.agent_id, setting]),
   );
@@ -164,6 +170,14 @@ export default async function InboxPage({
           <CardContent className="space-y-2">
             {moderatorAgents.map((agent) => {
               const setting = moderatorSettingByAgent.get(agent.id);
+              if (!trainedAgents.has(agent.id)) {
+                return (
+                  <div key={agent.id} className="space-y-2">
+                    <p className="text-sm font-medium">{agent.name}</p>
+                    <UntrainedAgentNotice agentId={agent.id} what="Every reply the moderator drafts" />
+                  </div>
+                );
+              }
               return (
                 <div
                   key={agent.id}

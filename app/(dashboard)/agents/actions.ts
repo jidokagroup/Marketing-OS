@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { AGENT_EXISTS_FOR_CLIENT_ERROR, existingAgentForClient } from "@/lib/agent-per-client";
 
 export type FormState = { error: string } | null;
 
@@ -24,6 +25,10 @@ export async function createAgentAction(
   }
   if (!clientId) {
     return { error: "Choose a client so this agent only uses that client's data." };
+  }
+
+  if (await existingAgentForClient(supabase, user.id, clientId)) {
+    return { error: AGENT_EXISTS_FOR_CLIENT_ERROR };
   }
 
   const { data, error } = await supabase

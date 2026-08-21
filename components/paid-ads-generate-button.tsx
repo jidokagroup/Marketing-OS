@@ -8,13 +8,7 @@ import { Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { readJsonResponse } from "@/lib/client-response";
 
-export function PaidAdsGenerateButton({
-  agentId,
-  hasVoiceDna,
-}: {
-  agentId: string;
-  hasVoiceDna: boolean;
-}) {
+export function PaidAdsGenerateButton({ agentId }: { agentId: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -39,7 +33,7 @@ export function PaidAdsGenerateButton({
   }
 
   return (
-    <Button onClick={onGenerate} disabled={busy || !hasVoiceDna} size="sm">
+    <Button onClick={onGenerate} disabled={busy} size="sm">
       <Megaphone className="mr-1 h-4 w-4" />
       {busy ? "Generating…" : "Generate from top posts"}
     </Button>

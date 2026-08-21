@@ -33,6 +33,7 @@ export async function GET(request: Request) {
 
   let drafted = 0;
   let flagged = 0;
+  let untrained = 0;
   const errors: string[] = [];
 
   for (const setting of settings) {
@@ -45,12 +46,13 @@ export async function GET(request: Request) {
       );
       drafted += result.drafted;
       flagged += result.flagged;
+      if (result.skipped === "untrained") untrained += 1;
     } catch (err) {
       errors.push(err instanceof Error ? err.message : `Failed for agent ${setting.agent_id}`);
     }
   }
 
-  return NextResponse.json({ ok: true, agents: settings.length, drafted, flagged, errors });
+  return NextResponse.json({ ok: true, agents: settings.length, drafted, flagged, untrained, errors });
 }
 
 export const POST = GET;

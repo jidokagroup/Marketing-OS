@@ -5,6 +5,7 @@ import { getAuthContext } from "@/lib/auth";
 import { loadDnaInput } from "@/lib/ai/generate";
 import { buildSourcePosts, lookbackDate, runPaidAdGeneration } from "@/lib/ai/paid-ads";
 import { isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
+import { UNTRAINED_AGENT_ERROR, hasVoiceDna } from "@/lib/agent-readiness";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -27,6 +28,10 @@ export async function POST(
     .maybeSingle();
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  if (!(await hasVoiceDna(supabase, agentId))) {
+    return NextResponse.json({ error: UNTRAINED_AGENT_ERROR }, { status: 400 });
   }
 
   const analyticsResult = await supabase

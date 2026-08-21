@@ -2,6 +2,7 @@ import { generateStructured } from "@/lib/ai/anthropic";
 import { buildDnaBrief, loadDnaInput } from "@/lib/ai/generate";
 import { buildBrandBrainBrief } from "@/lib/brand-brain";
 import { opsTable } from "@/lib/marketing-os/operations";
+import { hasVoiceDna } from "@/lib/agent-readiness";
 import { inboxReply, inboxReplyJsonSchema, type InboxReplyData } from "@/lib/schemas/inbox-moderator";
 import type { BrandBrain } from "@/lib/supabase/types";
 
@@ -94,7 +95,15 @@ export async function runModeratorPassForAgent(
   ownerId: string,
   agentId: string,
   autoApproveLowRisk: boolean,
-): Promise<{ drafted: number; flagged: number }> {
+): Promise<{ drafted: number; flagged: number; skipped?: "untrained" }> {
+  // Guarded here rather than only in the routes so the scheduled sweep is
+  // covered too: a setting can be enabled and the agent's training removed
+  // (or never finished) afterwards, and a reply written with no Voice DNA is
+  // a generic reply going out under the client's name.
+  if (!(await hasVoiceDna(supabase, agentId))) {
+    return { drafted: 0, flagged: 0, skipped: "untrained" };
+  }
+
   const threadsResult = await opsTable(supabase, "marketing_os_inbox_threads")
     .select("id, agent_id, platform, channel, participant_username")
     .eq("owner_id", ownerId)

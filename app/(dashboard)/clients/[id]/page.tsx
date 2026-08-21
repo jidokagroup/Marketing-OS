@@ -217,10 +217,17 @@ export default async function ClientDetailPage({
         title={client.name}
         description={client.notes || "Client workspace, agents, generated content, and scheduled posts."}
       >
-        <ButtonLink href={`/agents/new?client_id=${client.id}`}>
-          Create Writing Agent
-          <ArrowRight className="ml-1 h-4 w-4" />
-        </ButtonLink>
+        {primaryAgent ? (
+          <ButtonLink href={`/agents/${primaryAgent.id}`}>
+            Open Writing Agent
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </ButtonLink>
+        ) : (
+          <ButtonLink href={`/agents/new?client_id=${client.id}`}>
+            Create Writing Agent
+            <ArrowRight className="ml-1 h-4 w-4" />
+          </ButtonLink>
+        )}
       </PageHeader>
 
       {client.industry && <Badge variant="secondary">{client.industry}</Badge>}
@@ -253,14 +260,17 @@ export default async function ClientDetailPage({
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Writing Agents</h2>
-          <ButtonLink href={`/agents/new?client_id=${client.id}`} variant="outline" size="sm">
-            New agent
-          </ButtonLink>
+          <h2 className="text-lg font-semibold">Writing Agent</h2>
+          {agentList.length === 0 && (
+            <ButtonLink href={`/agents/new?client_id=${client.id}`} variant="outline" size="sm">
+              Create agent
+            </ButtonLink>
+          )}
         </div>
         {agentList.length === 0 ? (
           <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-            No agents yet. Create one to upload files, build Brand Voice DNA, and generate content.
+            No agent yet. Each client gets one, trained on their own content — create it to
+            upload files, build Brand Voice DNA, and generate from their voice.
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">

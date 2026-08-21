@@ -2,11 +2,13 @@ import { LineChart } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
 import { asRows, isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
+import { trainedAgentIds } from "@/lib/agent-readiness";
 import type { PerformanceIntelligenceReportData } from "@/lib/schemas/performance-intelligence";
 import { EmptyState } from "@/components/empty-state";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { PerformanceIntelligenceGenerateButton } from "@/components/performance-intelligence-generate-button";
+import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -102,6 +104,8 @@ export default async function PerformancePage() {
     .order("created_at", { ascending: false });
   const agentList = agents ?? [];
 
+  const trained = await trainedAgentIds(supabase, agentList.map((a) => a.id));
+
   const reportsResult =
     agentList.length > 0
       ? await opsTable(supabase, "marketing_os_performance_intelligence_reports")
@@ -144,9 +148,13 @@ export default async function PerformancePage() {
                     <h2 className="text-lg font-semibold">{agent.name}</h2>
                     {report && <Badge variant="secondary">{report.post_count} posts analyzed</Badge>}
                   </div>
-                  <PerformanceIntelligenceGenerateButton agentId={agent.id} />
+                  {trained.has(agent.id) && (
+                    <PerformanceIntelligenceGenerateButton agentId={agent.id} />
+                  )}
                 </div>
-                {report ? (
+                {!trained.has(agent.id) ? (
+                  <UntrainedAgentNotice agentId={agent.id} what="This analysis" />
+                ) : report ? (
                   <ReportCard report={report} />
                 ) : (
                   <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">

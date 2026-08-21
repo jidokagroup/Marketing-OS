@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getAuthContext } from "@/lib/auth";
 import { runModeratorPassForAgent } from "@/lib/ai/inbox-moderator";
 import { opsTable } from "@/lib/marketing-os/operations";
+import { UNTRAINED_AGENT_ERROR, hasVoiceDna } from "@/lib/agent-readiness";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -33,6 +34,10 @@ export async function POST(
     .maybeSingle();
   if (!agent) {
     return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+  }
+
+  if (!(await hasVoiceDna(supabase, agentId))) {
+    return NextResponse.json({ error: UNTRAINED_AGENT_ERROR }, { status: 400 });
   }
 
   const settingResult = await opsTable(supabase, "marketing_os_inbox_moderator_settings")

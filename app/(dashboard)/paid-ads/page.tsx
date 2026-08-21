@@ -2,11 +2,13 @@ import { Megaphone } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
 import { asRows, isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
+import { trainedAgentIds } from "@/lib/agent-readiness";
 import type { PaidAdCopyData, SourcePostData } from "@/lib/schemas/paid-ads";
 import { EmptyState } from "@/components/empty-state";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { PaidAdsGenerateButton } from "@/components/paid-ads-generate-button";
+import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -76,6 +78,8 @@ export default async function PaidAdsPage() {
     .order("created_at", { ascending: false });
   const agentList = agents ?? [];
 
+  const trained = await trainedAgentIds(supabase, agentList.map((a) => a.id));
+
   const resultsResult =
     agentList.length > 0
       ? await opsTable(supabase, "marketing_os_paid_ad_copy")
@@ -115,20 +119,18 @@ export default async function PaidAdsPage() {
             return (
               <section key={agent.id} className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h2 className="text-lg font-semibold">{agent.name}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {agent.status === "ready"
-                        ? "Voice DNA ready"
-                        : "Analyze this agent's Voice DNA before generating ad copy"}
-                    </p>
-                  </div>
-                  <PaidAdsGenerateButton agentId={agent.id} hasVoiceDna={agent.status === "ready"} />
+                  <h2 className="text-lg font-semibold">{agent.name}</h2>
+                  {trained.has(agent.id) && <PaidAdsGenerateButton agentId={agent.id} />}
                 </div>
+                {!trained.has(agent.id) && (
+                  <UntrainedAgentNotice agentId={agent.id} what="Ad copy" />
+                )}
                 {agentResults.length === 0 ? (
-                  <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    No ad copy generated yet for {agent.name}.
-                  </p>
+                  trained.has(agent.id) ? (
+                    <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                      No ad copy generated yet for {agent.name}.
+                    </p>
+                  ) : null
                 ) : (
                   <div className="space-y-3">
                     {agentResults.map((result) => (

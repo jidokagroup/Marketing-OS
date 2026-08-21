@@ -5,6 +5,7 @@ import { getAuthContext } from "@/lib/auth";
 import type { GenerationRequest } from "@/lib/ai/generate";
 import { triggerBackgroundFunction } from "@/lib/background-trigger";
 import { CONTENT_CHANNEL_LABELS } from "@/lib/core-agents";
+import { UNTRAINED_AGENT_ERROR, hasVoiceDna } from "@/lib/agent-readiness";
 
 export const runtime = "nodejs";
 
@@ -90,16 +91,8 @@ export async function POST(
       : body.platform?.trim() || undefined;
 
   // Require an analyzed agent (Voice DNA present).
-  const { data: voice } = await supabase
-    .from("marketing_os_voice_profiles")
-    .select("agent_id")
-    .eq("agent_id", agentId)
-    .maybeSingle();
-  if (!voice) {
-    return NextResponse.json(
-      { error: "Analyze this agent before generating content." },
-      { status: 400 },
-    );
+  if (!(await hasVoiceDna(supabase, agentId))) {
+    return NextResponse.json({ error: UNTRAINED_AGENT_ERROR }, { status: 400 });
   }
 
   // Generation itself runs out-of-band: retrieval plus a Claude call for a
