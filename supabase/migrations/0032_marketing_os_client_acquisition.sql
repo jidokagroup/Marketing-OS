@@ -46,6 +46,13 @@ create table if not exists public.marketing_os_acquisition_attempts (
 create index if not exists marketing_os_acquisition_attempts_lead_idx
   on public.marketing_os_acquisition_attempts (lead_id, attempt_no);
 
+-- Attempt numbers are derived by counting existing rows, so two requests that
+-- overlap would both read the same count and write the same attempt_no. The
+-- constraint makes the loser fail cleanly instead of silently duplicating a
+-- touch in the sequence.
+create unique index if not exists marketing_os_acquisition_attempts_lead_no_key
+  on public.marketing_os_acquisition_attempts (lead_id, attempt_no);
+
 create table if not exists public.marketing_os_acquisition_replies (
   id          uuid primary key default gen_random_uuid(),
   owner_id    uuid not null references auth.users (id) on delete cascade,

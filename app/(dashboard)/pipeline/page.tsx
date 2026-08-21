@@ -13,7 +13,11 @@ import {
   type LeadRow,
 } from "@/lib/marketing-os/operations";
 import { EmptyState } from "@/components/empty-state";
-import { OutreachGenerateButton } from "@/components/outreach-generate-button";
+import Link from "next/link";
+import { createPipelineLeadAction } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -147,6 +151,57 @@ export default async function PipelinePage() {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Add a prospect</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Evidence is what the first touch opens on &mdash; something specific they said, posted or
+            shipped. Without it the opener is generic, and a generic opener is the message people
+            delete.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form action={createPipelineLeadAction} className="grid gap-2 sm:grid-cols-2">
+            <Input name="lead_name" placeholder="Name *" required aria-label="Name" />
+            <select
+              name="client_id"
+              required
+              aria-label="Client"
+              className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="">Acquiring for which client? *</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+            <Input name="company" placeholder="Company" aria-label="Company" />
+            <Input name="email" type="email" placeholder="Email" aria-label="Email" />
+            <Input name="linkedin_url" placeholder="LinkedIn URL" aria-label="LinkedIn URL" />
+            <Input name="source_channel" placeholder="Found via (linkedin, referral…)" aria-label="Source" />
+            <Input name="source_url" placeholder="Source URL" aria-label="Source URL" />
+            <Input
+              name="estimated_value"
+              type="number"
+              min="0"
+              placeholder="Estimated value"
+              aria-label="Estimated value"
+            />
+            <Textarea
+              name="evidence"
+              rows={2}
+              className="sm:col-span-2"
+              placeholder="Evidence — what they posted, said, or shipped that makes this relevant"
+              aria-label="Evidence"
+            />
+            <div className="sm:col-span-2">
+              <Button type="submit" size="sm">Add prospect</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
       {leads.length === 0 ? (
         <EmptyState
           icon={TrendingUp}
@@ -213,13 +268,14 @@ export default async function PipelinePage() {
                                     Next touch {formatDate(lead.next_attempt_at)}
                                   </p>
                                 )}
-                                {lead.client_id && (
-                                  <OutreachGenerateButton
-                                    leadId={lead.id}
-                                    channel={lead.email ? "email" : "linkedin"}
-                                    attemptNo={leadAttempts.length + 1}
-                                  />
-                                )}
+                                <Link
+                                  href={`/pipeline/${lead.id}`}
+                                  className="inline-block text-xs font-medium text-primary hover:underline"
+                                >
+                                  {leadAttempts.length === 0
+                                    ? "Start sequence →"
+                                    : `${leadAttempts.length} touch${leadAttempts.length === 1 ? "" : "es"} →`}
+                                </Link>
                               </div>
                             );
                           })()}

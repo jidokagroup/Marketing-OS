@@ -9,7 +9,7 @@ import { buildBrandBrainBrief } from "@/lib/brand-brain";
 import { asRows, isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
 import { OUTREACH_CHANNELS, type OutreachChannel } from "@/lib/schemas/acquisition";
 import { nextStageRules, normalizeOutreachStage } from "@/lib/acquisition/stages";
-import { daysUntilNextTouch } from "@/lib/acquisition/touchpoints";
+import { TOUCHPOINTS, daysUntilNextTouch } from "@/lib/acquisition/touchpoints";
 import type { BrandBrain } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -96,6 +96,33 @@ export async function POST(
     .order("attempt_no", { ascending: true });
   const prior = asRows<{ attempt_no: number; body: string }>(priorResult.data);
   const attemptNo = prior.length + 1;
+
+  // Guarded here as well as in the UI, since the route is reachable directly.
+  // Both cases are ones where continuing actively damages the relationship
+  // rather than merely wasting a call.
+  const replyResult = await opsTable(supabase, "marketing_os_acquisition_replies")
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("lead_id", leadId)
+    .limit(1)
+    .maybeSingle();
+  if (replyResult.data) {
+    return NextResponse.json(
+      {
+        error:
+          "This prospect already replied — the sequence stops there. Continuing to send after a reply is the fastest way to undo the relationship.",
+      },
+      { status: 400 },
+    );
+  }
+  if (attemptNo > TOUCHPOINTS.length) {
+    return NextResponse.json(
+      {
+        error: `The ${TOUCHPOINTS.length}-touch sequence is finished for this prospect. Move them to a longer-term nurture rather than sending a seventh message.`,
+      },
+      { status: 400 },
+    );
+  }
 
   const [brainResult, dna] = await Promise.all([
     opsTable(supabase, "marketing_os_brand_brains").select("*").eq("agent_id", agentId).maybeSingle(),
