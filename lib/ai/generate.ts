@@ -8,6 +8,7 @@ import {
   type GeneratedContentData,
   type QualityScoreData,
 } from "@/lib/schemas/generation";
+import { buildLearningsBrief, type BrandLearning } from "@/lib/brand-learnings";
 import type {
   VoiceProfileData,
   BeliefProfileData,
@@ -30,6 +31,12 @@ export interface GenerationRequest {
 }
 
 export interface DnaInput {
+  /**
+   * What the client has taught us since the profiles were built. Separate from
+   * the profiles because a profile is an analysis of past work and a learning
+   * is a decision someone made or a pattern performance proved.
+   */
+  learnings?: BrandLearning[];
   voice: VoiceProfileData | null;
   belief: BeliefProfileData | null;
   hooks: HookLibraryData | null;
@@ -54,6 +61,9 @@ function list(items: unknown, maxItems: number, mapItem?: (item: unknown) => str
 }
 
 export function buildDnaBrief(dna: DnaInput): string {
+  // Placed after the profiles below, so a learned correction is the last thing
+  // the model reads about how this client sounds.
+  const learningsBrief = buildLearningsBrief(dna.learnings ?? []);
   const parts: string[] = [];
   if (dna.voice) {
     parts.push(
@@ -98,6 +108,7 @@ export function buildDnaBrief(dna: DnaInput): string {
       `Objections: ${list(dna.knowledge.objections, 5, (o) => String((o as { objection?: unknown }).objection ?? ""))}.`,
     );
   }
+  if (learningsBrief) parts.push(learningsBrief);
   return parts.join("\n");
 }
 
@@ -488,13 +499,16 @@ export async function loadDnaInput(
       };
     };
   };
-  const [voice, belief, hooks, story, phrase, knowledge] = await Promise.all([
+  const [voice, belief, hooks, story, phrase, knowledge, learnings] = await Promise.all([
     db.from("marketing_os_voice_profiles").select("*").eq("agent_id", agentId).maybeSingle(),
     db.from("marketing_os_belief_profiles").select("*").eq("agent_id", agentId).maybeSingle(),
     db.from("marketing_os_hook_libraries").select("*").eq("agent_id", agentId).maybeSingle(),
     db.from("marketing_os_story_frameworks").select("*").eq("agent_id", agentId).maybeSingle(),
     db.from("marketing_os_phrase_libraries").select("*").eq("agent_id", agentId).maybeSingle(),
     db.from("marketing_os_knowledge_graphs").select("*").eq("agent_id", agentId).maybeSingle(),
+    // Only the active ones reach generation; an archived learning keeps its
+    // evidence but stops steering the writing.
+    loadActiveLearnings(db, agentId),
   ]);
 
   return {
@@ -504,5 +518,44 @@ export async function loadDnaInput(
     story: story.data as StoryFrameworksData | null,
     phrase: phrase.data as PhraseLibraryData | null,
     knowledge: knowledge.data as KnowledgeGraphData | null,
+    learnings,
   };
+}
+
+/**
+ * Reads active learnings, tolerating a database that does not have them yet.
+ *
+ * Generation must not start failing on a deployment where this migration has
+ * not been applied — losing the learnings costs some tailoring, losing
+ * generation costs the product.
+ */
+async function loadActiveLearnings(
+  db: unknown,
+  agentId: string,
+): Promise<BrandLearning[]> {
+  try {
+    const result = await (db as {
+      from: (table: string) => {
+        select: (columns: string) => {
+          eq: (column: string, value: unknown) => {
+            eq: (column: string, value: unknown) => {
+              order: (
+                column: string,
+                options?: Record<string, unknown>,
+              ) => PromiseLike<{ data: unknown; error: unknown }>;
+            };
+          };
+        };
+      };
+    })
+      .from("marketing_os_brand_learnings")
+      .select("id, statement, kind, source, origin, confidence, supporting_examples, active, learned_at")
+      .eq("agent_id", agentId)
+      .eq("active", true)
+      .order("confidence", { ascending: false });
+
+    return Array.isArray(result?.data) ? (result.data as BrandLearning[]) : [];
+  } catch {
+    return [];
+  }
 }

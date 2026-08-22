@@ -10,8 +10,10 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { decodeEditSignal } from "@/lib/edit-signals";
 import { SeatSync } from "@/components/seat-context";
 import { CopyButton } from "@/components/copy-button";
+import { LearnFromEditPrompt } from "@/components/learn-from-edit-prompt";
 import { ScoreBadge } from "@/components/score-badge";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { Badge } from "@/components/ui/badge";
@@ -56,10 +58,10 @@ export default async function GeneratedDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; learn?: string }>;
 }) {
   const { id } = await params;
-  const { saved } = await searchParams;
+  const { saved, learn } = await searchParams;
   const { supabase } = await requireUser();
 
   const { data: content } = await supabase
@@ -188,6 +190,14 @@ export default async function GeneratedDetailPage({
     <div className="mx-auto max-w-4xl">
       <SeatSync agentId={content.agent_id} clientId={agent?.client_id ?? null} />
       <SavedToast variant={saved} />
+      {agent && (
+        <LearnFromEditPrompt
+          agentId={agent.id}
+          clientId={agent.client_id}
+          contentId={id}
+          removedTerms={decodeEditSignal(learn)}
+        />
+      )}
       <GenerationStatusBanner
         status={content.status}
         errorMessage={content.error_message}
