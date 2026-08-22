@@ -168,9 +168,9 @@ const SETTINGS_TABS = [
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; moderator?: string; reason?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, moderator, reason } = await searchParams;
   const activeTab = (SETTINGS_TABS as readonly string[]).includes(tab ?? "")
     ? (tab as string)
     : "connections";
@@ -875,6 +875,16 @@ export default async function SettingsPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {moderator === "saved" && (
+                <p className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+                  Saved.
+                </p>
+              )}
+              {moderator === "error" && (
+                <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  Could not save: {reason ?? "unknown error"}
+                </p>
+              )}
               {moderatorAgents.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No seats yet. Add a client and train its agent first.
