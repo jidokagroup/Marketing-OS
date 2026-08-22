@@ -101,7 +101,11 @@ export async function POST(
 
     revalidatePath("/performance");
 
-    return NextResponse.json({ ok: true, result: inserted });
+    return NextResponse.json({
+      ok: true,
+      post_count: posts.length,
+      result: inserted,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Performance analysis failed";
     return NextResponse.json({ error: message }, { status: 500 });

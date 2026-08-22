@@ -1,41 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Megaphone } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { readJsonResponse } from "@/lib/client-response";
+import { AsyncActionButton } from "@/components/async-action-button";
 
 export function PaidAdsGenerateButton({ agentId }: { agentId: string }) {
-  const router = useRouter();
-  const [busy, setBusy] = useState(false);
-
-  async function onGenerate() {
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/agents/${agentId}/paid-ads/generate`, {
-        method: "POST",
-      });
-      const json = await readJsonResponse<{ ok?: boolean }>(res);
-      if (!res.ok || !json.ok) {
-        toast.error(json.error ?? "Could not generate ad copy");
-        return;
-      }
-      toast.success("Paid ad copy generated from the last 30 days");
-      router.refresh();
-    } catch {
-      toast.error("Network error while generating ad copy");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
-    <Button onClick={onGenerate} disabled={busy} size="sm">
-      <Megaphone className="mr-1 h-4 w-4" />
-      {busy ? "Generating…" : "Generate from top posts"}
-    </Button>
+    <AsyncActionButton<{ ok?: boolean; variants?: number }>
+      endpoint={`/api/agents/${agentId}/paid-ads/generate`}
+      idleLabel="Generate from top posts"
+      runningLabel="Generating…"
+      runningHint="Reading the last 30 days of top posts and writing ad copy…"
+      describeSuccess={(json) =>
+        json.variants
+          ? `Wrote ${json.variants} ad variant${json.variants === 1 ? "" : "s"} from the last 30 days.`
+          : "Ad copy generated from the last 30 days."
+      }
+      fallbackError="Could not generate ad copy."
+      icon={<Megaphone className="mr-1 h-4 w-4" />}
+    />
   );
 }

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BarChart3, CheckCircle2, DollarSign, Eye, Heart, Sparkles, TrendingUp } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { activeSeat } from "@/lib/seat";
+import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import {
   getEmailProviderDefinition,
   normalizeEmailProvider,
@@ -109,21 +111,20 @@ export default async function AnalyticsPage({
   searchParams: Promise<{
     platform?: string;
     backfill?: string;
-    days?: string;
-    rows?: string;
-    accounts?: string;
-    errors?: string;
+    agent_id?: string;
+    client?: string;
   }>;
 }) {
   const { user, supabase } = await requireUser();
   const {
     platform = "all",
     backfill,
-    days = "90",
-    rows: backfillRows = "0",
-    accounts: backfillAccounts = "0",
-    errors: backfillErrors = "0",
+    agent_id: agentParam,
+    client: clientParam,
   } = await searchParams;
+  // The Analytics import redirects back here, so the seat has to be carried
+  // in and out or the header lands on a different client.
+  const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
   const attribution = await getAttributionData(supabase, user.id);
 
   const [
@@ -132,6 +133,7 @@ export default async function AnalyticsPage({
     { data: accounts },
     { count: scheduledCount },
     emailProviderResult,
+    backfillRunResult,
   ] =
     await Promise.all([
       supabase
@@ -152,6 +154,14 @@ export default async function AnalyticsPage({
       opsTable(supabase, "marketing_os_email_provider_settings")
         .select("provider, provider_label, status")
         .eq("owner_id", user.id)
+        .maybeSingle(),
+      opsTable(supabase, "marketing_os_analytics_backfill_runs")
+        .select(
+          "platform, lookback_days, status, accounts_processed, rows_stored, errors, detail, error_message, finished_at",
+        )
+        .eq("owner_id", user.id)
+        .order("requested_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
     ]);
 
@@ -256,15 +266,15 @@ export default async function AnalyticsPage({
     : selectedEmailProvider !== "mailchimp" && emailProviderSettings?.status === "connected"
       ? selectedEmailProviderLabel
     : null;
-  const backfillNotice =
-    backfill === "success"
-      ? {
-          rows: Number(backfillRows).toLocaleString(),
-          accounts: Number(backfillAccounts).toLocaleString(),
-          errors: Number(backfillErrors).toLocaleString(),
-          days,
-        }
-      : null;
+  // The recorded run outlives the redirect, so the result is still there after
+  // a refresh — and it carries a per-account outcome, which is the part that
+  // says why an account that looks connected imported nothing.
+  const lastBackfill = isOpsSchemaMissing(backfillRunResult.error)
+    ? null
+    : asRow<BackfillRunRow>(backfillRunResult.data);
+  const backfillNotice = lastBackfill
+    ? { run: lastBackfill, justRan: backfill === "success" || backfill === "error" }
+    : null;
 
   if (data.length === 0) {
     const checklist = [
@@ -307,6 +317,7 @@ export default async function AnalyticsPage({
           platform={selectedPlatform}
           platforms={backfillPlatformOptions}
           disabled={backfillSupportedConnectedCount === 0}
+          seat={seat}
         />
         <PlatformOverview platforms={platformStatuses} />
         <AnalyticsPlatformFilter platform={selectedPlatform} options={platformOptions} />
@@ -433,6 +444,7 @@ export default async function AnalyticsPage({
         platform={selectedPlatform}
         platforms={backfillPlatformOptions}
         disabled={backfillSupportedConnectedCount === 0}
+        seat={seat}
       />
 
       <PlatformOverview platforms={platformStatuses} />
@@ -615,25 +627,84 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+type BackfillRunRow = {
+  platform: string;
+  lookback_days: number;
+  status: string;
+  accounts_processed: number;
+  rows_stored: number;
+  errors: number;
+  detail: BackfillAccountDetail[] | null;
+  error_message: string | null;
+  finished_at: string | null;
+};
+
+type BackfillAccountDetail = {
+  platform: string;
+  username: string | null;
+  rows: number;
+  status: string;
+  error?: string;
+};
+
+const BACKFILL_ACCOUNT_LABEL: Record<string, string> = {
+  imported: "imported",
+  no_data: "nothing new in this window",
+  no_token: "token unreadable",
+  failed: "failed",
+};
+
 function BackfillNotice({
-  rows,
-  accounts,
-  errors,
-  days,
+  run,
+  justRan,
 }: {
-  rows: string;
-  accounts: string;
-  errors: string;
-  days: string;
+  run: BackfillRunRow;
+  justRan: boolean;
 }) {
+  const failed = run.status === "failed" || run.errors > 0;
+  const detail = Array.isArray(run.detail) ? run.detail : [];
+
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-      <p className="font-medium">Analytics backfill complete</p>
-      <p className="mt-1">
-        Pulled the past {days} days across {accounts} connected account
-        {accounts === "1" ? "" : "s"} and stored {rows} analytics row
-        {rows === "1" ? "" : "s"}. Errors: {errors}.
+    <div
+      className={
+        failed
+          ? "rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          : "rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
+      }
+    >
+      <p className="font-medium">
+        {justRan ? "Analytics backfill finished" : "Last analytics backfill"}
+        {run.finished_at ? "" : " — still running"}
       </p>
+      <p className="mt-1">
+        Pulled the past {run.lookback_days} days across{" "}
+        {run.accounts_processed.toLocaleString()} connected account
+        {run.accounts_processed === 1 ? "" : "s"} and stored{" "}
+        {run.rows_stored.toLocaleString()} row
+        {run.rows_stored === 1 ? "" : "s"}.
+      </p>
+      {run.error_message && <p className="mt-1">{run.error_message}</p>}
+
+      {/* Per account, because "0 rows overall" is the least useful thing this
+          could tell someone with four platforms connected. */}
+      {detail.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {detail.map((item, index) => (
+            <li key={index}>
+              <span className="font-medium">
+                {PLATFORM_LABELS[item.platform as keyof typeof PLATFORM_LABELS] ??
+                  item.platform}
+                {item.username ? ` (${item.username})` : ""}
+              </span>
+              {": "}
+              {item.status === "imported"
+                ? `${item.rows.toLocaleString()} row${item.rows === 1 ? "" : "s"} imported`
+                : (BACKFILL_ACCOUNT_LABEL[item.status] ?? item.status)}
+              {item.error ? ` — ${item.error}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -642,10 +713,12 @@ function AnalyticsBackfillPanel({
   platform,
   platforms,
   disabled,
+  seat,
 }: {
   platform: string;
   platforms: BackfillPlatformOption[];
   disabled: boolean;
+  seat: { agentId: string | null; clientId: string | null };
 }) {
   const defaultPlatform = platforms.some((item) => item.key === platform && !item.disabled)
     ? platform
@@ -658,6 +731,15 @@ function AnalyticsBackfillPanel({
       </CardHeader>
       <CardContent>
         <form action={backfillAnalyticsAction} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          {/* Carried for the redirect only. The import stays owner-wide,
+              because this page shows every seat's analytics and scoping the
+              import but not the page would quietly disagree with itself. */}
+          {seat.agentId && (
+            <input type="hidden" name="return_agent_id" value={seat.agentId} />
+          )}
+          {seat.clientId && (
+            <input type="hidden" name="return_client" value={seat.clientId} />
+          )}
           <label className="grid gap-1 text-sm">
             <span className="font-medium">Lookback window</span>
             <select

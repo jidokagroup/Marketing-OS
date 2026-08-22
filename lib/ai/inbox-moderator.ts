@@ -95,13 +95,19 @@ export async function runModeratorPassForAgent(
   ownerId: string,
   agentId: string,
   autoApproveLowRisk: boolean,
-): Promise<{ drafted: number; flagged: number; skipped?: "untrained" }> {
+): Promise<{
+  drafted: number;
+  flagged: number;
+  /** How many open threads were examined, so "nothing to do" is legible. */
+  checked: number;
+  skipped?: "untrained";
+}> {
   // Guarded here rather than only in the routes so the scheduled sweep is
   // covered too: a setting can be enabled and the agent's training removed
   // (or never finished) afterwards, and a reply written with no Voice DNA is
   // a generic reply going out under the client's name.
   if (!(await hasVoiceDna(supabase, agentId))) {
-    return { drafted: 0, flagged: 0, skipped: "untrained" };
+    return { drafted: 0, flagged: 0, checked: 0, skipped: "untrained" };
   }
 
   const threadsResult = await opsTable(supabase, "marketing_os_inbox_threads")
@@ -110,7 +116,9 @@ export async function runModeratorPassForAgent(
     .eq("agent_id", agentId)
     .eq("status", "needs_review");
   const threads = (threadsResult.data ?? []) as ModeratorThread[];
-  if (threads.length === 0) return { drafted: 0, flagged: 0 };
+  // Reporting how many threads were examined is what separates "there was
+  // nothing to do" from "this did not run".
+  if (threads.length === 0) return { drafted: 0, flagged: 0, checked: 0 };
 
   const messagesResult = await opsTable(supabase, "marketing_os_inbox_messages")
     .select("thread_id, role, body, created_at")
@@ -199,5 +207,5 @@ export async function runModeratorPassForAgent(
     if (needsHuman) flagged += 1;
   }
 
-  return { drafted, flagged };
+  return { drafted, flagged, checked: threads.length };
 }

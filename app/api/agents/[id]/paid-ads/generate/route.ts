@@ -90,7 +90,11 @@ export async function POST(
 
     revalidatePath("/paid-ads");
 
-    return NextResponse.json({ ok: true, result: inserted });
+    return NextResponse.json({
+      ok: true,
+      variants: Array.isArray(ads) ? ads.length : undefined,
+      result: inserted,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Ad copy generation failed";
     return NextResponse.json({ error: message }, { status: 500 });
