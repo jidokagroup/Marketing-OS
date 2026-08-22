@@ -305,7 +305,10 @@ export default async function CampaignDetailPage({
             </p>
           )}
         </div>
-        <div className="grid min-w-64 grid-cols-3 gap-2 text-sm">
+        {/* Pipeline and revenue are separate numbers. Falling back to the
+            leads' estimated value under a "Revenue" label reported money that
+            had not been earned, and disagreed with the Money page. */}
+        <div className="grid min-w-64 grid-cols-4 gap-2 text-sm">
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground">Budget</p>
             <p className="font-semibold">{formatMoney(campaign.budget)}</p>
@@ -315,10 +318,12 @@ export default async function CampaignDetailPage({
             <p className="font-semibold">{leads.length}</p>
           </div>
           <div className="rounded-lg border p-3">
+            <p className="text-muted-foreground">Pipeline</p>
+            <p className="font-semibold">{formatMoney(leadValue)}</p>
+          </div>
+          <div className="rounded-lg border p-3">
             <p className="text-muted-foreground">Revenue</p>
-            <p className="font-semibold">
-              {formatMoney(revenueTotal || leadValue)}
-            </p>
+            <p className="font-semibold">{formatMoney(revenueTotal)}</p>
           </div>
         </div>
       </div>

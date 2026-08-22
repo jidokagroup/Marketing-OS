@@ -28,6 +28,7 @@ import {
   PLATFORM_LABELS,
 } from "@/lib/social/platforms";
 import { cn } from "@/lib/utils";
+import { formatInstant, instantToWallTime } from "@/lib/time-format";
 
 export type CalendarPost = {
   id: string;
@@ -101,7 +102,13 @@ function approvalLabel(post: CalendarPost) {
   return "needs approval";
 }
 
-export function CalendarPostDetails({ post }: { post: CalendarPost }) {
+export function CalendarPostDetails({
+  post,
+  timeZone,
+}: {
+  post: CalendarPost;
+  timeZone: string;
+}) {
   const { deletedIds, markDeleted } = useDeletedPosts();
   if (deletedIds.has(post.id)) return null;
 
@@ -119,6 +126,7 @@ export function CalendarPostDetails({ post }: { post: CalendarPost }) {
       <CalendarPostBody
         post={post}
         compact
+        timeZone={timeZone}
         onDeleted={() => markDeleted(post.id)}
       />
     </details>
@@ -129,10 +137,12 @@ export function CalendarPostCard({
   post,
   agentName,
   clientName,
+  timeZone,
 }: {
   post: CalendarPost;
   agentName: string;
   clientName: string;
+  timeZone: string;
 }) {
   const { deletedIds, markDeleted } = useDeletedPosts();
   if (deletedIds.has(post.id)) return null;
@@ -147,7 +157,7 @@ export function CalendarPostCard({
           <p className="mt-1 text-sm text-muted-foreground">
             {clientName} · {agentName} ·{" "}
             {post.scheduled_time
-              ? new Date(post.scheduled_time).toLocaleString()
+              ? formatInstant(post.scheduled_time, timeZone)
               : "Draft with no time"}
           </p>
         </div>
@@ -168,7 +178,11 @@ export function CalendarPostCard({
           )}
         </div>
       </div>
-      <CalendarPostBody post={post} onDeleted={() => markDeleted(post.id)} />
+      <CalendarPostBody
+        post={post}
+        timeZone={timeZone}
+        onDeleted={() => markDeleted(post.id)}
+      />
     </div>
   );
 }
@@ -176,10 +190,12 @@ export function CalendarPostCard({
 function CalendarPostBody({
   post,
   compact = false,
+  timeZone,
   onDeleted,
 }: {
   post: CalendarPost;
   compact?: boolean;
+  timeZone: string;
   onDeleted: () => void;
 }) {
   const isEmailCampaign = post.platform === "mailchimp";
@@ -252,6 +268,7 @@ function CalendarPostBody({
               name="scheduled_time"
               type="datetime-local"
               required
+              defaultValue={instantToWallTime(post.scheduled_time, timeZone)}
               className="h-8 w-auto"
             />
             <Button variant="outline" size={compact ? "xs" : "sm"} type="submit">

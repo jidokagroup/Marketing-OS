@@ -11,7 +11,9 @@ import {
   type CampaignRow,
   type ClientOption,
 } from "@/lib/marketing-os/operations";
+import { activeSeat } from "@/lib/seat";
 import { EmptyState } from "@/components/empty-state";
+import { SeatFields } from "@/components/seat-fields";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -83,9 +85,20 @@ function messageOfType(
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ platform?: string; review?: string }>;
+  searchParams: Promise<{
+    platform?: string;
+    review?: string;
+    agent_id?: string;
+    client?: string;
+  }>;
 }) {
-  const { platform = "all", review = "all" } = await searchParams;
+  const {
+    platform = "all",
+    review = "all",
+    agent_id: agentParam,
+    client: clientParam,
+  } = await searchParams;
+  const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
   const { user, supabase } = await requireUser();
   const threadsResult = await opsTable(supabase, "marketing_os_inbox_threads")
     .select("id, campaign_id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at, scheduled_post_id")
@@ -199,6 +212,7 @@ export default async function InboxPage({
       )}
 
       <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[220px_220px_auto]">
+        <SeatFields seat={seat} />
         <select
           name="platform"
           defaultValue={platform}

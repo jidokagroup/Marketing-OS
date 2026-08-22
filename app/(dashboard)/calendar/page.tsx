@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { instantToDayKey, instantToWallTime, workspaceTimeZone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import { PageHeader } from "@/components/page-header";
@@ -22,10 +23,20 @@ export const metadata = { title: "Calendar · Jidoka Marketing Team OS" };
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function inRange(value: string | null, start: Date, end: Date) {
-  if (!value) return false;
-  const date = new Date(value);
-  return date >= start && date <= end;
+/**
+ * The grid is drawn in the workspace timezone, not the host's.
+ *
+ * Every date here is a `YYYY-MM-DD` key rather than a `Date`, because a `Date`
+ * built on the server carries the host's zone — UTC on Netlify — and a post at
+ * 8pm Eastern on the 31st would then land in the next month's grid while the
+ * card beside it read "Aug 31". Keys compare and sort correctly as strings.
+ */
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function dayKey(year: number, month: number, day: number) {
+  return `${year}-${pad(month + 1)}-${pad(day)}`;
 }
 
 export default async function CalendarPage({
@@ -53,15 +64,29 @@ export default async function CalendarPage({
   } = await searchParams;
   const monthOffset = Math.max(0, Math.min(11, Number(offset ?? 0) || 0));
 
-  const now = new Date();
-  const base = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
-  const year = base.getFullYear();
-  const month = base.getMonth();
-  const rangeStart = view === "week" ? now : new Date(year, month, 1);
-  const rangeEnd =
+  const timeZone = await workspaceTimeZone();
+  const todayKey = instantToDayKey(new Date(), timeZone);
+  const [todayYear, todayMonth, todayDay] = todayKey.split("-").map(Number);
+
+  // UTC arithmetic on a zone-derived date: the components are already the
+  // user's, so this is plain calendar maths with no second zone applied.
+  const shownMonth = new Date(
+    Date.UTC(todayYear, todayMonth - 1 + monthOffset, 1),
+  );
+  const year = shownMonth.getUTCFullYear();
+  const month = shownMonth.getUTCMonth();
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const firstWeekday = shownMonth.getUTCDay();
+
+  const rangeStartKey =
+    view === "week" ? todayKey : dayKey(year, month, 1);
+  const rangeEndKey =
     view === "week"
-      ? new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59)
-      : new Date(year, month + 1, 0, 23, 59, 59);
+      ? instantToWallTime(
+          new Date(Date.UTC(todayYear, todayMonth - 1, todayDay + 7)),
+          "UTC",
+        ).slice(0, 10)
+      : dayKey(year, month, daysInMonth);
 
   const [{ data: agents }, { data: clients }] = await Promise.all([
     supabase
@@ -110,50 +135,50 @@ export default async function CalendarPage({
   }
 
   const postList = posts;
+  const keyForPost = (post: CalendarPost) =>
+    post.scheduled_time ? instantToDayKey(post.scheduled_time, timeZone) : "";
   const visiblePosts =
     view === "list"
       ? postList
-      : postList.filter((post) => inRange(post.scheduled_time, rangeStart, rangeEnd));
+      : postList.filter((post) => {
+          const key = keyForPost(post);
+          return Boolean(key) && key >= rangeStartKey && key <= rangeEndKey;
+        });
 
   const byDay = new Map<number, CalendarPost[]>();
   for (const post of visiblePosts) {
-    if (!post.scheduled_time) continue;
-    const d = new Date(post.scheduled_time).getDate();
+    const key = keyForPost(post);
+    if (!key) continue;
+    const d = Number(key.slice(8, 10));
     const arr = byDay.get(d) ?? [];
     arr.push(post);
     byDay.set(d, arr);
   }
 
-  const firstWeekday = rangeStart.getDay();
-  const daysInMonth = rangeEnd.getDate();
   const cells: (number | null)[] = [
     ...Array(firstWeekday).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const monthLabel = base.toLocaleString("default", {
+  const monthLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
     month: "long",
     year: "numeric",
-  });
+  }).format(shownMonth);
   const todayDate =
-    now.getFullYear() === year && now.getMonth() === month ? now.getDate() : -1;
+    todayYear === year && todayMonth - 1 === month ? todayDay : -1;
   const requestedDay = Number(day ?? todayDate);
   const selectedDay =
     view === "month"
       ? Math.max(1, Math.min(daysInMonth, requestedDay || 1))
       : null;
-  const selectedDate = selectedDay ? new Date(year, month, selectedDay) : null;
-  const selectedPosts = selectedDay
-    ? postList.filter((post) => {
-        if (!post.scheduled_time) return false;
-        const date = new Date(post.scheduled_time);
-        return (
-          date.getFullYear() === year &&
-          date.getMonth() === month &&
-          date.getDate() === selectedDay
-        );
-      })
+  const selectedKey = selectedDay ? dayKey(year, month, selectedDay) : null;
+  const selectedDate = selectedDay
+    ? new Date(Date.UTC(year, month, selectedDay))
+    : null;
+  const selectedPosts = selectedKey
+    ? postList.filter((post) => keyForPost(post) === selectedKey)
     : [];
   const platforms = [
     "all",
@@ -278,6 +303,7 @@ export default async function CalendarPage({
                   post={post}
                   agentName={agent?.name ?? "Writing Agent"}
                   clientName={clientName ?? "No client"}
+                  timeZone={timeZone}
                 />
               );
             })}
@@ -318,7 +344,7 @@ export default async function CalendarPage({
                         </Link>
                         <div className="space-y-1">
                           {dayPosts.map((post) => (
-                            <CalendarPostDetails key={post.id} post={post} />
+                            <CalendarPostDetails key={post.id} post={post} timeZone={timeZone} />
                           ))}
                         </div>
                       </>
@@ -334,6 +360,7 @@ export default async function CalendarPage({
           <div className="mt-6 space-y-3">
             <h2 className="text-lg font-semibold">
               {selectedDate.toLocaleDateString("en-US", {
+                timeZone: "UTC",
                 weekday: "long",
                 month: "long",
                 day: "numeric",
@@ -353,6 +380,7 @@ export default async function CalendarPage({
                     post={post}
                     agentName={agent?.name ?? "Writing Agent"}
                     clientName={clientName ?? "No client"}
+                    timeZone={timeZone}
                   />
                 );
               })

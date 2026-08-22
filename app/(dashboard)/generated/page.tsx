@@ -2,6 +2,8 @@ import Link from "next/link";
 import { CalendarClock, CopyPlus, Download, Edit3, Sparkles } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { activeSeat } from "@/lib/seat";
+import { SeatFields } from "@/components/seat-fields";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -68,6 +70,7 @@ export default async function GeneratedPage({
   searchParams: Promise<{
     q?: string;
     agent?: string;
+    agent_id?: string;
     client?: string;
     platform?: string;
     status?: string;
@@ -78,11 +81,13 @@ export default async function GeneratedPage({
   const {
     q = "",
     agent = "all",
+    agent_id: seatAgentParam,
     client: rawClient = "",
     platform = "all",
     status = "all",
     type = "all",
   } = await searchParams;
+  const seat = await activeSeat({ agent_id: seatAgentParam, client: rawClient });
 
   const [{ data: items }, { data: scheduledPosts }, { data: agents }, { data: clients }] =
     await Promise.all([
@@ -105,10 +110,16 @@ export default async function GeneratedPage({
   const agentRows = agents ?? [];
   const requestedAgent =
     agent !== "all" ? agentRows.find((row) => row.id === agent) : null;
+  // With no client asked for, show the seat the header is naming rather than
+  // whichever agent happens to have been updated most recently.
   const client =
     rawClient === "all"
       ? "all"
-      : rawClient || requestedAgent?.client_id || agentRows[0]?.client_id || "all";
+      : rawClient ||
+        seat.clientId ||
+        requestedAgent?.client_id ||
+        agentRows[0]?.client_id ||
+        "all";
   const agentById = new Map(agentRows.map((row) => [row.id, row]));
   const clientById = new Map((clients ?? []).map((row) => [row.id, row.name]));
   const statusesByContent = new Map<string, string[]>();
@@ -207,6 +218,7 @@ export default async function GeneratedPage({
       ) : (
         <div className="space-y-4">
           <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_150px_150px_150px_150px_auto]">
+            <SeatFields seat={seat} omit={["client"]} />
             <Input name="q" defaultValue={q} placeholder="Search content" />
             <select
               name="client"

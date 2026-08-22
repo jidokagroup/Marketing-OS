@@ -47,7 +47,12 @@ type MemberRow = {
   status: string;
 };
 
-export default async function TeamPage() {
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ capacity?: string; reason?: string }>;
+}) {
+  const { capacity, reason } = await searchParams;
   const { user, supabase } = await requireUser();
   const weekStart = currentWeekStart();
   const [capacityResult, membersResult] = await Promise.all([
@@ -96,7 +101,18 @@ export default async function TeamPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {capacity === "saved" && (
+                <p className="mb-3 rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+                  Capacity saved.
+                </p>
+              )}
+              {capacity === "error" && (
+                <p className="mb-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  Could not save capacity: {reason ?? "unknown error"}
+                </p>
+              )}
               <form action={saveTeamCapacityAction} className="space-y-3">
+                <input type="hidden" name="return_to" value="/team" />
                 <select
                   name="member_id"
                   defaultValue=""

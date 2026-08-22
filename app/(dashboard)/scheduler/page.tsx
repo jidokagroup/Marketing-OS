@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { formatInstant, instantToWallTime, workspaceTimeZone } from "@/lib/timezone";
 import {
   getEmailProviderDefinition,
   normalizeEmailProvider,
@@ -81,6 +82,7 @@ export default async function SchedulerPage({
     content_id: contentId = "",
     content_field: contentField = "",
   } = await searchParams;
+  const timeZone = await workspaceTimeZone();
 
   const [{ data: allAgents }, { data: clients }] = await Promise.all([
     supabase
@@ -395,7 +397,7 @@ export default async function SchedulerPage({
                       )}
                       {p.scheduled_time && (
                         <span className="text-muted-foreground">
-                          {new Date(p.scheduled_time).toLocaleString()}
+                          {formatInstant(p.scheduled_time, timeZone)}
                         </span>
                       )}
                     </div>
@@ -562,6 +564,10 @@ export default async function SchedulerPage({
                             name="scheduled_time"
                             type="datetime-local"
                             required
+                            defaultValue={instantToWallTime(
+                              p.scheduled_time,
+                              timeZone,
+                            )}
                             className="h-8 w-auto"
                           />
                           <Button variant="outline" size="sm" type="submit">

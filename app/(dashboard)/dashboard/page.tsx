@@ -2,6 +2,11 @@ import Link from "next/link";
 import { ArrowRight, MessageSquare, Target } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import {
+  coreTrainingLabel,
+  coreTrainingState,
+  type CoreTrainingFields,
+} from "@/lib/core-training";
 import { CORE_AGENTS, ORCHESTRATOR_AGENT } from "@/lib/core-agents";
 import {
   asRows,
@@ -28,7 +33,7 @@ import {
 
 export const metadata = { title: "Core Command · Jidoka Marketing Team OS" };
 
-type TrainingRow = {
+type TrainingRow = CoreTrainingFields & {
   id: string;
   agent_key: string;
   updated_at: string;
@@ -70,7 +75,9 @@ async function getCommandData() {
       .eq("owner_id", user.id)
       .eq("status", "needs_review"),
     opsTable(supabase, "marketing_os_core_agent_training")
-      .select("id, agent_key, updated_at")
+      .select(
+        "id, agent_key, updated_at, training_data, operating_rules, approval_rules, handoff_rules, data_sources",
+      )
       .eq("owner_id", user.id),
     opsTable(supabase, "marketing_os_campaigns")
       .select(
@@ -218,8 +225,15 @@ export default async function DashboardPage() {
                     ))}
                   </div>
                   <div className="flex items-center justify-between gap-3 border-t pt-4 text-sm">
-                    <Badge variant={training ? "default" : "outline"}>
-                      {training ? "Trained" : "Needs training"}
+                    {/* A saved-but-empty row is not a trained agent. */}
+                    <Badge
+                      variant={
+                        coreTrainingState(training) === "trained"
+                          ? "default"
+                          : "outline"
+                      }
+                    >
+                      {coreTrainingLabel(training)}
                     </Badge>
                     <span className="inline-flex items-center gap-1 text-muted-foreground group-hover:text-foreground">
                       Open

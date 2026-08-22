@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { HelpChatbot } from "@/components/help-chatbot";
 import { MobileNav } from "@/components/mobile-nav";
 import { SeatSwitcher } from "@/components/seat-switcher";
+import { seatFromCookie } from "@/lib/seat";
+import { TimeZoneSync } from "@/components/time-zone-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +38,10 @@ export default async function DashboardLayout({
     };
   });
   const latestAgent = activeAgents[0];
+  // Pages reached without seat params in the URL — filter submits, action
+  // redirects, detail pages addressed by id — would otherwise show the first
+  // seat in this list while rendering another client's records.
+  const remembered = await seatFromCookie();
 
   return (
     <div className="flex min-h-screen">
@@ -44,7 +50,7 @@ export default async function DashboardLayout({
         <header className="flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
           <MobileNav />
           <div className="min-w-0 flex-1">
-            <SeatSwitcher seats={activeAgents} />
+            <SeatSwitcher seats={activeAgents} remembered={remembered.agentId} />
           </div>
           {!LOGIN_DISABLED && (
             <div className="ml-auto flex items-center gap-3">
@@ -63,6 +69,7 @@ export default async function DashboardLayout({
         <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
       </div>
       <HelpChatbot accounts={accounts ?? []} primaryAgentId={latestAgent?.id} />
+      <TimeZoneSync />
     </div>
   );
 }

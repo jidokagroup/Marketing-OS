@@ -168,9 +168,14 @@ const SETTINGS_TABS = [
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; moderator?: string; reason?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    moderator?: string;
+    capacity?: string;
+    reason?: string;
+  }>;
 }) {
-  const { tab, moderator, reason } = await searchParams;
+  const { tab, moderator, capacity, reason } = await searchParams;
   const activeTab = (SETTINGS_TABS as readonly string[]).includes(tab ?? "")
     ? (tab as string)
     : "connections";
@@ -664,10 +669,21 @@ export default async function SettingsPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {capacity === "saved" && (
+              <p className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+                Capacity saved.
+              </p>
+            )}
+            {capacity === "error" && (
+              <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Could not save capacity: {reason ?? "unknown error"}
+              </p>
+            )}
             <form
               action={saveTeamCapacityAction}
               className="grid gap-3 rounded-lg border p-4 lg:grid-cols-6"
             >
+              <input type="hidden" name="return_to" value="/settings?tab=team" />
               <Input name="member_name" placeholder="Name" required />
               <Input name="email" type="email" placeholder="Email" />
               <Input name="role" placeholder="Role" defaultValue="strategist" />
@@ -701,6 +717,11 @@ export default async function SettingsPage({
                     className="grid gap-3 rounded-lg border p-4 lg:grid-cols-6"
                   >
                     <input type="hidden" name="id" value={row.id} />
+                    <input
+                      type="hidden"
+                      name="return_to"
+                      value="/settings?tab=team"
+                    />
                     <input
                       type="hidden"
                       name="member_id"
