@@ -168,9 +168,9 @@ const SETTINGS_TABS = [
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; moderator?: string; reason?: string }>;
 }) {
-  const { tab } = await searchParams;
+  const { tab, moderator, reason } = await searchParams;
   const activeTab = (SETTINGS_TABS as readonly string[]).includes(tab ?? "")
     ? (tab as string)
     : "connections";
@@ -260,7 +260,11 @@ export default async function SettingsPage({
   )
     .select("agent_id, enabled, auto_approve_low_risk")
     .eq("owner_id", user.id);
-  const moderatorSettings = isOpsSchemaMissing(moderatorSettingsResult.error)
+  // Falling back to [] silently was the whole problem: a missing table
+  // rendered every seat as switched off, and the save that followed failed
+  // just as quietly. The tab now says the table is missing instead.
+  const moderatorSchemaMissing = isOpsSchemaMissing(moderatorSettingsResult.error);
+  const moderatorSettings = moderatorSchemaMissing
     ? []
     : asRows<{ agent_id: string; enabled: boolean; auto_approve_low_risk: boolean }>(
         moderatorSettingsResult.data,
@@ -875,7 +879,23 @@ export default async function SettingsPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {moderatorAgents.length === 0 ? (
+              {moderatorSchemaMissing && (
+                <OpsSchemaNotice
+                  title="Inbox Moderator settings table is missing"
+                  migrationPath="supabase/migrations/0031_marketing_os_performance_intelligence_and_moderator.sql"
+                />
+              )}
+              {moderator === "saved" && (
+                <p className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+                  Saved.
+                </p>
+              )}
+              {moderator === "error" && (
+                <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  Could not save: {reason ?? "unknown error"}
+                </p>
+              )}
+              {moderatorSchemaMissing ? null : moderatorAgents.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No seats yet. Add a client and train its agent first.
                 </p>
