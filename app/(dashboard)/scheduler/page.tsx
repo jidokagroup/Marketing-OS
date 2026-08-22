@@ -26,10 +26,12 @@ import {
   SCHEDULER_PLATFORMS,
   connectionLabel,
   isAutoPublishableContent,
+  publishBlockers,
 } from "@/lib/social/platforms";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { SchedulerUploader } from "@/components/scheduler-uploader";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PostStatusBadge } from "@/components/post-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink, buttonVariants } from "@/components/ui/button";
@@ -440,6 +442,12 @@ export default async function SchedulerPage({
                     </div>
 
                     <div className="flex flex-wrap gap-2">
+                      {/* "Scheduled" means the publisher will take it. A draft
+                          with nothing missing is the state in between, and
+                          used to look identical to one missing its media. */}
+                      {p.status === "draft" && publishBlockers(p).length === 0 && (
+                        <Badge variant="outline">ready to publish</Badge>
+                      )}
                       {!p.caption && (
                         <Badge variant="destructive">
                           <AlertCircle className="h-3 w-3" />
@@ -596,14 +604,13 @@ export default async function SchedulerPage({
 
                       <form action={deletePostAction} className="ml-auto">
                         <input type="hidden" name="id" value={p.id} />
-                        <Button
-                          variant="ghost"
+                        <ConfirmSubmitButton
+                          message={`Delete "${p.title || "this post"}" from the queue? This cannot be undone.`}
                           size="icon-sm"
-                          type="submit"
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </ConfirmSubmitButton>
                       </form>
                     </div>
                   </CardContent>

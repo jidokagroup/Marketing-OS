@@ -326,6 +326,11 @@ function CalendarDeletePostForm({
           size={compact ? "xs" : "sm"}
           type="submit"
           disabled={pending}
+          onClick={(event) => {
+            if (!window.confirm("Delete this post from the queue? This cannot be undone.")) {
+              event.preventDefault();
+            }
+          }}
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" />

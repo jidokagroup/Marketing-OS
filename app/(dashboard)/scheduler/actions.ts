@@ -5,10 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { wallTimeToInstant, workspaceTimeZone } from "@/lib/timezone";
 import { matchGeneratedByTitle } from "@/lib/scheduler";
-import {
-  getPlatformDefinition,
-  isAutoPublishableContent,
-} from "@/lib/social/platforms";
+import { publishBlockers } from "@/lib/social/platforms";
 
 export async function scheduleAction(formData: FormData) {
   const { supabase } = await requireUser();
@@ -24,22 +21,20 @@ export async function scheduleAction(formData: FormData) {
 
   const { data: post } = await supabase
     .from("marketing_os_scheduled_posts")
-    .select("social_account_id, platform, content_type")
+    .select("social_account_id, platform, content_type, caption, media_path")
     .eq("id", id)
     .maybeSingle();
-  const autoPublishable = post
-    ? isAutoPublishableContent(post.platform, post.content_type)
-    : false;
+
+  // A post the publisher would reject stays a draft with the reason on it,
+  // rather than sitting in the queue as "Scheduled" until it fails unattended.
+  const blockers = post ? publishBlockers(post) : ["Post not found."];
 
   await supabase
     .from("marketing_os_scheduled_posts")
     .update({
       scheduled_time: scheduledAt.toISOString(),
-      status: post?.social_account_id && autoPublishable ? "scheduled" : "draft",
-      error:
-        post?.social_account_id && !autoPublishable
-          ? `${getPlatformDefinition(post.platform)?.label ?? post.platform} ${post.content_type} auto-publishing is not live yet.`
-          : null,
+      status: blockers.length === 0 ? "scheduled" : "draft",
+      error: blockers.length === 0 ? null : blockers.join(" "),
     })
     .eq("id", id);
   revalidatePath("/scheduler");

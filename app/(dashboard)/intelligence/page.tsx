@@ -11,6 +11,11 @@ import {
 
 import { requireUser } from "@/lib/auth";
 import {
+  STRANDED_SCAN_MESSAGE,
+  scanState,
+} from "@/lib/intelligence-scan";
+import { formatInstant, workspaceTimeZone } from "@/lib/timezone";
+import {
   asRows,
   isOpsSchemaMissing,
   opsTable,
@@ -351,6 +356,8 @@ export default async function IntelligencePage() {
     ? "Latest saved scan"
     : "Marketing baseline";
   const reportSource = latestReport ? "Latest saved scan" : "Baseline guidance";
+  const scanStatus = scanState(latestReport);
+  const timeZone = await workspaceTimeZone();
   const competitorAccounts = latestReport?.competitor_accounts ?? [];
   // The scan judges both scores itself against the competitors it actually
   // read. The old formula only counted how many items came back, so it landed
@@ -527,11 +534,16 @@ export default async function IntelligencePage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4" />
-            {latestReport?.status === "queued" || latestReport?.status === "running"
+            {/* A row left `queued` by a worker that never reported back is not
+                a scan in progress, and saying so left users waiting on work
+                that had already stopped. */}
+            {scanStatus === "pending"
               ? "Competitor scan in progress…"
-              : latestReport?.scanned_at
-                ? `Last scan ${new Date(latestReport.scanned_at).toLocaleString()}`
-                : "Live scan starts after platform APIs are connected"}
+              : scanStatus === "stranded"
+                ? "Last scan did not finish — save the watchlist again to retry"
+                : latestReport?.scanned_at
+                  ? `Last scan ${formatInstant(latestReport.scanned_at, timeZone)}`
+                  : "Live scan starts after platform APIs are connected"}
           </div>
         </CardContent>
       </Card>
@@ -567,8 +579,14 @@ export default async function IntelligencePage() {
           </form>
           <div className="mt-3">
             <ScanStatusBanner
-              status={latestReport?.status}
-              errorMessage={latestReport?.error_message}
+              status={
+                scanStatus === "stranded" ? "failed" : latestReport?.status
+              }
+              errorMessage={
+                scanStatus === "stranded"
+                  ? STRANDED_SCAN_MESSAGE
+                  : latestReport?.error_message
+              }
               startedAt={latestReport?.requested_at}
             />
           </div>
@@ -576,7 +594,7 @@ export default async function IntelligencePage() {
             <p className="mt-3 text-xs text-muted-foreground">
               Latest scan
               {latestReport.scanned_at
-                ? ` (${new Date(latestReport.scanned_at).toLocaleString()})`
+                ? ` (${formatInstant(latestReport.scanned_at, timeZone)})`
                 : ""}
               : {latestReport.summary}
             </p>
