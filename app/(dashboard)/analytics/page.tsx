@@ -41,9 +41,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { PLATFORM_DEFINITIONS, getPlatformDefinition } from "@/lib/social/platforms";
-import { backfillAnalyticsAction } from "./actions";
+import {
+  backfillAnalyticsAction,
+  importAnalyticsCsvAction,
+} from "./actions";
 
 export const metadata = { title: "Analytics · Jidoka Marketing Team OS" };
 
@@ -116,6 +120,10 @@ export default async function AnalyticsPage({
   searchParams: Promise<{
     platform?: string;
     backfill?: string;
+    csv?: string;
+    reason?: string;
+    rows?: string;
+    skipped?: string;
     agent_id?: string;
     client?: string;
   }>;
@@ -124,6 +132,10 @@ export default async function AnalyticsPage({
   const {
     platform = "all",
     backfill,
+    csv,
+    reason: csvReason,
+    rows: csvRows,
+    skipped: csvSkipped,
     agent_id: agentParam,
     client: clientParam,
   } = await searchParams;
@@ -136,6 +148,7 @@ export default async function AnalyticsPage({
     { data: rows },
     { data: latestAgent },
     { data: accounts },
+    { data: importAgents },
     { count: scheduledCount },
     emailProviderResult,
     backfillRunResult,
@@ -155,6 +168,11 @@ export default async function AnalyticsPage({
         .limit(1)
         .maybeSingle(),
       supabase.from("marketing_os_social_accounts").select("platform, status"),
+      supabase
+        .from("marketing_os_writing_agents")
+        .select("id, name")
+        .eq("owner_id", user.id)
+        .order("updated_at", { ascending: false }),
       supabase.from("marketing_os_scheduled_posts").select("id", { count: "exact", head: true }),
       opsTable(supabase, "marketing_os_email_provider_settings")
         .select("provider, provider_label, status")
@@ -335,6 +353,14 @@ export default async function AnalyticsPage({
           disabled={backfillSupportedConnectedCount === 0}
           seat={seat}
         />
+        <AnalyticsCsvImportPanel
+          agents={importAgents ?? []}
+          seat={seat}
+          result={csv}
+          reason={csvReason}
+          rows={csvRows}
+          skipped={csvSkipped}
+        />
         <PlatformOverview platforms={platformStatuses} />
         <AnalyticsPlatformFilter platform={selectedPlatform} options={platformOptions} />
         <CampaignAttributionPanel attribution={attribution} />
@@ -468,6 +494,15 @@ export default async function AnalyticsPage({
         platforms={backfillPlatformOptions}
         disabled={backfillSupportedConnectedCount === 0}
         seat={seat}
+      />
+
+      <AnalyticsCsvImportPanel
+        agents={importAgents ?? []}
+        seat={seat}
+        result={csv}
+        reason={csvReason}
+        rows={csvRows}
+        skipped={csvSkipped}
       />
 
       <PlatformOverview platforms={platformStatuses} />
@@ -805,6 +840,130 @@ function AnalyticsBackfillPanel({
   );
 }
 
+/**
+ * The way in for history no API will hand over.
+ *
+ * TikTok and LinkedIn have no importer here, a YouTube project can have the
+ * Data API switched off, and every platform's API stops returning posts past
+ * some horizon. Without this, those seats stay permanently "awaiting
+ * analytics", which blocks best-time guidance and Performance Intelligence
+ * behind an API grant nobody may ever get.
+ */
+function AnalyticsCsvImportPanel({
+  agents,
+  seat,
+  result,
+  reason,
+  rows,
+  skipped,
+}: {
+  agents: { id: string; name: string }[];
+  seat: { agentId: string | null; clientId: string | null };
+  result?: string;
+  reason?: string;
+  rows?: string;
+  skipped?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Import analytics from a CSV</CardTitle>
+        <CardDescription>
+          Upload a platform export to fill in history the APIs cannot reach —
+          TikTok and LinkedIn, anything older than an API will return, or a
+          platform whose API is switched off.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {result === "success" && (
+          <p className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+            Imported {Number(rows ?? 0).toLocaleString()} row
+            {rows === "1" ? "" : "s"}.
+            {Number(skipped ?? 0) > 0
+              ? ` ${Number(skipped).toLocaleString()} row${skipped === "1" ? "" : "s"} skipped — the reasons are listed with the last import above.`
+              : ""}
+          </p>
+        )}
+        {result === "error" && (
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {reason ?? "The import could not be read."}
+          </p>
+        )}
+
+        {agents.length === 0 ? (
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            Add a client and its writing agent first — imported history is
+            stored against a seat.
+          </p>
+        ) : (
+          <form
+            action={importAnalyticsCsvAction}
+            className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
+          >
+            {seat.agentId && (
+              <input type="hidden" name="return_agent_id" value={seat.agentId} />
+            )}
+            {seat.clientId && (
+              <input type="hidden" name="return_client" value={seat.clientId} />
+            )}
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">Seat</span>
+              <select
+                name="agent_id"
+                defaultValue={seat.agentId ?? agents[0]?.id}
+                className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">Platform</span>
+              <select
+                name="platform"
+                defaultValue="tiktok"
+                className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {CSV_IMPORT_PLATFORMS.map((key) => (
+                  <option key={key} value={key}>
+                    {PLATFORM_LABELS[key as keyof typeof PLATFORM_LABELS] ?? key}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">CSV file</span>
+              <Input type="file" name="file" accept=".csv,text/csv" required />
+            </label>
+            <Button type="submit">Import CSV</Button>
+          </form>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Needs a date column and at least one metric. Column names are matched
+          loosely, so the file downloaded from Instagram, TikTok, YouTube
+          Studio, X or LinkedIn usually works unedited — dates as{" "}
+          <span className="font-mono">YYYY-MM-DD</span> or{" "}
+          <span className="font-mono">MM/DD/YYYY</span>. Importing the same
+          export twice updates those posts rather than duplicating them.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const CSV_IMPORT_PLATFORMS = [
+  "tiktok",
+  "linkedin",
+  "instagram",
+  "facebook",
+  "youtube",
+  "x",
+];
+
 /** Which platforms have an importer at all. Kept in step with the action. */
 const BACKFILL_SUPPORTED = new Set(["instagram", "facebook", "youtube", "x"]);
 
@@ -817,7 +976,9 @@ function platformDetail(platform: AnalyticsPlatformStatus): string {
   if (platform.disabled) return "API setup paused — no analytics yet.";
   if (!platform.connected) return "Not connected.";
   if (!platform.backfillSupported) {
-    return "Connected. No analytics importer for this platform yet.";
+    return platform.hasData
+      ? "Connected. Analytics here came from a CSV import — there is no API importer for this platform."
+      : "Connected. No API importer for this platform — import a CSV export instead.";
   }
 
   const last = platform.lastImport;
@@ -831,7 +992,7 @@ function platformDetail(platform: AnalyticsPlatformStatus): string {
     return "Connected. The last import found nothing new in that window.";
   }
   if (platform.hasData) return "Analytics imported.";
-  return "Connected. Run Pull past data to import history.";
+  return "Connected. Run Pull past data, or import a CSV export, to add history.";
 }
 
 function PlatformOverview({ platforms }: { platforms: AnalyticsPlatformStatus[] }) {

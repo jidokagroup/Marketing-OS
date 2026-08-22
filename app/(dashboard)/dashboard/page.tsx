@@ -253,6 +253,8 @@ async function getSeatBrief(seat: SeatContext) {
       hasVoiceDna: false,
       connectedPlatforms: [] as string[],
       analyticsRows: 0,
+      contentCount: 0,
+      postCount: 0,
       posts: [] as SeatPost[],
       inboxNeedsReview: 0,
       moderatorEnabled: false,
@@ -273,6 +275,8 @@ async function getSeatBrief(seat: SeatContext) {
     billingResult,
     leadsResult,
     attemptsResult,
+    contentCountResult,
+    postCountResult,
   ] = await Promise.all([
     supabase
       .from("marketing_os_voice_profiles")
@@ -329,6 +333,14 @@ async function getSeatBrief(seat: SeatContext) {
       .select("lead_id")
       .eq("owner_id", user.id)
       .limit(1000),
+    supabase
+      .from("marketing_os_generated_content")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId),
+    supabase
+      .from("marketing_os_scheduled_posts")
+      .select("id", { count: "exact", head: true })
+      .eq("agent_id", agentId),
   ]);
 
   const readyPlatforms = publishReadyPlatforms();
@@ -357,12 +369,53 @@ async function getSeatBrief(seat: SeatContext) {
     moderatorEnabled: isOpsSchemaMissing(moderatorResult.error)
       ? false
       : Boolean(asRow<{ enabled: boolean }>(moderatorResult.data)?.enabled),
+    contentCount: contentCountResult.count ?? 0,
+    postCount: postCountResult.count ?? 0,
     leadsAwaitingFirstTouch: countUntouchedLeads(leadsResult, attemptsResult),
     latestScan: (scanResult.data ?? null) as ScanReport | null,
     billingStatus: isOpsSchemaMissing(billingResult.error)
       ? null
       : (asRow<{ status: string }>(billingResult.data)?.status ?? ""),
   };
+}
+
+function MetricRow({
+  title,
+  metrics,
+  link,
+}: {
+  title: string;
+  metrics: { label: string; value: string | number; href: string }[];
+  link: (href: string) => string;
+}) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        {metrics.map((metric) => (
+          <Link
+            key={metric.label}
+            href={link(metric.href)}
+            className={cn(
+              "rounded-lg border p-4 transition-colors hover:border-primary/50",
+              metric.label === "Needs review" &&
+                Number(metric.value) > 0 &&
+                "border-destructive/40 bg-destructive/5",
+            )}
+          >
+            <p className="text-xs font-medium text-muted-foreground">
+              {metric.label}
+            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">
+              {metric.value}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default async function DashboardPage({
@@ -444,15 +497,57 @@ export default async function DashboardPage({
     analyticsRows: brief.analyticsRows,
   });
 
-  const metrics = [
+  // The panels below are this seat's; these counts were the whole workspace's,
+  // and nothing said so. A seat with one blocked post sat under "Scheduled 40"
+  // and read as healthy. They are two rows now, each saying whose numbers it
+  // is showing.
+  const seatLeads = data.leads.filter(
+    (lead) => !brief.clientId || lead.client_id === brief.clientId,
+  );
+  const seatMetrics = [
+    {
+      label: "Paid campaigns",
+      value: seatCampaigns.filter((campaign) =>
+        ["planning", "active"].includes(campaign.status),
+      ).length,
+      href: "/campaigns",
+    },
+    {
+      label: "Open work",
+      value: openWork.filter((item) =>
+        seatCampaigns.some((campaign) => campaign.id === item.campaign_id),
+      ).length,
+      href: "/work",
+    },
+    { label: "Content pieces", value: brief.contentCount, href: "/generated" },
+    { label: "Scheduled", value: brief.postCount, href: "/calendar" },
+    { label: "Needs review", value: brief.inboxNeedsReview, href: "/inbox" },
+    // Two numbers, not one with a switching label. Pipeline is what might
+    // close; revenue is what has.
+    {
+      label: "Pipeline",
+      value: formatMoney(campaignPipeline(seatLeads)),
+      href: "/pipeline",
+    },
+    {
+      label: "Revenue",
+      value: formatMoney(
+        seatCampaigns.reduce(
+          (sum, campaign) => sum + campaignRevenue(campaign, data.revenueEvents),
+          0,
+        ),
+      ),
+      href: "/money",
+    },
+  ];
+
+  const workspaceMetrics = [
     { label: "Clients", value: data.clients, href: "/clients" },
+    { label: "Seats", value: data.agents, href: "/agents" },
     { label: "Paid campaigns", value: activeCampaigns.length, href: "/campaigns" },
-    { label: "Open work", value: openWork.length, href: "/work" },
     { label: "Content pieces", value: data.content, href: "/generated" },
     { label: "Scheduled", value: data.scheduledPosts, href: "/calendar" },
     { label: "Needs review", value: data.inboxNeedsReview, href: "/inbox" },
-    // Two numbers, not one with a switching label. Pipeline is what might
-    // close; revenue is what has.
     { label: "Pipeline", value: formatMoney(pipelineValue), href: "/pipeline" },
     { label: "Revenue", value: formatMoney(revenueTotal), href: "/money" },
   ];
@@ -641,31 +736,25 @@ export default async function DashboardPage({
         <CardHeader>
           <CardTitle>Operating Snapshot</CardTitle>
           <CardDescription>
-            A compact readout of the work currently moving through the OS.
+            This seat first, then the workspace it sits in — the same numbers
+            mean different things at each scale.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-            {metrics.map((metric) => (
-              <Link
-                key={metric.label}
-                href={metric.href}
-                className={cn(
-                  "rounded-lg border p-4 transition-colors hover:border-primary/50",
-                  metric.label === "Needs review" &&
-                    Number(metric.value) > 0 &&
-                    "border-destructive/40 bg-destructive/5",
-                )}
-              >
-                <p className="text-xs font-medium text-muted-foreground">
-                  {metric.label}
-                </p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">
-                  {metric.value}
-                </p>
-              </Link>
-            ))}
-          </div>
+        <CardContent className="space-y-5">
+          <MetricRow
+            title={
+              brief.agentName
+                ? `${brief.agentName}'s seat`
+                : "The current seat"
+            }
+            metrics={seatMetrics}
+            link={link}
+          />
+          <MetricRow
+            title="Across every client"
+            metrics={workspaceMetrics}
+            link={link}
+          />
         </CardContent>
       </Card>
 
