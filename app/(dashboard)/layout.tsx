@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { HelpChatbot } from "@/components/help-chatbot";
 import { MobileNav } from "@/components/mobile-nav";
-import { ActiveAgentLabel } from "@/components/active-agent-label";
+import { SeatSwitcher } from "@/components/seat-switcher";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,7 @@ export default async function DashboardLayout({
         <header className="flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
           <MobileNav />
           <div className="min-w-0 flex-1">
-            <ActiveAgentLabel agents={activeAgents} />
+            <SeatSwitcher seats={activeAgents} />
           </div>
           {!LOGIN_DISABLED && (
             <div className="ml-auto flex items-center gap-3">
