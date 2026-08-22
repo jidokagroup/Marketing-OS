@@ -7,6 +7,7 @@ import {
   coreTrainingState,
   type CoreTrainingFields,
 } from "@/lib/core-training";
+import { countMemoriesByAgent, type CoreMemoryRow } from "@/lib/core-memory";
 import { CORE_AGENTS, ORCHESTRATOR_AGENT } from "@/lib/core-agents";
 import {
   asRows,
@@ -53,6 +54,7 @@ async function getCommandData() {
     workResult,
     leadsResult,
     revenueResult,
+    memoryResult,
   ] = await Promise.all([
     supabase
       .from("marketing_os_clients")
@@ -101,6 +103,11 @@ async function getCommandData() {
       .eq("owner_id", user.id)
       .order("occurred_at", { ascending: false })
       .limit(50),
+    opsTable(supabase, "marketing_os_memory_records")
+      .select("record_type, title, memory_owner, affected_business_systems")
+      .eq("owner_id", user.id)
+      .eq("status", "active")
+      .limit(200),
   ]);
 
   const opsSchemaReady = !isOpsSchemaMissing(campaignsResult.error);
@@ -117,6 +124,12 @@ async function getCommandData() {
     ? asRows<TrainingRow>(trainingResult.data)
     : [];
   const trainingByAgent = new Map(training.map((item) => [item.agent_key, item]));
+  // Memory counts towards readiness: an agent with stored knowledge and no
+  // rules is in a different state from one with neither.
+  const memories = isOpsSchemaMissing(memoryResult.error)
+    ? []
+    : asRows<CoreMemoryRow>(memoryResult.data);
+  const memoryByAgent = countMemoriesByAgent(memories, CORE_AGENTS);
 
   return {
     opsSchemaReady,
@@ -131,6 +144,7 @@ async function getCommandData() {
     leads,
     revenueEvents,
     trainingByAgent,
+    memoryByAgent,
   };
 }
 
@@ -196,6 +210,7 @@ export default async function DashboardPage() {
         {CORE_AGENTS.map((agent) => {
           const Icon = agent.icon;
           const training = data.trainingByAgent.get(agent.key);
+          const memoryCount = data.memoryByAgent.get(agent.key) ?? 0;
           return (
             <Link key={agent.key} href={agent.href} className="group">
               <Card className="h-full transition-colors hover:border-primary/50">
@@ -228,12 +243,12 @@ export default async function DashboardPage() {
                     {/* A saved-but-empty row is not a trained agent. */}
                     <Badge
                       variant={
-                        coreTrainingState(training) === "trained"
+                        coreTrainingState(training, memoryCount) === "trained"
                           ? "default"
                           : "outline"
                       }
                     >
-                      {coreTrainingLabel(training)}
+                      {coreTrainingLabel(training, memoryCount)}
                     </Badge>
                     <span className="inline-flex items-center gap-1 text-muted-foreground group-hover:text-foreground">
                       Open

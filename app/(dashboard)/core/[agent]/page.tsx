@@ -3,11 +3,17 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Save } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { isMemoryForAgent } from "@/lib/core-memory";
+import {
+  coreTrainingGaps,
+  coreTrainingLabel,
+  coreTrainingSignals,
+  coreTrainingState,
+} from "@/lib/core-training";
 import {
   CORE_AGENT_BY_KEY,
   CORE_AGENTS,
   ORCHESTRATOR_AGENT,
-  type CoreAgentDefinition,
   type CoreAgentKey,
 } from "@/lib/core-agents";
 import {
@@ -86,38 +92,15 @@ function truncate(value: string, maxLength: number) {
   return value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value;
 }
 
-function isUsefulMemory(memory: MemoryRow) {
-  return (
-    memory.record_type !== "Agent Refinement" &&
-    !memory.title.toLowerCase().includes("training updated")
-  );
-}
-
-function isMemoryForAgent(memory: MemoryRow, agent: CoreAgentDefinition) {
-  if (!isUsefulMemory(memory)) return false;
-  const systems = memory.affected_business_systems ?? [];
-
-  if (agent.key === "orchestrator") {
-    return (
-      memory.memory_owner === agent.label ||
-      memory.memory_owner === "JIDOKA Core Orchestrator" ||
-      memory.record_type === "Playbook" ||
-      systems.some((system) =>
-        ["Routing", "Memory", "Handoffs", "Escalations"].includes(system),
-      )
-    );
-  }
-
-  if (memory.memory_owner === agent.label) return true;
-  return systems.some((system) => agent.systems.includes(system));
-}
-
 export default async function CoreAgentTrainingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ agent: string }>;
+  searchParams: Promise<{ saved?: string; reason?: string }>;
 }) {
   const { agent: key } = await params;
+  const { saved, reason } = await searchParams;
   const agent = CORE_AGENT_BY_KEY.get(key as CoreAgentKey);
   if (!agent) notFound();
 
@@ -151,6 +134,9 @@ export default async function CoreAgentTrainingPage({
         isMemoryForAgent(memory, agent),
       );
 
+  const gaps = coreTrainingGaps(training);
+  const filledSignals = coreTrainingSignals(training).filled;
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <Link
@@ -163,7 +149,55 @@ export default async function CoreAgentTrainingPage({
 
       <PageHeader title={agent.label} description={agent.summary}>
         <Badge variant="secondary">{agent.segment}</Badge>
+        <Badge
+          variant={
+            coreTrainingState(training, memories.length) === "trained"
+              ? "default"
+              : "outline"
+          }
+        >
+          {coreTrainingLabel(training, memories.length)}
+        </Badge>
       </PageHeader>
+
+      {saved === "1" && (
+        <p className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+          Training saved.
+        </p>
+      )}
+      {saved === "error" && (
+        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          Could not save training: {reason ?? "unknown error"}
+        </p>
+      )}
+
+      {/* Saying "Trained" was the whole problem; saying which parts are still
+          empty is the part that lets someone act on it. */}
+      {!schemaMissing && gaps.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 text-sm text-amber-950">
+          <p className="font-medium">
+            {gaps.length} of {gaps.length + filledSignals} parts of this agent
+            are still empty
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {gaps.map((gap) => (
+              <li
+                key={gap}
+                className="rounded border border-amber-300/70 bg-white/60 px-2 py-0.5 text-xs dark:bg-transparent"
+              >
+                {gap}
+              </li>
+            ))}
+          </ul>
+          {memories.length > 0 && (
+            <p className="mt-2 text-xs text-amber-900/80">
+              {memories.length} memory record
+              {memories.length === 1 ? "" : "s"} already inform this agent, but
+              memory is not a substitute for the rules above.
+            </p>
+          )}
+        </div>
+      )}
 
       {schemaMissing && (
         <OpsSchemaNotice
