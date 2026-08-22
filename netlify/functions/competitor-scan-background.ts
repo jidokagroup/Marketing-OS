@@ -1,5 +1,11 @@
 import type { ScanClient } from "../../lib/ai/competitor-scan";
 import { createServiceClient } from "../../lib/supabase/service-client";
+import { opsTable } from "../../lib/marketing-os/operations";
+import {
+  percentComplete,
+  type ScanProgress,
+  type ScanStage,
+} from "../../lib/intelligence/stages";
 
 /**
  * Competitor scan worker.
@@ -49,64 +55,308 @@ async function loadClient(
   return (data as ScanClient) ?? null;
 }
 
-async function runOne(db: ReturnType<typeof createServiceClient>, report: ReportRow) {
+type ScanDb = ReturnType<typeof createServiceClient>;
+
+/**
+ * Internal diagnostics. Never rendered anywhere a customer can see: the row's
+ * `error_message` carries the sentence they read, and this carries the reason
+ * an engineer needs.
+ */
+async function logScan(
+  db: ScanDb,
+  report: ReportRow,
+  entry: {
+    stage?: ScanStage | "worker";
+    provider?: string;
+    level?: "info" | "warn" | "error";
+    latency_ms?: number;
+    retry_count?: number;
+    message: string;
+    detail?: Record<string, unknown>;
+  },
+) {
+  try {
+    await opsTable(db, "marketing_os_intelligence_scan_logs").insert({
+      owner_id: report.owner_id,
+      report_id: report.id,
+      client_id: report.client_id,
+      stage: entry.stage ?? null,
+      provider: entry.provider ?? null,
+      level: entry.level ?? "info",
+      latency_ms: entry.latency_ms ?? null,
+      retry_count: entry.retry_count ?? 0,
+      message: entry.message,
+      detail: entry.detail ?? {},
+    });
+  } catch {
+    // Logging must never be the thing that fails a scan.
+  }
+}
+
+/** Marks where the scan is, so the page can describe it without guessing. */
+async function setProgress(
+  db: ScanDb,
+  report: ReportRow,
+  progress: ScanProgress,
+) {
+  await db
+    .from("marketing_os_social_intelligence_reports")
+    .update({
+      status: progress.status,
+      current_stage: progress.current_stage ?? null,
+      sources_total: progress.sources_total ?? 0,
+      sources_completed: progress.sources_completed ?? 0,
+      sources_failed: progress.sources_failed ?? 0,
+      last_completed_step: progress.last_completed_step ?? null,
+      percent_complete: percentComplete(progress),
+    })
+    .eq("id", report.id);
+}
+
+async function finishStage(
+  db: ScanDb,
+  report: ReportRow,
+  stage: ScanStage,
+  status: "succeeded" | "failed",
+  extra: { output?: unknown; error_message?: string; error_code?: string } = {},
+) {
+  await opsTable(db, "marketing_os_intelligence_scan_stages").upsert(
+    {
+      owner_id: report.owner_id,
+      report_id: report.id,
+      stage,
+      status,
+      finished_at: new Date().toISOString(),
+      output: (extra.output ?? {}) as Record<string, unknown>,
+      error_code: extra.error_code ?? null,
+      error_message: extra.error_message ?? null,
+    },
+    { onConflict: "report_id,stage" },
+  );
+}
+
+/** What a previous run already banked, so a retry does not redo it. */
+async function loadStageOutputs(db: ScanDb, report: ReportRow) {
+  const { data } = await opsTable(db, "marketing_os_intelligence_scan_stages")
+    .select("stage, status, output")
+    .eq("report_id", report.id);
+
+  const outputs = new Map<string, Record<string, unknown>>();
+  for (const row of (data ?? []) as {
+    stage: string;
+    status: string;
+    output: Record<string, unknown>;
+  }[]) {
+    if (row.status === "succeeded") outputs.set(row.stage, row.output ?? {});
+  }
+  return outputs;
+}
+
+async function runOne(db: ScanDb, report: ReportRow) {
   const websites = report.competitor_accounts ?? [];
   if (!websites.length) {
     await db
       .from("marketing_os_social_intelligence_reports")
       .update({
         status: "complete",
+        current_stage: null,
+        percent_complete: 100,
+        completed_at: new Date().toISOString(),
         summary: "Watchlist is empty. Add competitor websites and save to run a scan.",
       })
       .eq("id", report.id);
     return { id: report.id, ok: true, skipped: "empty_watchlist" };
   }
 
+  const banked = await loadStageOutputs(db, report);
+  const progress: ScanProgress = {
+    status: "fetching",
+    current_stage: "fetching",
+    sources_total: websites.length,
+    sources_completed: 0,
+    sources_failed: 0,
+    last_completed_step:
+      (["aggregating", "analyzing", "normalizing", "fetching"] as ScanStage[]).find(
+        (stage) => banked.has(stage),
+      ) ?? null,
+  };
+
   await db
     .from("marketing_os_social_intelligence_reports")
-    .update({ status: "running" })
+    .update({ started_at: new Date().toISOString() })
     .eq("id", report.id);
+
+  // Sections survive a partial run: a group that fails costs its own fields,
+  // not the report, and a later retry fills them in without redoing the rest.
+  const sections: Record<string, unknown> = {
+    ...((banked.get("analyzing")?.sections as Record<string, unknown>) ?? {}),
+  };
+  const failedGroups: string[] = [];
 
   try {
     const client = await loadClient(db, report);
-    // Imported lazily: if the scan module fails to load in the bundled function
-    // (a missing transitive dep, a bad env var at module scope) that surfaces
-    // here as a catchable error we can write to the row, instead of killing the
-    // invocation with nothing but a platform log entry.
-    const { runCompetitorScan } = await import("../../lib/ai/competitor-scan");
+    const { buildScanContext, SCAN_SECTION_GROUPS, runScanSectionGroup, runScanSynthesis, cleanScan } =
+      await import("../../lib/ai/competitor-scan");
 
-    // Real platform data first (Instagram Business Discovery + YouTube Data
-    // API), then a web-search pass for TikTok, which has no commercial API.
-    // Both degrade to empty rather than failing the scan.
+    // ---- fetching -------------------------------------------------------
+    progress.status = "fetching";
+    progress.current_stage = "fetching";
+    await setProgress(db, report, progress);
+
     const { loadCompetitorExecutionData } = await import(
       "../../lib/social/competitor-execution"
     );
     const execution = await loadCompetitorExecutionData(db, report.owner_id, websites);
+    const { fetchSiteExcerpts } = await import("../../lib/ai/competitor-scan");
+    const excerpts = await fetchSiteExcerpts(websites);
+
+    const fetchedCount = excerpts.filter(
+      (excerpt: { text: string }) => excerpt.text,
+    ).length;
+    progress.sources_completed = fetchedCount;
+    progress.sources_failed = websites.length - fetchedCount;
+
+    // Per-source outcomes, so "7 of 18" is a fact rather than an estimate.
+    await opsTable(db, "marketing_os_intelligence_scan_sources").upsert(
+      excerpts.map((excerpt: { url: string; text: string }) => ({
+        owner_id: report.owner_id,
+        report_id: report.id,
+        source_url: excerpt.url,
+        status: excerpt.text ? "fetched" : "failed",
+        error_message: excerpt.text ? null : "The page could not be read.",
+      })),
+      { onConflict: "report_id,source_url" },
+    );
+    await finishStage(db, report, "fetching", "succeeded", {
+      output: { fetched: fetchedCount },
+    });
+    progress.last_completed_step = "fetching";
+    await logScan(db, report, {
+      stage: "fetching",
+      message: `fetched ${fetchedCount}/${websites.length} sources`,
+    });
+
+    // ---- normalizing ----------------------------------------------------
+    progress.status = "normalizing";
+    progress.current_stage = "normalizing";
+    await setProgress(db, report, progress);
 
     let executionBrief = execution.brief;
     if (execution.tiktokHandles.length) {
-      const { researchTikTokAccounts } = await import("../../lib/ai/web-research");
-      const clientContext = client
-        ? `CLIENT: ${client.name}${client.industry ? ` — ${client.industry}` : ""}`
-        : "CLIENT: a marketing client.";
-      executionBrief += await researchTikTokAccounts(
-        execution.tiktokHandles,
-        clientContext,
-      );
+      try {
+        const { researchTikTokAccounts } = await import("../../lib/ai/web-research");
+        const clientContext = client
+          ? `CLIENT: ${client.name}${client.industry ? ` — ${client.industry}` : ""}`
+          : "CLIENT: a marketing client.";
+        executionBrief += await researchTikTokAccounts(
+          execution.tiktokHandles,
+          clientContext,
+        );
+      } catch (error) {
+        // TikTok has no commercial API, so this pass is best-effort by nature.
+        // Losing it costs some execution colour, never the scan.
+        await logScan(db, report, {
+          stage: "normalizing",
+          level: "warn",
+          message: "tiktok research pass failed",
+          detail: { reason: error instanceof Error ? error.message : String(error) },
+        });
+      }
     }
 
-    const scan = await runCompetitorScan({
+    const context = buildScanContext({
       client,
       websites,
       executionBrief,
       executionGaps: execution.gaps,
+      excerpts,
     });
+    await finishStage(db, report, "normalizing", "succeeded");
+    progress.last_completed_step = "normalizing";
+
+    // ---- analyzing ------------------------------------------------------
+    progress.status = "analyzing";
+    progress.current_stage = "analyzing";
+    await setProgress(db, report, progress);
+
+    for (const group of SCAN_SECTION_GROUPS) {
+      // Skip what a previous attempt already produced.
+      if (group.fields.every((field) => sections[field])) continue;
+
+      const startedAt = Date.now();
+      try {
+        const produced = await runScanSectionGroup(group, context);
+        Object.assign(sections, produced);
+        await logScan(db, report, {
+          stage: "analyzing",
+          provider: "anthropic",
+          latency_ms: Date.now() - startedAt,
+          message: `section group ${group.key} produced`,
+        });
+      } catch (error) {
+        failedGroups.push(group.key);
+        await logScan(db, report, {
+          stage: "analyzing",
+          provider: "anthropic",
+          level: "error",
+          latency_ms: Date.now() - startedAt,
+          message: `section group ${group.key} failed`,
+          detail: { reason: error instanceof Error ? error.message : String(error) },
+        });
+      }
+      // Banked after every group, so a worker killed mid-analysis loses one
+      // group rather than all of them.
+      await finishStage(db, report, "analyzing", "succeeded", { output: { sections } });
+      await setProgress(db, report, progress);
+    }
+    progress.last_completed_step = "analyzing";
+
+    // Nothing usable at all is a failure; anything else is a report.
+    if (Object.keys(sections).length === 0) {
+      throw new Error("no section group could be produced");
+    }
+
+    // ---- aggregating ----------------------------------------------------
+    progress.status = "aggregating";
+    progress.current_stage = "aggregating";
+    await setProgress(db, report, progress);
+    await finishStage(db, report, "aggregating", "succeeded");
+    progress.last_completed_step = "aggregating";
+
+    // ---- generating_recommendations -------------------------------------
+    progress.status = "generating_recommendations";
+    progress.current_stage = "generating_recommendations";
+    await setProgress(db, report, progress);
+
+    let synthesis: Record<string, unknown> = {};
+    try {
+      synthesis = (await runScanSynthesis(context, sections)) as Record<string, unknown>;
+    } catch (error) {
+      failedGroups.push("synthesis");
+      await logScan(db, report, {
+        stage: "generating_recommendations",
+        provider: "anthropic",
+        level: "error",
+        message: "synthesis failed",
+        detail: { reason: error instanceof Error ? error.message : String(error) },
+      });
+    }
+    await finishStage(db, report, "generating_recommendations", "succeeded");
+
+    const scan = cleanScan({ ...sections, ...synthesis } as never);
+    const partial = failedGroups.length > 0;
 
     await db
       .from("marketing_os_social_intelligence_reports")
       .update({
-        status: "complete",
+        status: partial ? "partial" : "complete",
+        current_stage: null,
+        percent_complete: 100,
+        completed_at: new Date().toISOString(),
+        last_completed_step: "generating_recommendations",
         error_message: null,
+        error_code: partial ? "sections_incomplete" : null,
+        internal_error_message: partial ? `failed groups: ${failedGroups.join(", ")}` : null,
         trending_topics: scan.trending_topics,
         hooks: scan.hooks,
         content_opportunities: {
@@ -129,21 +379,31 @@ async function runOne(db: ReturnType<typeof createServiceClient>, report: Report
       })
       .eq("id", report.id);
 
-    return { id: report.id, ok: true };
+    return { id: report.id, ok: true, partial };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "scan failed";
-    // Baseline guidance is already on the row, so the page stays useful; we
-    // only record why the live scan did not replace it.
+
+    // Whatever analysis did succeed is kept on the row, so a failure late in
+    // the run still leaves the user with the sections that were produced.
     await db
       .from("marketing_os_social_intelligence_reports")
       .update({
         status: "failed",
-        error_message: reason,
-        summary:
-          `The live competitor scan could not complete (${reason}). ` +
-          "Baseline guidance is shown below — save the watchlist again to retry.",
+        current_stage: null,
+        error_code: "scan_failed",
+        internal_error_message: reason,
+        error_message: null,
+        last_completed_step: progress.last_completed_step,
+        percent_complete: percentComplete({ ...progress, status: "failed" }),
       })
       .eq("id", report.id);
+
+    await logScan(db, report, {
+      stage: progress.current_stage ?? "worker",
+      level: "error",
+      message: "scan failed",
+      detail: { reason, failedGroups },
+    });
 
     return { id: report.id, ok: false, error: reason };
   }
