@@ -23,5 +23,6 @@ export async function setModeratorSettingAction(formData: FormData) {
     { onConflict: "owner_id,agent_id" },
   );
 
+  revalidatePath("/settings");
   revalidatePath("/inbox");
 }

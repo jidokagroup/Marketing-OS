@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Bot,
   ChevronRight,
   CreditCard,
   FileText,
@@ -51,6 +52,9 @@ import { createPlaybookAction, updatePlaybookAction } from "@/app/(dashboard)/pl
 import { saveTeamCapacityAction } from "@/app/(dashboard)/team/actions";
 import { isBillingConfigured } from "@/lib/stripe";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
+import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
+import { setModeratorSettingAction } from "./moderator-actions";
+import { trainedAgentIds } from "@/lib/agent-readiness";
 import { PageHeader } from "@/components/page-header";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PlaybookUploadForm } from "@/components/playbook-upload-form";
@@ -147,7 +151,29 @@ function playbookCategoryOptions() {
   ];
 }
 
-export default async function SettingsPage() {
+/**
+ * Tabs that ?tab= may select. Stripe's return, success and cancel URLs all
+ * point at ?tab=billing, as does /join when billing is unconfigured, so
+ * ignoring the parameter dropped everyone finishing checkout on Connections.
+ */
+const SETTINGS_TABS = [
+  "connections",
+  "billing",
+  "team",
+  "playbooks",
+  "automations",
+  "account",
+] as const;
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const activeTab = (SETTINGS_TABS as readonly string[]).includes(tab ?? "")
+    ? (tab as string)
+    : "connections";
   const { user, supabase } = await requireUser();
   const weekStart = currentWeekStart();
   const [
@@ -219,6 +245,32 @@ export default async function SettingsPage() {
     accountList.map((account) => [account.platform, account]),
   );
 
+  const { data: moderatorAgentRows } = await supabase
+    .from("marketing_os_writing_agents")
+    .select("id, name, client_id, clients:marketing_os_clients(name)")
+    .order("created_at", { ascending: false });
+  const moderatorAgents = (moderatorAgentRows ?? []).map((agent) => {
+    const client = agent.clients as unknown as { name?: string } | { name?: string }[] | null;
+    const clientName = Array.isArray(client) ? client[0]?.name : client?.name;
+    return { id: agent.id, name: agent.name, seatName: clientName ?? agent.name };
+  });
+  const moderatorSettingsResult = await opsTable(
+    supabase,
+    "marketing_os_inbox_moderator_settings",
+  )
+    .select("agent_id, enabled, auto_approve_low_risk")
+    .eq("owner_id", user.id);
+  const moderatorSettings = isOpsSchemaMissing(moderatorSettingsResult.error)
+    ? []
+    : asRows<{ agent_id: string; enabled: boolean; auto_approve_low_risk: boolean }>(
+        moderatorSettingsResult.data,
+      );
+  const moderatorByAgent = new Map(moderatorSettings.map((row) => [row.agent_id, row]));
+  const trainedSeats = await trainedAgentIds(
+    supabase,
+    moderatorAgents.map((agent) => agent.id),
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -228,12 +280,13 @@ export default async function SettingsPage() {
 
       {schemaMissing && <OpsSchemaNotice />}
 
-      <Tabs defaultValue="connections">
+      <Tabs defaultValue={activeTab}>
         <TabsList>
           <TabsTrigger value="connections">Connections</TabsTrigger>
           <TabsTrigger value="billing">Billing</TabsTrigger>
           {!schemaMissing && <TabsTrigger value="team">Team</TabsTrigger>}
           {!schemaMissing && <TabsTrigger value="playbooks">Playbooks</TabsTrigger>}
+          <TabsTrigger value="automations">Automations</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
 
@@ -807,6 +860,77 @@ export default async function SettingsPage() {
         </Card>
         </TabsContent>
       )}
+
+        <TabsContent value="automations" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bot className="h-4 w-4" />
+                Inbox Moderator
+              </CardTitle>
+              <CardDescription>
+                Drafts a reply in the client&rsquo;s voice for every open thread and flags the ones a
+                person should read. Nothing is ever sent to a platform automatically &mdash; sending
+                still happens from the Inbox.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {moderatorAgents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No seats yet. Add a client and train its agent first.
+                </p>
+              ) : (
+                moderatorAgents.map((agent) => {
+                  const setting = moderatorByAgent.get(agent.id);
+                  if (!trainedSeats.has(agent.id)) {
+                    return (
+                      <div key={agent.id} className="space-y-2">
+                        <p className="text-sm font-medium">{agent.seatName}</p>
+                        <UntrainedAgentNotice
+                          agentId={agent.id}
+                          what="Every reply the moderator drafts"
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <form
+                      key={agent.id}
+                      action={setModeratorSettingAction}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
+                    >
+                      <input type="hidden" name="agent_id" value={agent.id} />
+                      <span className="text-sm font-medium">{agent.seatName}</span>
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            name="enabled"
+                            defaultChecked={setting?.enabled ?? false}
+                            className="h-4 w-4"
+                          />
+                          On
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            name="auto_approve_low_risk"
+                            defaultChecked={setting?.auto_approve_low_risk ?? false}
+                            className="h-4 w-4"
+                          />
+                          Auto-approve low-risk drafts
+                        </label>
+                        <Button type="submit" size="sm" variant="outline">
+                          Save
+                        </Button>
+                      </div>
+                    </form>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="account" className="space-y-6">
       <Card>
