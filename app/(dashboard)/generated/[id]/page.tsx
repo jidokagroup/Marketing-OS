@@ -202,9 +202,16 @@ export default async function GeneratedDetailPage({
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
+          {/* Same precedence as the Generated Content list. The detail used to
+              lead with the topic while the list led with the title, so the two
+              named the same piece differently and neither matched the other in
+              an audit trail. */}
           <h1 className="text-2xl font-bold tracking-tight">
-            {content.topic || "Untitled piece"}
+            {content.title || content.topic || "Untitled piece"}
           </h1>
+          {content.title && content.topic && content.title !== content.topic && (
+            <p className="text-sm text-muted-foreground">{content.topic}</p>
+          )}
           <div className="flex flex-wrap items-center gap-1.5">
             {agent && (
               <Link href={`/agents/${agent.id}`}>

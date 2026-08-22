@@ -206,11 +206,23 @@ export default async function ContentIdeasPage({
                 ? clientById.get(idea.client_id)
                 : null;
               const agent = idea.agent_id ? agentById.get(idea.agent_id) : null;
-              const generateHref = idea.agent_id
-                ? `/agents/${idea.agent_id}?tab=generate`
-                : latestAgentId
-                  ? `/agents/${latestAgentId}?tab=generate`
-                  : "/agents";
+              // The generator reads these params, so an idea can arrive with
+              // its own content already in the form instead of sending the
+              // user to a blank one and asking them to retype it.
+              const generateAgentId = idea.agent_id ?? latestAgentId;
+              const prefill = new URLSearchParams({
+                tab: "generate",
+                title: idea.title ?? "",
+                topic: idea.title ?? "",
+                goal: idea.funnel_stage ?? "",
+                notes: [idea.description, idea.format && `Format: ${idea.format}`]
+                  .filter(Boolean)
+                  .join("\n\n"),
+              });
+              if (idea.platform) prefill.append("platforms", idea.platform);
+              const generateHref = generateAgentId
+                ? `/agents/${generateAgentId}?${prefill.toString()}`
+                : "/agents";
               return (
                 <Card key={idea.id}>
                   <CardHeader>
