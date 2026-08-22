@@ -16,13 +16,11 @@ import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { updateInboxThreadStatusAction } from "./actions";
-import { setModeratorSettingAction } from "./moderator-actions";
-import { trainedAgentIds } from "@/lib/agent-readiness";
+import { ButtonLink } from "@/components/ui/button";
 import { InboxModeratorRunButton } from "@/components/inbox-moderator-run-button";
-import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
 
 export const metadata = { title: "Inbox · Jidoka Marketing Team OS" };
 
@@ -159,12 +157,11 @@ export default async function InboxPage({
     : asRows<{ agent_id: string; enabled: boolean; auto_approve_low_risk: boolean }>(
         moderatorSettingsResult.data,
       );
-  const trainedAgents = await trainedAgentIds(
-    supabase,
-    moderatorAgents.map((agent) => agent.id),
-  );
   const moderatorSettingByAgent = new Map(
     moderatorSettings.map((setting) => [setting.agent_id, setting]),
+  );
+  const enabledSeats = moderatorAgents.filter(
+    (agent) => moderatorSettingByAgent.get(agent.id)?.enabled,
   );
   const campaignById = new Map(campaigns.map((item) => [item.id, item]));
   const clientById = new Map(clients.map((item) => [item.id, item]));
@@ -178,66 +175,27 @@ export default async function InboxPage({
 
       {schemaMissing && <OpsSchemaNotice title="Campaign inbox links need migration 0016" />}
 
+      {/* Configuration lives in Settings → Automations. What belongs here is
+          the state it is in and the one action that operates on this page. */}
       {moderatorAgents.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Inbox Moderator</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              An agent that drafts replies in the brand&rsquo;s voice for every open thread, and pings you
-              only for the ones it flags. Nothing is ever sent to a platform automatically &mdash; sending
-              still happens below, the same way it always has.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {moderatorAgents.map((agent) => {
-              const setting = moderatorSettingByAgent.get(agent.id);
-              if (!trainedAgents.has(agent.id)) {
-                return (
-                  <div key={agent.id} className="space-y-2">
-                    <p className="text-sm font-medium">{agent.name}</p>
-                    <UntrainedAgentNotice agentId={agent.id} what="Every reply the moderator drafts" />
-                  </div>
-                );
-              }
-              return (
-                <div
-                  key={agent.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                >
-                  <form
-                    action={setModeratorSettingAction}
-                    className="flex flex-wrap items-center gap-4"
-                  >
-                    <input type="hidden" name="agent_id" value={agent.id} />
-                    <span className="text-sm font-medium">{agent.name}</span>
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        name="enabled"
-                        defaultChecked={setting?.enabled ?? false}
-                        className="h-4 w-4"
-                      />
-                      On for this agent
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        name="auto_approve_low_risk"
-                        defaultChecked={setting?.auto_approve_low_risk ?? false}
-                        className="h-4 w-4"
-                      />
-                      Auto-approve low-risk drafts
-                    </label>
-                    <Button type="submit" size="sm" variant="outline">
-                      Save
-                    </Button>
-                  </form>
-                  <InboxModeratorRunButton agentId={agent.id} />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 px-3 py-2">
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Inbox Moderator</span>{" "}
+            {enabledSeats.length === 0
+              ? "is off for every seat."
+              : `drafts replies for ${enabledSeats.length} of ${moderatorAgents.length} seat${
+                  moderatorAgents.length === 1 ? "" : "s"
+                }.`}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {enabledSeats.map((agent) => (
+              <InboxModeratorRunButton key={agent.id} agentId={agent.id} />
+            ))}
+            <ButtonLink href="/settings?tab=automations" variant="ghost" size="sm">
+              {enabledSeats.length === 0 ? "Turn on" : "Manage"}
+            </ButtonLink>
+          </div>
+        </div>
       )}
 
       <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[220px_220px_auto]">
