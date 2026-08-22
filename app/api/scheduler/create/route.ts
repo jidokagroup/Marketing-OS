@@ -33,6 +33,7 @@ interface CreateBody {
   comment_auto_reply?: string;
   dm_sequence?: string;
   source_import?: string;
+  campaign_id?: string;
 }
 
 const DEFAULT_POSTING_WINDOWS: Record<
@@ -373,6 +374,9 @@ export async function POST(request: Request) {
       status: ready ? "scheduled" : "draft",
       error: ready || !scheduledTime ? null : blockers.join(" "),
       generated_content_id: match?.generated_content_id ?? null,
+      // Inherited from the matched content so a campaign keeps its thread
+      // from brief through to the post that went out.
+      campaign_id: cleanText(body.campaign_id) ?? match?.campaign_id ?? null,
       caption: selectedCaption,
       script: match?.script ?? null,
       best_posting_window: body.use_best_time

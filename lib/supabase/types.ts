@@ -289,11 +289,15 @@ export interface Database {
           status: ScanStatus;
           error_message: string | null;
           requested_at: string;
+          // Added by migration 0016 so a piece can be attributed to the
+          // campaign it was made for.
+          campaign_id: string | null;
         };
         Insert: {
           id?: string;
           agent_id: string;
           owner_id: string;
+          campaign_id?: string | null;
           title?: string | null;
           topic?: string | null;
           goal?: string | null;
@@ -552,11 +556,15 @@ export interface Database {
           external_post_id: string | null;
           performance_score: number | null;
           error: string | null;
+          // Added by migration 0016 so a post keeps its link to the campaign
+          // the content was made for.
+          campaign_id: string | null;
         };
         Insert: {
           id?: string;
           agent_id: string;
           owner_id: string;
+          campaign_id?: string | null;
           generated_content_id?: string | null;
           social_account_id?: string | null;
           platform?: string;

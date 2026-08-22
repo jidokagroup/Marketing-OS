@@ -22,6 +22,8 @@ export function GenerateForm({ agentId }: { agentId: string }) {
   const prefillGoal = searchParams.get("goal") ?? "";
   const prefillNotes = searchParams.get("notes") ?? "";
   const prefillPlatforms = searchParams.getAll("platforms");
+  // Set by "Generate content" on a campaign, so the piece comes back linked.
+  const campaignId = searchParams.get("campaign_id") ?? "";
   const defaultPlatforms = prefillPlatforms.length ? prefillPlatforms : ["instagram"];
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -35,6 +37,7 @@ export function GenerateForm({ agentId }: { agentId: string }) {
       .filter(Boolean);
     payload.platforms = platforms.length ? platforms : ["instagram"];
     payload.platform = platforms.length ? platforms.join(", ") : "Instagram";
+    if (campaignId) payload.campaign_id = campaignId;
     if (!String(payload.topic ?? "").trim()) {
       toast.error("Topic is required");
       return;

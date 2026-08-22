@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { campaignPipeline, campaignRevenue } from "@/lib/campaign-money";
 import { SeatSync } from "@/components/seat-context";
 import {
   WORKFLOW_STAGES,
@@ -241,16 +242,24 @@ export default async function CampaignDetailPage({
   const leads = asRows<LeadRow>(leadsResult.data);
   const revenue = asRows<RevenueEventRow>(revenueResult.data);
   const experiments = asRows<ExperimentRow>(experimentsResult.data);
+  // Carries the campaign so the piece comes back attached to it, and the
+  // brief so the generator starts from what this campaign is for.
   const generatedHref = latestAgentResult.data?.id
-    ? `/agents/${latestAgentResult.data.id}?tab=generate`
+    ? `/agents/${latestAgentResult.data.id}?${new URLSearchParams({
+        tab: "generate",
+        campaign_id: campaign.id,
+        title: campaign.name,
+        topic: campaign.goal ?? campaign.name,
+        goal: campaign.primary_kpi ?? "",
+        notes: campaign.target_audience
+          ? `Audience: ${campaign.target_audience}`
+          : "",
+      }).toString()}`
     : "/agents";
-  const revenueTotal =
-    Number(campaign.attributed_revenue ?? 0) +
-    revenue.reduce((sum, item) => sum + Number(item.amount ?? 0), 0);
-  const leadValue = leads.reduce(
-    (sum, item) => sum + Number(item.actual_value || item.estimated_value || 0),
-    0,
-  );
+  // Shared with the Money page, which used to compute revenue a different way
+  // and disagree with this header about the same campaign.
+  const revenueTotal = campaignRevenue(campaign, revenue);
+  const leadValue = campaignPipeline(leads);
   const channelsDefault = Array.isArray(brief?.channels)
     ? brief.channels.join(", ")
     : "";
@@ -312,10 +321,14 @@ export default async function CampaignDetailPage({
         {/* Pipeline and revenue are separate numbers. Falling back to the
             leads' estimated value under a "Revenue" label reported money that
             had not been earned, and disagreed with the Money page. */}
-        <div className="grid min-w-64 grid-cols-4 gap-2 text-sm">
+        <div className="grid min-w-64 grid-cols-2 gap-2 text-sm sm:grid-cols-5">
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground">Budget</p>
             <p className="font-semibold">{formatMoney(campaign.budget)}</p>
+          </div>
+          <div className="rounded-lg border p-3">
+            <p className="text-muted-foreground">Spend</p>
+            <p className="font-semibold">{formatMoney(campaign.actual_spend)}</p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-muted-foreground">Leads</p>

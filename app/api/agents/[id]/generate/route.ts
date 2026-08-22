@@ -78,7 +78,7 @@ export async function POST(
   }
 
   const body = (await request.json().catch(() => ({}))) as Partial<
-    GenerationRequest & { platforms?: string[] }
+    GenerationRequest & { platforms?: string[]; campaign_id?: string }
   >;
   const topic = String(body.topic ?? "").trim();
   if (!topic) {
@@ -114,6 +114,10 @@ export async function POST(
       cta: body.cta?.trim() || null,
       length: body.length?.trim() || null,
       notes: body.notes?.trim() || null,
+      // Content generated from a campaign stays attached to it, so the
+      // campaign can account for the work done under it rather than being a
+      // brief with nothing linked back.
+      campaign_id: body.campaign_id?.trim() || null,
       status: "queued",
       requested_at: new Date().toISOString(),
     })
