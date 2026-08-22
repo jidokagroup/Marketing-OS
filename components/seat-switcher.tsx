@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronsUpDown } from "lucide-react";
 
 import { SEAT_COOKIE, seatCookieValue } from "@/lib/seat-cookie";
+import { useRecordSeat } from "@/components/seat-context";
 
 export type SeatOption = {
   id: string;
@@ -47,6 +48,7 @@ export function SeatSwitcher({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const recordSeat = useRecordSeat();
 
   const agentMatch = pathname.match(/^\/agents\/([^/]+)(.*)$/);
   const clientMatch = pathname.match(/^\/clients\/([^/]+)(.*)$/);
@@ -61,7 +63,18 @@ export function SeatSwitcher({
   // action redirect, a detail page reached by id — the remembered seat keeps
   // the header honest instead of silently sliding to whichever seat happens to
   // sort first.
+  // A record on screen outranks the URL: `/generated/<id>?agent_id=<other>` is
+  // a link someone could construct, and the honest answer is whose record is
+  // actually being displayed. Below that the URL wins, then the remembered
+  // seat, so a page with no seat anywhere still names the one the user is in
+  // rather than sliding to whichever seat happens to sort first.
   const active =
+    (recordSeat?.agentId
+      ? seats.find((seat) => seat.id === recordSeat.agentId)
+      : null) ??
+    (recordSeat?.clientId
+      ? seats.find((seat) => seat.clientId === recordSeat.clientId)
+      : null) ??
     (agentId ? seats.find((seat) => seat.id === agentId) : null) ??
     (clientId ? seats.find((seat) => seat.clientId === clientId) : null) ??
     (remembered ? seats.find((seat) => seat.id === remembered) : null) ??
@@ -109,6 +122,14 @@ export function SeatSwitcher({
       target = `/clients/${seat.clientId}${clientMatch[2]}`;
       params.delete("agent_id");
       params.delete("client");
+    } else if (recordSeat) {
+      // The record on screen belongs to the seat being left behind, so staying
+      // on it would put the new seat's name above another client's data. Go up
+      // to the list this record came from, scoped to the seat just chosen.
+      target = pathname.replace(/\/[^/]+$/, "") || "/dashboard";
+      params.set("agent_id", seat.id);
+      if (seat.clientId) params.set("client", seat.clientId);
+      else params.delete("client");
     } else {
       params.set("agent_id", seat.id);
       if (seat.clientId) params.set("client", seat.clientId);

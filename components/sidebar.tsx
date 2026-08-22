@@ -1,34 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 import { NAV_ITEMS } from "@/lib/nav";
+import { useSeatScopedHref } from "@/components/seat-context";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const agentMatch = pathname.match(/^\/agents\/([^/]+)/);
-  const clientMatch = pathname.match(/^\/clients\/([^/]+)/);
-  const activeAgent =
-    searchParams.get("agent_id") ||
-    (agentMatch?.[1] && agentMatch[1] !== "new" ? agentMatch[1] : "");
-  const activeClient =
-    searchParams.get("client") ||
-    (clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : "");
-
-  function scopedHref(href: string) {
-    if (!activeClient && !activeAgent) return href;
-    if (href !== "/content") {
-      return href;
-    }
-    const params = new URLSearchParams();
-    if (activeClient) params.set("client", activeClient);
-    if (activeAgent) params.set("agent_id", activeAgent);
-    return `${href}?${params.toString()}`;
-  }
+  const scopedHref = useSeatScopedHref();
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r bg-card md:flex">

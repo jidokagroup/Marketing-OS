@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { SeatSync } from "@/components/seat-context";
 import { CopyButton } from "@/components/copy-button";
 import { ScoreBadge } from "@/components/score-badge";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -185,6 +186,7 @@ export default async function GeneratedDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl">
+      <SeatSync agentId={content.agent_id} clientId={agent?.client_id ?? null} />
       <SavedToast variant={saved} />
       <GenerationStatusBanner
         status={content.status}

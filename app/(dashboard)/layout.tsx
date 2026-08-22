@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { HelpChatbot } from "@/components/help-chatbot";
 import { MobileNav } from "@/components/mobile-nav";
+import { SeatContextProvider } from "@/components/seat-context";
 import { SeatSwitcher } from "@/components/seat-switcher";
 import { seatFromCookie } from "@/lib/seat";
 import { TimeZoneSync } from "@/components/time-zone-sync";
@@ -44,32 +45,36 @@ export default async function DashboardLayout({
   const remembered = await seatFromCookie();
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
-          <MobileNav />
-          <div className="min-w-0 flex-1">
-            <SeatSwitcher seats={activeAgents} remembered={remembered.agentId} />
-          </div>
-          {!LOGIN_DISABLED && (
-            <div className="ml-auto flex items-center gap-3">
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                {user.email}
-              </span>
-              <form action={signOut}>
-                <Button variant="ghost" size="sm" type="submit">
-                  <LogOut className="mr-1 h-4 w-4" />
-                  Sign out
-                </Button>
-              </form>
+    // The provider spans the header and the page so a detail page can tell
+    // the switcher above it which seat's record it is showing.
+    <SeatContextProvider>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-16 items-center justify-between gap-4 border-b bg-card px-4 md:px-6">
+            <MobileNav />
+            <div className="min-w-0 flex-1">
+              <SeatSwitcher seats={activeAgents} remembered={remembered.agentId} />
             </div>
-          )}
-        </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+            {!LOGIN_DISABLED && (
+              <div className="ml-auto flex items-center gap-3">
+                <span className="hidden text-sm text-muted-foreground sm:inline">
+                  {user.email}
+                </span>
+                <form action={signOut}>
+                  <Button variant="ghost" size="sm" type="submit">
+                    <LogOut className="mr-1 h-4 w-4" />
+                    Sign out
+                  </Button>
+                </form>
+              </div>
+            )}
+          </header>
+          <main className="flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        </div>
+        <HelpChatbot accounts={accounts ?? []} primaryAgentId={latestAgent?.id} />
+        <TimeZoneSync />
       </div>
-      <HelpChatbot accounts={accounts ?? []} primaryAgentId={latestAgent?.id} />
-      <TimeZoneSync />
-    </div>
+    </SeatContextProvider>
   );
 }

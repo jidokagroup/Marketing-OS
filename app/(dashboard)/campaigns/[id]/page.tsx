@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { SeatSync } from "@/components/seat-context";
 import {
   WORKFLOW_STAGES,
   asRow,
@@ -272,6 +273,9 @@ export default async function CampaignDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* Tells the header which seat this campaign belongs to, so the
+          selector stops naming a different client than the page shows. */}
+      <SeatSync clientId={campaign.client_id} />
       <Link
         href="/campaigns"
         className="text-sm text-muted-foreground hover:text-foreground"

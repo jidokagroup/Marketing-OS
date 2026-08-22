@@ -1,6 +1,8 @@
 import { FileText, Search } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { activeSeat } from "@/lib/seat";
+import { SeatFields } from "@/components/seat-fields";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -20,10 +22,23 @@ export const metadata = { title: "Source Library · Jidoka Marketing Team OS" };
 export default async function ScriptsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; type?: string; status?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    type?: string;
+    status?: string;
+    agent_id?: string;
+    client?: string;
+  }>;
 }) {
   const { supabase } = await requireUser();
-  const { q = "", type = "all", status = "all" } = await searchParams;
+  const {
+    q = "",
+    type = "all",
+    status = "all",
+    agent_id: agentParam,
+    client: clientParam,
+  } = await searchParams;
+  const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
 
   const { data: assets } = await supabase
     .from("marketing_os_uploaded_assets")
@@ -79,6 +94,7 @@ export default async function ScriptsPage({
           </div>
 
           <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_160px_160px_auto]">
+            <SeatFields seat={seat} />
             <label className="relative">
               <span className="sr-only">Search source files</span>
               <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

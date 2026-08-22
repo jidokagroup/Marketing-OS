@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { SeatSync } from "@/components/seat-context";
 import {
   asRows,
   formatDate,
@@ -113,6 +114,7 @@ export default async function LeadDetailPage({
 
   return (
     <div className="space-y-6">
+      <SeatSync clientId={lead.client_id} />
       <div>
         <Link href="/pipeline" className="text-sm text-muted-foreground hover:underline">
           ← Pipeline

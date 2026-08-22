@@ -37,3 +37,24 @@ export function parseSeatCookie(raw: string | null | undefined) {
   const [agentId, clientId] = value.split("|");
   return { agentId: seatId(agentId), clientId: seatId(clientId) };
 }
+
+/**
+ * Adds the active seat to a link that would otherwise drop it.
+ *
+ * An href that already names a seat is left as it is — an explicit link is a
+ * deliberate one, and overriding it would make "open this in Canton" mean
+ * something other than what it says.
+ */
+export function seatScopedHref(
+  href: string,
+  agentId: string | null,
+  clientId: string | null,
+): string {
+  if (!agentId && !clientId) return href;
+
+  const [base, query = ""] = href.split("?", 2);
+  const params = new URLSearchParams(query);
+  if (agentId && !params.has("agent_id")) params.set("agent_id", agentId);
+  if (clientId && !params.has("client")) params.set("client", clientId);
+  return `${base}?${params.toString()}`;
+}
