@@ -275,7 +275,9 @@ export default async function GeneratedDetailPage({
           <form action={deleteGeneratedContentAction}>
             <input type="hidden" name="id" value={content.id} />
             <ConfirmSubmitButton
-              message="Delete this generated piece?"
+              title="Delete this generated piece?"
+              confirmLabel="Delete piece"
+              message={`"${content.title || content.topic || "This piece"}" is deleted permanently, along with its scores and every version of the copy. Scheduled posts made from it keep their captions but lose the link back.`}
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-destructive"

@@ -140,7 +140,9 @@ export function AssetLibraryTable({
                     <input type="hidden" name="id" value={asset.id} />
                     <input type="hidden" name="agent_id" value={agentId} />
                     <ConfirmSubmitButton
-                      message="Delete this source file from the agent?"
+                      title="Delete this source file?"
+                      confirmLabel="Delete file"
+                      message={`"${asset.title}" is removed from this agent's knowledge base. Voice DNA already analysed from it stays until the agent is re-analysed.`}
                       size="icon-sm"
                       className="text-muted-foreground hover:text-destructive"
                     >

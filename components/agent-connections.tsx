@@ -207,7 +207,9 @@ export function AgentConnections({
                       <input type="hidden" name="id" value={account.id} />
                       <input type="hidden" name="agent_id" value={agentId} />
                       <ConfirmSubmitButton
-                        message={`Disconnect ${platform.label}? Scheduled posts for this account stop publishing until it is reconnected.`}
+                        title={`Disconnect ${platform.label}?`}
+                        confirmLabel="Disconnect"
+                        message={`${platform.label} is unlinked from this agent. Every scheduled post for this account stops publishing until it is reconnected, and analytics for it stop importing.`}
                         className="text-muted-foreground hover:text-destructive"
                       >
                         <Trash2 className="mr-1 h-3.5 w-3.5" />

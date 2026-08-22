@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatInstant, instantToWallTime } from "@/lib/time-format";
 import { postLifecycle } from "@/lib/scheduler-lifecycle";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PostLifecycleBadge } from "@/components/post-lifecycle-badge";
 
 export type CalendarPost = {
@@ -274,32 +275,28 @@ function CalendarPostBody({
             />
             {/* Scheduling hands the post to the publisher, so it confirms
                 like the outward-facing action it is. */}
-            <Button
-              variant="outline"
-              size={compact ? "xs" : "sm"}
-              type="submit"
-              onClick={(event) => {
-                if (!lifecycle.canAutoPublish) return;
-                const when = post.scheduled_time ? "Reschedule" : "Schedule";
-                if (
-                  !window.confirm(
-                    `${when} "${post.title || "this post"}" to publish to ${
-                      PLATFORM_LABELS[
-                        post.platform as keyof typeof PLATFORM_LABELS
-                      ] ?? post.platform
-                    }? It will go out automatically at the time you set.`,
-                  )
-                ) {
-                  event.preventDefault();
-                }
-              }}
-            >
-              {lifecycle.canAutoPublish
-                ? post.scheduled_time
-                  ? "Reschedule"
-                  : "Schedule"
-                : "Save draft time"}
-            </Button>
+            {/* Scheduling hands the post to the publisher on a timer, which
+                is the definition of an action worth asking about. Saving a
+                draft time is not, so only one of them asks. */}
+            {lifecycle.canAutoPublish ? (
+              <ConfirmSubmitButton
+                variant="outline"
+                size={compact ? "xs" : "sm"}
+                destructive={false}
+                title={post.scheduled_time ? "Reschedule this post?" : "Schedule this post?"}
+                confirmLabel={post.scheduled_time ? "Reschedule" : "Schedule"}
+                message={`"${post.title || "This post"}" will publish to ${
+                  PLATFORM_LABELS[post.platform as keyof typeof PLATFORM_LABELS] ??
+                  post.platform
+                } automatically at the time you set. Nobody reviews it again first.`}
+              >
+                {post.scheduled_time ? "Reschedule" : "Schedule"}
+              </ConfirmSubmitButton>
+            ) : (
+              <Button variant="outline" size={compact ? "xs" : "sm"} type="submit">
+                Save draft time
+              </Button>
+            )}
           </form>
         )}
         <CalendarDeletePostForm
@@ -343,21 +340,17 @@ function CalendarDeletePostForm({
     <div className="ml-auto">
       <form action={deletePost}>
         <input type="hidden" name="id" value={postId} />
-        <Button
-          variant="ghost"
+        <ConfirmSubmitButton
           size={compact ? "xs" : "sm"}
-          type="submit"
           disabled={pending}
-          onClick={(event) => {
-            if (!window.confirm("Delete this post from the queue? This cannot be undone.")) {
-              event.preventDefault();
-            }
-          }}
+          title="Delete this post?"
+          confirmLabel="Delete post"
+          message="This removes the post from the queue permanently. Any caption, media and Comment-to-DM flow saved on it goes with it."
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" />
           {pending ? "Deleting" : "Delete"}
-        </Button>
+        </ConfirmSubmitButton>
       </form>
       {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>

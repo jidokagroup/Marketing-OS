@@ -551,7 +551,10 @@ export default async function SchedulerPage({
                           <input type="hidden" name="id" value={p.id} />
                           <ConfirmSubmitButton
                             variant="outline"
-                            message={`Unschedule "${p.title || "this post"}"? It goes back to a draft and will not publish until you schedule it again.`}
+                            destructive={false}
+                            title="Unschedule this post?"
+                            confirmLabel="Unschedule"
+                            message={`"${p.title || "This post"}" goes back to a draft and will not publish until you schedule it again. The caption, media and time stay on it.`}
                           >
                             Unschedule
                           </ConfirmSubmitButton>
@@ -576,11 +579,14 @@ export default async function SchedulerPage({
                           {lifecycle.canAutoPublish ? (
                             <ConfirmSubmitButton
                               variant="outline"
-                              message={`Schedule "${p.title || "this post"}" to publish to ${
+                              destructive={false}
+                              title="Schedule this post?"
+                              confirmLabel="Schedule"
+                              message={`"${p.title || "This post"}" will publish to ${
                                 PLATFORM_LABELS[
                                   p.platform as keyof typeof PLATFORM_LABELS
                                 ] ?? p.platform
-                              }${agent?.name ? ` as ${agent.name}` : ""}? It will go out automatically at the time you set.`}
+                              }${agent?.name ? ` as ${agent.name}` : ""} automatically at the time you set. Nobody reviews it again first.`}
                             >
                               Schedule
                             </ConfirmSubmitButton>
@@ -611,7 +617,9 @@ export default async function SchedulerPage({
                       <form action={deletePostAction} className="ml-auto">
                         <input type="hidden" name="id" value={p.id} />
                         <ConfirmSubmitButton
-                          message={`Delete "${p.title || "this post"}" from the queue? This cannot be undone.`}
+                          title="Delete this post?"
+                          confirmLabel="Delete post"
+                          message={`"${p.title || "This post"}" is removed from the queue permanently, along with its caption, media and Comment-to-DM flow.`}
                           size="icon-sm"
                           className="text-muted-foreground hover:text-destructive"
                         >

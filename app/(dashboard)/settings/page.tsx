@@ -58,6 +58,7 @@ import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
 import { trainedAgentIds } from "@/lib/agent-readiness";
 import { PageHeader } from "@/components/page-header";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ModeratorSettingsForm } from "@/components/moderator-settings-form";
 import { PlaybookUploadForm } from "@/components/playbook-upload-form";
 import { Badge } from "@/components/ui/badge";
@@ -652,9 +653,18 @@ export default async function SettingsPage({
                   </p>
                 </div>
                 <input type="hidden" name="plan" value="monthly" />
-                <PendingSubmitButton pendingLabel="Redirecting to Stripe…">
+                {/* Leaves the app for Stripe and puts a card on file, so it
+                    asks before it goes rather than after. */}
+                <ConfirmSubmitButton
+                  variant="default"
+                  size="default"
+                  destructive={false}
+                  title="Start the monthly plan?"
+                  confirmLabel="Continue to Stripe"
+                  message="This opens Stripe checkout for the $297/month plan with a 7-day free trial. You will be asked for a card, and billing starts when the trial ends unless you cancel."
+                >
                   Start free trial
-                </PendingSubmitButton>
+                </ConfirmSubmitButton>
               </form>
               <form
                 action={startCheckoutAction}
@@ -667,9 +677,16 @@ export default async function SettingsPage({
                   </p>
                 </div>
                 <input type="hidden" name="plan" value="annual" />
-                <PendingSubmitButton pendingLabel="Redirecting to Stripe…">
+                <ConfirmSubmitButton
+                  variant="default"
+                  size="default"
+                  destructive={false}
+                  title="Start the annual plan?"
+                  confirmLabel="Continue to Stripe"
+                  message="This opens Stripe checkout for the $3,267/year plan with a 7-day free trial. You will be asked for a card, and billing starts when the trial ends unless you cancel."
+                >
                   Start free trial
-                </PendingSubmitButton>
+                </ConfirmSubmitButton>
               </form>
             </div>
           )}

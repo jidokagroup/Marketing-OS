@@ -13,6 +13,7 @@ import {
 } from "@/lib/marketing-os/operations";
 import { activeSeat } from "@/lib/seat";
 import { EmptyState } from "@/components/empty-state";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SeatFields } from "@/components/seat-fields";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
@@ -373,18 +374,38 @@ export default async function InboxPage({
                       rows={2}
                       aria-label="Internal note"
                     />
+                    {/* Both of these reach outside the app — one answers a
+                        real person under the client's name, the other closes
+                        the thread so nobody looks at it again. */}
                     <div className="flex flex-wrap gap-2">
-                      <Button type="submit" name="status" value="posted">
+                      <ConfirmSubmitButton
+                        name="status"
+                        value="posted"
+                        variant="default"
+                        size="default"
+                        destructive={false}
+                        title={isFlowReview ? "Approve this flow?" : "Send this reply?"}
+                        confirmLabel={isFlowReview ? "Approve flow" : "Send reply"}
+                        message={
+                          isFlowReview
+                            ? `Approve the Comment-to-DM flow for ${client?.name ?? "this client"} on ${thread.platform}. Once the post is live, replies and DMs go out automatically to anyone who comments.`
+                            : `Send this reply to ${thread.participant_username ?? "this person"} on ${thread.platform} as ${client?.name ?? "this client"}. It is posted publicly and cannot be unsent from here.`
+                        }
+                      >
                         {isFlowReview ? "Approve flow" : "Send reply"}
-                      </Button>
-                      <Button
-                        type="submit"
+                      </ConfirmSubmitButton>
+                      <ConfirmSubmitButton
                         name="status"
                         value="resolved"
                         variant="outline"
+                        size="default"
+                        destructive={false}
+                        title="Mark this resolved?"
+                        confirmLabel="Mark resolved"
+                        message={`This thread with ${thread.participant_username ?? "this person"} leaves the review queue. Nothing is sent, and nobody is asked to look at it again.`}
                       >
                         Mark resolved
-                      </Button>
+                      </ConfirmSubmitButton>
                     </div>
                   </form>
                 </CardContent>
