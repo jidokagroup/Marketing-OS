@@ -116,6 +116,26 @@ export function instantToWallTime(
   return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
 }
 
+/**
+ * The hour of the day an instant falls in, in `timeZone`, as 0-23.
+ *
+ * Analytics rows carry a stored `hour` column, but it was written from the
+ * host's clock — UTC on Netlify — so "best posting time" was reported hours
+ * away from when the audience was actually there. The true instant is on the
+ * row either way, so the hour is derived from that at read time rather than
+ * trusted from the column. That also fixes rows written before this, which no
+ * amount of correcting the writer would have reached.
+ */
+export function instantToHour(
+  value: string | Date | null | undefined,
+  timeZone: string,
+): number | null {
+  const wall = instantToWallTime(value, timeZone);
+  if (!wall) return null;
+  const hour = Number(wall.slice(11, 13));
+  return Number.isInteger(hour) ? hour : null;
+}
+
 /** The calendar day an instant falls on in `timeZone`, as `YYYY-MM-DD`. */
 export function instantToDayKey(
   value: string | Date | null | undefined,

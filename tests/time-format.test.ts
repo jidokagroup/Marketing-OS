@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   formatInstant,
+  instantToHour,
   instantToDayKey,
   instantToWallTime,
   isValidTimeZone,
@@ -98,6 +99,32 @@ check("timezone validation rejects junk", () => {
   assert.equal(isValidTimeZone("Mars/Olympus"), false);
   assert.equal(isValidTimeZone(""), false);
   assert.equal(isValidTimeZone(null), false);
+});
+
+check("the hour follows the viewer's zone, not the host's", () => {
+  // The bug this exists for: an 8pm Eastern post was being reported as a
+  // midnight post, so "best posting time" pointed at the wrong hour entirely.
+  assert.equal(instantToHour("2026-08-23T00:30:00Z", NY), 20);
+  assert.equal(instantToHour("2026-08-23T00:30:00Z", "UTC"), 0);
+  assert.equal(instantToHour("2026-08-22T18:00:00Z", NY), 14);
+});
+
+check("midnight is hour 0, not 24", () => {
+  assert.equal(instantToHour("2026-08-22T04:00:00Z", NY), 0);
+});
+
+check("an unreadable instant has no hour rather than a wrong one", () => {
+  assert.equal(instantToHour(null, NY), null);
+  assert.equal(instantToHour("not a date", NY), null);
+  assert.equal(instantToHour(undefined, NY), null);
+});
+
+check("hour and day key agree with each other across the date line", () => {
+  // A late-evening post must land on the evening's date and the evening's
+  // hour, not split across two days.
+  const instant = "2026-08-23T01:00:00Z";
+  assert.equal(instantToDayKey(instant, NY), "2026-08-22");
+  assert.equal(instantToHour(instant, NY), 21);
 });
 
 console.log(`\n${passed} timezone checks passed`);
