@@ -143,9 +143,17 @@ async function upsertRow(row: MetricRow): Promise<number> {
       title: row.accountName,
       posted_time: posted.toISOString(),
       fetched_at: new Date().toISOString(),
+      // Written in UTC and read back in the viewer's zone. These were the
+      // host's local clock, which is UTC on Netlify and something else on a
+      // developer's laptop, so the same post got a different hour depending on
+      // where the import ran. `posted_time` above is the instant that matters;
+      // these three are a denormalisation of it, and now mean one thing.
       date: posted.toISOString().slice(0, 10),
-      hour: posted.getHours(),
-      day_of_week: posted.toLocaleDateString("en-US", { weekday: "long" }),
+      hour: posted.getUTCHours(),
+      day_of_week: posted.toLocaleDateString("en-US", {
+        weekday: "long",
+        timeZone: "UTC",
+      }),
       caption: row.caption ?? null,
       media_type: row.mediaType ?? null,
       views: row.views ?? 0,
