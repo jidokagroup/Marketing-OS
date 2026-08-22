@@ -93,7 +93,7 @@ export default async function PublishingPage() {
         </ButtonLink>
       </PageHeader>
 
-      {schemaMissing && <OpsSchemaNotice title="Campaign publishing links need migration 0016" />}
+      {schemaMissing && <OpsSchemaNotice feature="Campaign publishing" />}
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Metric label="Draft" value={counts.draft} />

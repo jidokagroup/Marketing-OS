@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, Target } from "lucide-react";
+import { Target } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
 import {
@@ -14,6 +14,7 @@ import {
   type ClientOption,
 } from "@/lib/marketing-os/operations";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorNotice } from "@/components/error-notice";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -73,13 +74,9 @@ export default async function CampaignsPage() {
       />
 
       {schemaMissing && <OpsSchemaNotice />}
+      {/* This printed the database's own message straight onto the page. */}
       {!schemaMissing && campaignsResult.error && (
-        <Card className="border-destructive/40">
-          <CardContent className="flex items-center gap-2 py-4 text-sm text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            {campaignsResult.error.message}
-          </CardContent>
-        </Card>
+        <ErrorNotice error={campaignsResult.error} action="load campaigns" />
       )}
 
       {!schemaMissing && (

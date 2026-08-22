@@ -18,7 +18,22 @@ export type Json =
 export type AgentStatus = "draft" | "analyzing" | "ready" | "error";
 export type AssetStatus = "pending" | "extracted" | "error";
 /** Lifecycle of a competitor scan report (see migration 0022). */
-export type ScanStatus = "queued" | "running" | "complete" | "failed";
+/**
+ * A scan's lifecycle. Widened by migration 0034 when the competitor scan
+ * became a staged pipeline; `running` is kept for rows written before that.
+ */
+export type ScanStatus =
+  | "queued"
+  | "fetching"
+  | "normalizing"
+  | "analyzing"
+  | "aggregating"
+  | "generating_recommendations"
+  | "running"
+  | "complete"
+  | "partial"
+  | "failed"
+  | "cancelled";
 
 type Timestamps = { created_at: string };
 type Mutable = Timestamps & { updated_at: string };
@@ -559,12 +574,23 @@ export interface Database {
           // Added by migration 0016 so a post keeps its link to the campaign
           // the content was made for.
           campaign_id: string | null;
+          // Added by migration 0035 so a publish can be claimed once, counted,
+          // and retried without republishing what already went out.
+          attempts: number;
+          last_attempted_at: string | null;
+          error_code: string | null;
+          /** The provider's own words. Never rendered in the customer UI. */
+          internal_error: string | null;
         };
         Insert: {
           id?: string;
           agent_id: string;
           owner_id: string;
           campaign_id?: string | null;
+          attempts?: number;
+          last_attempted_at?: string | null;
+          error_code?: string | null;
+          internal_error?: string | null;
           generated_content_id?: string | null;
           social_account_id?: string | null;
           platform?: string;
@@ -764,6 +790,19 @@ export interface Database {
           requested_at: string;
           client_id: string | null;
           recommendations: Json;
+          // Added by migration 0034 when the scan became a staged pipeline.
+          current_stage: string | null;
+          sources_total: number;
+          sources_completed: number;
+          sources_failed: number;
+          percent_complete: number;
+          last_completed_step: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          retry_count: number;
+          error_code: string | null;
+          /** The provider's own words. Never rendered in the customer UI. */
+          internal_error_message: string | null;
         };
         Insert: {
           id?: string;
@@ -783,6 +822,17 @@ export interface Database {
           requested_at?: string;
           client_id?: string | null;
           recommendations?: Json;
+          current_stage?: string | null;
+          sources_total?: number;
+          sources_completed?: number;
+          sources_failed?: number;
+          percent_complete?: number;
+          last_completed_step?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          retry_count?: number;
+          error_code?: string | null;
+          internal_error_message?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["social_intelligence_reports"]["Insert"]

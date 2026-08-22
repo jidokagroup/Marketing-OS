@@ -85,7 +85,7 @@ export default async function LeadDetailPage({
     return (
       <div className="space-y-6">
         <PageHeader title="Lead" />
-        <OpsSchemaNotice title="Client acquisition needs migration 0032" />
+        <OpsSchemaNotice feature="Client acquisition" />
       </div>
     );
   }

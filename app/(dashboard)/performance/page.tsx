@@ -1,5 +1,6 @@
 import { LineChart } from "lucide-react";
 
+
 import { requireUser } from "@/lib/auth";
 import { asRows, isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
 import { trainedAgentIds } from "@/lib/agent-readiness";
@@ -15,7 +16,15 @@ import { PageHeader } from "@/components/page-header";
 import { PerformanceIntelligenceGenerateButton } from "@/components/performance-intelligence-generate-button";
 import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
 import { Badge } from "@/components/ui/badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { InsightMoreActions } from "../intelligence/InsightMoreActions";
+import {
+  addInsightToBriefAction,
+  createCampaignFromInsightAction,
+  createContentIdeaFromInsightAction,
+} from "../intelligence/actions";
+import { saveInsightAsLearningAction } from "../learnings/actions";
 
 export const metadata = { title: "Performance Intelligence · Jidoka Marketing Team OS" };
 
@@ -26,7 +35,81 @@ type ReportRow = PerformanceIntelligenceReportData & {
   created_at: string;
 };
 
-function ReportCard({ report }: { report: ReportRow }) {
+/**
+ * The actions that make a finding into work.
+ *
+ * Performance Intelligence used to end at the page: a person read what worked,
+ * closed the tab, and the next draft was written exactly as before. Each of
+ * these carries the finding somewhere it changes an outcome — into the Brand
+ * Brain so future drafts obey it, into the generator as a brief, or into the
+ * idea and campaign backlogs.
+ */
+function InsightActionRow({
+  agentId,
+  agentName,
+  heading,
+  statement,
+  why,
+  kind,
+  opsReady,
+}: {
+  agentId: string;
+  agentName: string;
+  heading: string;
+  statement: string;
+  why?: string;
+  kind: string;
+  opsReady: boolean;
+}) {
+  const insightTitle = `${heading}: ${statement.slice(0, 72)}`;
+  const generateParams = new URLSearchParams({
+    tab: "generate",
+    title: insightTitle.slice(0, 90),
+    topic: statement,
+    goal: "Write another piece using what the performance analysis found worked",
+    notes: `From ${agentName}'s Performance Intelligence analysis — ${heading}.${
+      why ? ` ${why}` : ""
+    }`,
+  });
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <ButtonLink
+        href={`/agents/${agentId}?${generateParams.toString()}`}
+        size="xs"
+        variant="outline"
+      >
+        Generate more like this
+      </ButtonLink>
+      <InsightMoreActions
+        opsReady={opsReady}
+        actions={[
+          { label: "Save to Brand Brain", action: saveInsightAsLearningAction },
+          { label: "Create idea", action: createContentIdeaFromInsightAction },
+          { label: "Create campaign", action: createCampaignFromInsightAction },
+          { label: "Add to brief", action: addInsightToBriefAction },
+        ]}
+        hiddenFields={{
+          title: insightTitle,
+          body: statement,
+          type: heading,
+          source: "Performance Intelligence",
+        }}
+        extraFields={{ agent_id: agentId, kind }}
+      />
+    </div>
+  );
+}
+
+function ReportCard({
+  report,
+  agentName,
+  opsReady,
+}: {
+  report: ReportRow;
+  agentName: string;
+  opsReady: boolean;
+}) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -46,6 +129,14 @@ function ReportCard({ report }: { report: ReportRow }) {
               What the top tier has in common
             </p>
             <p className="text-sm">{report.top_tier_pattern}</p>
+            <InsightActionRow
+              agentId={report.agent_id}
+              agentName={agentName}
+              heading="What the top tier has in common"
+              statement={report.top_tier_pattern}
+              kind="voice_pattern"
+              opsReady={opsReady}
+            />
           </div>
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -91,6 +182,15 @@ function ReportCard({ report }: { report: ReportRow }) {
               <div key={i} className="rounded-lg border p-3">
                 <p className="text-sm font-medium">{rec.do}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{rec.why}</p>
+                <InsightActionRow
+                  agentId={report.agent_id}
+                  agentName={agentName}
+                  heading="Recommendation"
+                  statement={rec.do}
+                  why={rec.why}
+                  kind="other"
+                  opsReady={opsReady}
+                />
               </div>
             ))}
           </div>
@@ -150,7 +250,7 @@ export default async function PerformancePage() {
         description="The Market Intelligence upsell: a deeper AI read on this creator's own history, not the competitive market. It tiers published, measured content by performance_score and explains what actually separates what worked from what didn't."
       />
 
-      {schemaMissing && <OpsSchemaNotice title="Performance Intelligence needs migration 0031" />}
+      {schemaMissing && <OpsSchemaNotice feature="Performance Intelligence" />}
 
       {agentList.length === 0 ? (
         <EmptyState
@@ -181,7 +281,11 @@ export default async function PerformancePage() {
                 {!trained.has(agent.id) ? (
                   <UntrainedAgentNotice agentId={agent.id} what="This analysis" />
                 ) : report ? (
-                  <ReportCard report={report} />
+                  <ReportCard
+                    report={report}
+                    agentName={agent.name}
+                    opsReady={!schemaMissing}
+                  />
                 ) : (
                   <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
                     No analysis yet for {agent.name}. This needs at least{" "}

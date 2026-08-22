@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { describeEdit, encodeEditSignal } from "@/lib/edit-signals";
 
 function parseLines(value: FormDataEntryValue | null) {
   return String(value ?? "")
@@ -17,6 +18,16 @@ export async function updateGeneratedContentAction(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id) return;
   const variant = String(formData.get("variant") ?? "");
+  const primaryScript = String(formData.get("primary_script") ?? "");
+
+  // Read before writing, so the edit can be compared against what the agent
+  // actually wrote. A person striking the same phrase out every week is the
+  // clearest preference signal the product has, and it used to be discarded.
+  const { data: previous } = await supabase
+    .from("marketing_os_generated_content")
+    .select("agent_id, primary_script")
+    .eq("id", id)
+    .maybeSingle();
 
   await supabase
     .from("marketing_os_generated_content")
@@ -36,7 +47,18 @@ export async function updateGeneratedContentAction(formData: FormData) {
   revalidatePath("/scheduler");
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
-  redirect(`/generated/${id}${variant ? `?saved=${variant}` : ""}`);
+
+  const params = new URLSearchParams();
+  if (variant) params.set("saved", variant);
+  if (previous?.agent_id) {
+    const signal = describeEdit(previous.primary_script ?? "", primaryScript);
+    const encoded = encodeEditSignal(signal);
+    // Only ask when there is something specific to ask about. A prompt with no
+    // observation behind it is a nag, and people stop reading nags.
+    if (signal.meaningful && encoded) params.set("learn", encoded);
+  }
+  const query = params.toString();
+  redirect(`/generated/${id}${query ? `?${query}` : ""}`);
 }
 
 export async function toggleApprovalAction(formData: FormData) {

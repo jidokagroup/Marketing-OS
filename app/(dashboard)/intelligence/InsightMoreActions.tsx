@@ -35,10 +35,13 @@ type HiddenFields = {
 export function InsightMoreActions({
   actions,
   hiddenFields,
+  extraFields,
   opsReady,
 }: {
   actions: InsightAction[];
   hiddenFields: HiddenFields;
+  /** Context a particular surface needs to carry, e.g. the agent an insight belongs to. */
+  extraFields?: Record<string, string>;
   opsReady: boolean;
 }) {
   if (!opsReady) {
@@ -72,6 +75,9 @@ export function InsightMoreActions({
               <input type="hidden" name="client_id" value={hiddenFields.clientId ?? ""} />
               <input type="hidden" name="campaign_id" value={hiddenFields.campaignId ?? ""} />
               <input type="hidden" name="assignee_name" value="Marketing team" />
+              {Object.entries(extraFields ?? {}).map(([name, value]) => (
+                <input key={name} type="hidden" name={name} value={value} />
+              ))}
               {needsSeparator && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 render={<button type="submit" className="w-full text-left" />}

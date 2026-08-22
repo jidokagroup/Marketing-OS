@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  retryPlatformAction,
   scheduleAction,
   unscheduleAction,
   rematchAction,
@@ -130,7 +131,7 @@ export default async function SchedulerPage({
   let postsQuery = supabase
     .from("marketing_os_scheduled_posts")
     .select(
-      "id, title, platform, content_type, status, scheduled_time, caption, generated_content_id, media_path, best_posting_window, ideal_days, confidence_score, schedule_reason, comment_dm_enabled, comment_auto_reply, dm_sequence, social_account_id, error, writing_agents:marketing_os_writing_agents(name)",
+      "id, title, platform, content_type, status, scheduled_time, caption, generated_content_id, media_path, best_posting_window, ideal_days, confidence_score, schedule_reason, comment_dm_enabled, comment_auto_reply, dm_sequence, social_account_id, error, external_post_id, writing_agents:marketing_os_writing_agents(name)",
     )
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
@@ -463,8 +464,28 @@ export default async function SchedulerPage({
                     </div>
 
                     {p.error && lifecycle.detail !== p.error && (
-                      <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                        Last attempt: {p.error}
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                        <span>Last attempt: {p.error}</span>
+                        {/* Scoped to this platform. The sibling rows for the
+                            same piece may already have published, and a
+                            group-level retry would send their content twice. */}
+                        {lifecycle.state === "failed" && !p.external_post_id && (
+                          <form action={retryPlatformAction}>
+                            <input type="hidden" name="id" value={p.id} />
+                            <ConfirmSubmitButton
+                              variant="outline"
+                              destructive={false}
+                              title={`Retry ${PLATFORM_LABELS[p.platform as keyof typeof PLATFORM_LABELS] ?? p.platform}?`}
+                              confirmLabel="Retry"
+                              message={`This queues "${p.title || "this post"}" for ${
+                                PLATFORM_LABELS[p.platform as keyof typeof PLATFORM_LABELS] ??
+                                p.platform
+                              } again, and only that platform. Anything already published stays as it is.`}
+                            >
+                              Retry {PLATFORM_LABELS[p.platform as keyof typeof PLATFORM_LABELS] ?? p.platform}
+                            </ConfirmSubmitButton>
+                          </form>
+                        )}
                       </div>
                     )}
 

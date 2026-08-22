@@ -201,8 +201,7 @@ export default async function CoreAgentTrainingPage({
 
       {schemaMissing && (
         <OpsSchemaNotice
-          title="Core agent training needs migration 0017"
-          migrationPath="supabase/migrations/0017_marketing_os_core_memory.sql"
+          feature="Core agent training"
         />
       )}
 

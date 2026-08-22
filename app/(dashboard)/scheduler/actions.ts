@@ -210,3 +210,50 @@ export async function deletePostAction(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/generated");
 }
+
+
+/**
+ * Queues one platform for another attempt.
+ *
+ * Scoped to a single row on purpose. The sibling rows for the same piece are
+ * separate publications that already succeeded, and a group-level retry would
+ * post their content a second time — which is the outcome the whole publish
+ * path is built to avoid. A row that already carries an external id is left
+ * alone for the same reason.
+ */
+export async function retryPlatformAction(formData: FormData) {
+  const { user, supabase } = await requireUser();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return;
+
+  const { data: post } = await supabase
+    .from("marketing_os_scheduled_posts")
+    .select("id, status, external_post_id, scheduled_time")
+    .eq("id", id)
+    .eq("owner_id", user.id)
+    .maybeSingle();
+
+  // Not ours, already out, or not in a state a retry applies to.
+  if (!post || post.external_post_id || post.status !== "failed") return;
+
+  await supabase
+    .from("marketing_os_scheduled_posts")
+    .update({
+      status: "scheduled",
+      error: null,
+      error_code: null,
+      internal_error: null,
+      // Attempts are deliberately reset: a person choosing to retry is new
+      // information, and the automatic cap exists to stop the publisher
+      // looping unattended, not to stop someone trying again.
+      attempts: 0,
+      // Due immediately rather than at the original time, which has passed.
+      scheduled_time: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("owner_id", user.id);
+
+  revalidatePath("/scheduler");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+}

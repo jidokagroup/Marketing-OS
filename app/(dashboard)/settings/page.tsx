@@ -431,19 +431,7 @@ export default async function SettingsPage({
         </CardHeader>
         <CardContent className="space-y-5">
           {emailProviderSchemaMissing && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              {/* "the latest migration" was not enough to act on — the table
-                  this needs comes from a specific pair of migrations. */}
-              This needs the email provider table. Apply{" "}
-              <span className="font-mono">
-                supabase/migrations/0018_marketing_os_email_provider_settings.sql
-              </span>{" "}
-              and{" "}
-              <span className="font-mono">
-                supabase/migrations/0024_marketing_os_email_provider_instantly.sql
-              </span>{" "}
-              in Supabase, then reload this page.
-            </div>
+            <OpsSchemaNotice feature="Client email sending" />
           )}
           <form
             action={saveEmailProviderSettingsAction}
@@ -573,7 +561,7 @@ export default async function SettingsPage({
 
         <TabsContent value="billing" className="space-y-6">
       {billingSchemaMissing && (
-        <OpsSchemaNotice title="Billing needs migration 0023" />
+        <OpsSchemaNotice feature="Billing" />
       )}
       <Card>
         <CardHeader>
@@ -587,11 +575,9 @@ export default async function SettingsPage({
         </CardHeader>
         <CardContent className="space-y-4">
           {!billingConfigured ? (
-            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-              Stripe checkout pending. Set STRIPE_SECRET_KEY, STRIPE_PRICE_MONTHLY,
-              STRIPE_PRICE_ANNUAL, and STRIPE_WEBHOOK_SECRET to turn on checkout
-              and the customer billing portal.
-            </div>
+            // Listing the four keys to set was an instruction for whoever
+            // deploys the app, not for the person reading the billing tab.
+            <OpsSchemaNotice feature="Billing and checkout" />
           ) : subscription && subscription.status !== "none" ? (
             <>
               <div className="grid gap-4 md:grid-cols-3">
@@ -988,7 +974,6 @@ export default async function SettingsPage({
               {moderatorSchemaMissing && (
                 <OpsSchemaNotice
                   title="Inbox Moderator settings table is missing"
-                  migrationPath="supabase/migrations/0031_marketing_os_performance_intelligence_and_moderator.sql"
                 />
               )}
               {moderator === "saved" && (

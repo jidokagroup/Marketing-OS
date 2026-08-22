@@ -9,6 +9,7 @@ import {
 } from "@/lib/email-providers";
 import {
   asRow,
+  asRows,
   isOpsSchemaMissing,
   opsTable,
 } from "@/lib/marketing-os/operations";
@@ -19,6 +20,7 @@ import { AnalyzeButton } from "@/components/analyze-button";
 import { VoiceDnaPanel, type DnaData } from "@/components/voice-dna-panel";
 import { GenerateForm } from "@/components/generate-form";
 import { AgentConnections } from "@/components/agent-connections";
+import { BrandLearningsPanel } from "@/components/brand-learnings-panel";
 import { AgentDetailTabs } from "@/components/agent-detail-tabs";
 import { ScoreBadge } from "@/components/score-badge";
 import { EmptyState } from "@/components/empty-state";
@@ -30,6 +32,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import type { BrandLearning } from "@/lib/brand-learnings";
 import type { AgentStatus } from "@/lib/supabase/types";
 import { deleteAgentAction } from "../actions";
 
@@ -56,7 +59,7 @@ export default async function AgentDetailPage({
   const { data: agent } = await supabase
     .from("marketing_os_writing_agents")
     .select(
-      "id, name, industry, platform, notes, status, last_analyzed_at, clients:marketing_os_clients(name)",
+      "id, name, client_id, industry, platform, notes, status, last_analyzed_at, clients:marketing_os_clients(name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -130,6 +133,16 @@ export default async function AgentDetailPage({
   const selectedEmailProviderLabel =
     emailProviderSettings?.provider_label ??
     getEmailProviderDefinition(selectedEmailProvider).label;
+
+  const learningsResult = await opsTable(supabase, "marketing_os_brand_learnings")
+    .select(
+      "id, statement, kind, source, origin, confidence, supporting_examples, active, learned_at",
+    )
+    .eq("owner_id", user.id)
+    .eq("agent_id", id)
+    .order("confidence", { ascending: false });
+  const learningsUnavailable = isOpsSchemaMissing(learningsResult.error);
+  const learnings = asRows<BrandLearning>(learningsResult.data);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -212,7 +225,7 @@ export default async function AgentDetailPage({
             <AssetLibraryTable agentId={agent.id} assets={assetList} hasDna={hasDna} />
           )}
         </TabsContent>
-        <TabsContent value="dna" className="mt-6">
+        <TabsContent value="dna" className="mt-6 space-y-6">
           {hasDna ? (
             <VoiceDnaPanel data={dna} />
           ) : (
@@ -226,6 +239,12 @@ export default async function AgentDetailPage({
               }
             />
           )}
+          <BrandLearningsPanel
+            agentId={agent.id}
+            clientId={agent.client_id}
+            learnings={learnings}
+            unavailable={learningsUnavailable}
+          />
         </TabsContent>
         <TabsContent value="generate" className="mt-6">
           {hasDna ? (

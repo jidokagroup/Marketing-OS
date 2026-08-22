@@ -1,38 +1,42 @@
-import { DatabaseZap } from "lucide-react";
+import { ErrorNotice } from "@/components/error-notice";
 
-import { OPS_MIGRATION_PATH } from "@/lib/marketing-os/operations";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
+/**
+ * Shown where a feature's tables are not in the database yet.
+ *
+ * This used to print the migration filename and tell the reader to run it.
+ * That is an instruction for whoever deploys the app, not for the marketing
+ * manager looking at the screen — and it reads as a broken product rather than
+ * an unfinished setup. The filename now lives in the deployment checklist,
+ * where the person who can act on it will look.
+ *
+ * The `migrationPath` prop is still accepted so existing call sites keep
+ * working, and is deliberately ignored.
+ */
 export function OpsSchemaNotice({
-  title = "Marketing OS operations tables are not live yet",
-  migrationPath = OPS_MIGRATION_PATH,
+  feature,
+  title,
 }: {
+  /** What is unavailable, in the user's words, e.g. "Revenue attribution". */
+  feature?: string;
+  /** Legacy prop from when this named a migration. Used only as a fallback. */
   title?: string;
   migrationPath?: string;
 }) {
   return (
-    <Card className="border-amber-300 bg-amber-50/60 text-amber-950">
-      <CardHeader className="flex flex-row items-start gap-3 space-y-0">
-        <DatabaseZap className="mt-1 h-5 w-5 shrink-0" />
-        <div>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription className="text-amber-900/80">
-            Apply migration <span className="font-mono">{migrationPath}</span>{" "}
-            in Supabase to turn on campaigns, work, leads, revenue, playbooks,
-            team capacity, and intelligence actions.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="text-sm text-amber-900">
-        Existing clients, writing agents, generated content, film sessions,
-        scheduler, analytics, inbox, and integrations remain available.
-      </CardContent>
-    </Card>
+    <ErrorNotice
+      category="setup_incomplete"
+      action={feature ?? deriveFeature(title)}
+    />
   );
+}
+
+/**
+ * Older call sites pass strings like "Pipeline needs migration 0016". Take the
+ * part before "needs" as the feature name so nothing has to be migrated in
+ * lockstep, and never let the rest of it through.
+ */
+function deriveFeature(title?: string): string | undefined {
+  if (!title) return undefined;
+  const [feature] = title.split(/\s+needs?\s+/i);
+  return feature?.trim() || undefined;
 }

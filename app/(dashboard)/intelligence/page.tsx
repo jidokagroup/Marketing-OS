@@ -11,7 +11,6 @@ import {
 
 import { requireUser } from "@/lib/auth";
 import {
-  STRANDED_SCAN_MESSAGE,
   scanState,
   type ScanState,
 } from "@/lib/intelligence-scan";
@@ -28,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ScanStatusBanner } from "./ScanStatusBanner";
+import type { ScanStage, ScanStatus } from "@/lib/intelligence/stages";
 import { InsightMoreActions } from "./InsightMoreActions";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -539,7 +539,7 @@ export default async function IntelligencePage() {
       </PageHeader>
 
       {!opsReady && (
-        <OpsSchemaNotice title="Intelligence actions need migration 0016" />
+        <OpsSchemaNotice feature="Saving intelligence to ideas and campaigns" />
       )}
 
       <Card>
@@ -618,16 +618,26 @@ export default async function IntelligencePage() {
             </PendingSubmitButton>
           </form>
           <div className="mt-3">
+            {/* The scan records its own stage and source counts now, so this
+                reports what happened rather than inferring it from a clock.
+                A row the worker abandoned is shown as failed either way. */}
             <ScanStatusBanner
-              status={
-                scanStatus === "stranded" ? "failed" : latestReport?.status
-              }
-              errorMessage={
-                scanStatus === "stranded"
-                  ? STRANDED_SCAN_MESSAGE
-                  : latestReport?.error_message
-              }
-              startedAt={latestReport?.requested_at}
+              progress={{
+                status:
+                  scanStatus === "stranded"
+                    ? "failed"
+                    : ((latestReport?.status ?? "complete") as ScanStatus),
+                current_stage:
+                  (latestReport?.current_stage as ScanStage | null) ?? null,
+                sources_total: latestReport?.sources_total ?? 0,
+                sources_completed: latestReport?.sources_completed ?? 0,
+                sources_failed: latestReport?.sources_failed ?? 0,
+                last_completed_step:
+                  (latestReport?.last_completed_step as ScanStage | null) ?? null,
+                retry_count: latestReport?.retry_count ?? 0,
+                started_at: latestReport?.started_at ?? latestReport?.requested_at,
+                completed_at: latestReport?.completed_at ?? null,
+              }}
             />
           </div>
           {latestReport?.summary && (

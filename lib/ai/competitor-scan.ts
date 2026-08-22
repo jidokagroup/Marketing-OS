@@ -74,7 +74,7 @@ const recommendationValidator = z.object({
   why: z.string().min(10),
 });
 
-const scanValidator = z.object({
+const scanShape = {
   trending_topics: z.array(insightValidator).min(1),
   hooks: z.array(insightValidator).min(1),
   content_formats: z.array(insightValidator).min(1),
@@ -90,7 +90,21 @@ const scanValidator = z.object({
   opportunity_score: z.number().min(0).max(100),
   content_gap_score: z.number().min(0).max(100),
   summary: z.string().min(20),
-});
+};
+
+const scanValidator = z.object(scanShape);
+
+/**
+ * The validator for one group, picked from the full shape so a group can never
+ * validate against a different rule than the whole report does.
+ */
+function groupValidator(fields: readonly string[]) {
+  return z.object(
+    Object.fromEntries(
+      fields.map((field) => [field, scanShape[field as keyof typeof scanShape]]),
+    ) as Record<string, z.ZodTypeAny>,
+  );
+}
 
 const insightJsonSchema = (description: string) => ({
   type: "array",
@@ -134,7 +148,7 @@ const recommendationJsonSchema = {
   },
 };
 
-const scanJsonSchema = {
+export const scanJsonSchema = {
   type: "object",
   additionalProperties: false,
   required: [
@@ -286,7 +300,7 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function cleanScan(scan: CompetitorScanResult): CompetitorScanResult {
+export function cleanScan(scan: CompetitorScanResult): CompetitorScanResult {
   const cleaned = { ...scan };
   for (const field of Object.keys(MAX_ITEMS)) {
     const key = field as keyof CompetitorScanResult;
@@ -301,7 +315,7 @@ function cleanScan(scan: CompetitorScanResult): CompetitorScanResult {
   return cleaned;
 }
 
-async function fetchSiteExcerpts(websites: string[]) {
+export async function fetchSiteExcerpts(websites: string[]) {
   const urls = websites
     .filter((site) => site.startsWith("http://") || site.startsWith("https://"))
     .slice(0, MAX_SITES);
@@ -316,6 +330,228 @@ async function fetchSiteExcerpts(websites: string[]) {
       ? { url, text: result.value.slice(0, MAX_SITE_CHARS) }
       : { url, text: "" };
   });
+}
+
+/**
+ * The report, split into four model calls instead of one.
+ *
+ * The single call asked for thirteen arrays inside one 8,000-token response.
+ * When the model reached the ceiling it stopped mid-array, and the JSON that
+ * came back could not be parsed — so a scan that had already fetched every
+ * competitor site produced nothing at all. Each group here has its own token
+ * budget, its own schema and its own retry, and a group that fails costs its
+ * own sections rather than the report.
+ *
+ * The grouping is by what a section is *about*, so each call has one job and
+ * a coherent set of instructions rather than thirteen unrelated ones.
+ */
+export const SCAN_SECTION_GROUPS = [
+  {
+    key: "messaging",
+    label: "competitor messaging",
+    fields: ["trending_topics", "hooks", "hook_library"] as const,
+    maxTokens: 3000,
+    instruction:
+      "Read what these competitors are actually saying and how they open. " +
+      "Produce:\n" +
+      "- trending_topics: 5-6 topics the client should cover\n" +
+      "- hooks: 4-6 hooks to adapt\n" +
+      "- hook_library: 6-8 reusable hook patterns tagged by channel or format",
+  },
+  {
+    key: "gaps",
+    label: "positioning and gaps",
+    fields: ["content_formats", "content_gaps", "positioning"] as const,
+    maxTokens: 3000,
+    instruction:
+      "Find where these competitors leave room. Produce:\n" +
+      "- content_formats: 4-6 format opportunities\n" +
+      "- content_gaps: 4-6 gaps where a buyer need is underserved\n" +
+      "- positioning: 3-5 statements on standing out while staying competitive",
+  },
+  {
+    key: "execution",
+    label: "how competitors sell and execute",
+    fields: [
+      "offer_tracker",
+      "comment_themes",
+      "opportunity_signals",
+      "competitor_wins",
+    ] as const,
+    maxTokens: 3500,
+    instruction:
+      "Read how these competitors sell and how they execute. Produce:\n" +
+      "- offer_tracker: 4-6 specific offer or CTA signals actually seen or implied\n" +
+      "- comment_themes: 4-6 buyer questions, objections or comment-to-DM triggers\n" +
+      "- opportunity_signals: 4-6 directional signals; invent no exact metrics\n" +
+      "- competitor_wins: 3-5 observations on HOW they execute (format mix, cadence, " +
+      "which formats earn engagement, editing style, voiceover vs. music, trending " +
+      "audio) — never topics or content ideas. Cite the execution figures above, and " +
+      "state plainly where no execution data was available rather than guessing",
+  },
+] as const;
+
+export type ScanSectionGroup = (typeof SCAN_SECTION_GROUPS)[number];
+
+/**
+ * The closing call. Deliberately reads the *summaries* the earlier groups
+ * produced rather than the raw competitor pages, which keeps its input small
+ * and stops the synthesis from re-deriving everything under a token ceiling.
+ */
+export const SCAN_SYNTHESIS_FIELDS = [
+  "recommended_posts",
+  "recommendations",
+  "opportunity_score",
+  "content_gap_score",
+  "summary",
+] as const;
+
+function groupSchema(fields: readonly string[]) {
+  const properties = scanJsonSchema.properties as Record<string, unknown>;
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [...fields],
+    properties: Object.fromEntries(
+      fields.map((field) => [field, properties[field]]),
+    ),
+  };
+}
+
+const SCAN_SYSTEM =
+  "You are a social media competitor analyst for a marketing agency. " +
+  "You study competitor websites and produce concrete, education-first content " +
+  "ideas the agency's client can post across Instagram, Facebook, YouTube, X, " +
+  "TikTok, and email. Health-related ideas must stay compliance-safe: no " +
+  "medical claims, no promises of outcomes. Every idea must be specific enough " +
+  "to write a post from, tailored to the client's specific industry and audience " +
+  "— never generic marketing advice that could apply to any business. Every " +
+  "insight must be grounded in the actual competitor research material provided " +
+  "— never invented — and cited back to the specific URL it came from wherever " +
+  "that's possible.";
+
+const GROUP_RULES =
+  "Fill every field separately and keep each one's content inside its own " +
+  "array — never continue one section's list into the next field, and never " +
+  "emit a section name as a list item. Tailor every field to this client's " +
+  "specific industry and audience, not generic marketing advice, and cite the " +
+  "source_url each insight came from whenever it traces to one competitor page.";
+
+export type ScanContext = {
+  clientBlock: string;
+  competitorBlock: string;
+  executionBrief: string;
+  audioBlock: string;
+  gapBlock: string;
+};
+
+function contextPrompt(context: ScanContext) {
+  return (
+    `${context.clientBlock}\n\n` +
+    `COMPETITOR RESEARCH MATERIAL:\n${context.competitorBlock}\n` +
+    `${context.executionBrief}\n${context.audioBlock}\n${context.gapBlock}\n\n`
+  );
+}
+
+/**
+ * Runs one group. Throws on a group that cannot be produced, so the caller can
+ * record which sections are missing and still finish the report.
+ */
+export async function runScanSectionGroup(
+  group: ScanSectionGroup,
+  context: ScanContext,
+): Promise<Partial<CompetitorScanResult>> {
+  const result = await generateStructured<Partial<CompetitorScanResult>>({
+    system: SCAN_SYSTEM,
+    prompt: `${contextPrompt(context)}${GROUP_RULES}\n\n${group.instruction}`,
+    jsonSchema: groupSchema(group.fields),
+    validator: groupValidator(group.fields) as never,
+    maxTokens: group.maxTokens,
+    timeoutMs: SCAN_TIMEOUT_MS,
+    maxRetries: SCAN_MAX_RETRIES,
+  });
+  return result;
+}
+
+/** The synthesis call, fed from what the groups already produced. */
+export async function runScanSynthesis(
+  context: ScanContext,
+  sections: Partial<CompetitorScanResult>,
+): Promise<Partial<CompetitorScanResult>> {
+  // Only the insight text is carried forward. Sending the full objects back
+  // would rebuild the very payload the split exists to avoid.
+  const digest = Object.entries(sections)
+    .filter(([, value]) => Array.isArray(value))
+    .map(([field, value]) => {
+      const items = (value as { insight?: string }[])
+        .map((item) => item?.insight)
+        .filter(Boolean)
+        .slice(0, 8);
+      return `${field.toUpperCase()}:\n${items.map((item) => `- ${item}`).join("\n")}`;
+    })
+    .join("\n\n");
+
+  return generateStructured<Partial<CompetitorScanResult>>({
+    system: SCAN_SYSTEM,
+    prompt:
+      `${context.clientBlock}\n\n` +
+      `FINDINGS FROM THIS SCAN:\n${digest || "No sections were produced."}\n\n` +
+      "Synthesize the findings above. Produce:\n" +
+      "- recommended_posts: 4-6 concrete, ready-to-brief post concepts for this client\n" +
+      "- recommendations: exactly 3 moves, ranked by impact. Each is a decision to " +
+      "brief the team on this week — never finished copy, a caption, or a " +
+      "publishing instruction\n" +
+      "- opportunity_score / content_gap_score: your genuine 0-100 judgment for this " +
+      "client and these competitors, moving with what the scan actually found\n" +
+      "- summary: what competitors emphasize and where this client can stand out",
+    jsonSchema: groupSchema(SCAN_SYNTHESIS_FIELDS),
+    validator: groupValidator(SCAN_SYNTHESIS_FIELDS) as never,
+    maxTokens: 2500,
+    timeoutMs: SCAN_TIMEOUT_MS,
+    maxRetries: SCAN_MAX_RETRIES,
+  });
+}
+
+/** Assembles the prompt blocks once, so every group reads the same context. */
+export function buildScanContext({
+  client,
+  websites,
+  executionBrief = "",
+  executionGaps = [],
+  excerpts,
+}: {
+  client: ScanClient;
+  websites: string[];
+  executionBrief?: string;
+  executionGaps?: { url: string; reason: string }[];
+  excerpts: { url: string; text: string }[];
+}): ScanContext {
+  const fetched = excerpts.filter((excerpt) => excerpt.text);
+
+  return {
+    clientBlock: client
+      ? `CLIENT: ${client.name}${client.industry ? ` — industry: ${client.industry}` : ""}${
+          client.notes ? `\nAudience / ICP / notes: ${client.notes}` : ""
+        }`
+      : "CLIENT: a marketing client (no specific client selected).",
+    competitorBlock: fetched.length
+      ? fetched
+          .map((excerpt) => `--- COMPETITOR SITE: ${excerpt.url} ---\n${excerpt.text}`)
+          .join("\n\n")
+      : `No competitor site content could be fetched. Watchlist entries:\n${websites.join("\n")}`,
+    executionBrief,
+    audioBlock: client?.trending_audio_notes?.trim()
+      ? "\nTRENDING AUDIO NOTES (observed in-app by the client's strategist — treat as " +
+        "first-party observation, more reliable than inference, and the only audio " +
+        "source available; do not contradict or embellish it):\n" +
+        client.trending_audio_notes.trim()
+      : "",
+    gapBlock: executionGaps.length
+      ? "\nNO EXECUTION DATA AVAILABLE FOR THESE ACCOUNTS (say so plainly in competitor_wins " +
+        "rather than guessing how they execute):\n" +
+        executionGaps.map((gap) => `- ${gap.url}: ${gap.reason}`).join("\n")
+      : "",
+  };
 }
 
 export async function runCompetitorScan({
