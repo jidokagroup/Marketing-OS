@@ -24,10 +24,31 @@ function demoUserFromId(id: string): User {
   } as User;
 }
 
+/**
+ * owner_id is a uuid on every table. A demo owner id that is not one — a
+ * name, a label, anything hand-typed — is not caught here but at the far end
+ * of every query, as "invalid input syntax for type uuid" on each individual
+ * read and write. The app then looks like it silently refuses to save
+ * anything, which is a long way from the actual mistake.
+ */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function resolveDemoUser(admin: AdminSupabaseClient): Promise<User> {
-  const demoOwnerId =
-    process.env.JIDOKA_DEMO_OWNER_ID ?? process.env.BRKFREE_DEMO_OWNER_ID;
+  const demoOwnerId = (
+    process.env.JIDOKA_DEMO_OWNER_ID ??
+    process.env.BRKFREE_DEMO_OWNER_ID ??
+    ""
+  ).trim();
   if (demoOwnerId) {
+    if (!UUID_PATTERN.test(demoOwnerId)) {
+      throw new Error(
+        `JIDOKA_DEMO_OWNER_ID is set to "${demoOwnerId}", which is not a user id. ` +
+          "It must be the uuid of a row in auth.users — run " +
+          "`select id, email from auth.users;` in Supabase and use that id, or " +
+          "unset the variable to fall back to the most recently updated agent's owner.",
+      );
+    }
     return demoUserFromId(demoOwnerId);
   }
 
