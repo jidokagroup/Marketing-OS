@@ -3,6 +3,7 @@ import { BarChart3, CheckCircle2, DollarSign, Eye, Heart, Sparkles, TrendingUp }
 
 import { requireUser } from "@/lib/auth";
 import { activeSeat } from "@/lib/seat";
+import { seatScopedHref } from "@/lib/seat-cookie";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import {
   getEmailProviderDefinition,
@@ -61,6 +62,10 @@ type AnalyticsPlatformStatus = {
   hasData: boolean;
   disabled: boolean;
   note: string;
+  /** Whether an importer exists for this platform at all. */
+  backfillSupported: boolean;
+  /** What the most recent import did for this platform, if it ran. */
+  lastImport: BackfillAccountDetail | null;
 };
 type AttributionData = {
   schemaReady: boolean;
@@ -235,6 +240,24 @@ export default async function AnalyticsPage({
       };
     }),
   ];
+  // The recorded run outlives the redirect, so the result is still there after
+  // a refresh — and it carries a per-account outcome, which is the part that
+  // says why an account that looks connected imported nothing.
+  const lastBackfill = isOpsSchemaMissing(backfillRunResult.error)
+    ? null
+    : asRow<BackfillRunRow>(backfillRunResult.data);
+  const backfillNotice = lastBackfill
+    ? { run: lastBackfill, justRan: backfill === "success" || backfill === "error" }
+    : null;
+
+  // "Awaiting analytics" was the same message for a platform with no
+  // importer, one that had never been asked, and one whose last import was
+  // refused — three situations with three different answers.
+  const lastImportByPlatform = new Map(
+    (Array.isArray(lastBackfill?.detail) ? lastBackfill.detail : []).map(
+      (item) => [item.platform, item],
+    ),
+  );
   const platformStatuses: AnalyticsPlatformStatus[] = PLATFORM_DEFINITIONS.map((item) => ({
     key: item.key,
     label: item.label,
@@ -243,6 +266,8 @@ export default async function AnalyticsPage({
     hasData: analyticsPlatforms.has(item.key),
     disabled: Boolean(item.disabled),
     note: item.note,
+    backfillSupported: BACKFILL_SUPPORTED.has(item.key),
+    lastImport: lastImportByPlatform.get(item.key) ?? null,
   }));
   const connectHref = latestAgent?.id
     ? `/api/social/connect?agent_id=${latestAgent.id}&platform=instagram`
@@ -265,15 +290,6 @@ export default async function AnalyticsPage({
     ? selectedEmailProviderLabel
     : selectedEmailProvider !== "mailchimp" && emailProviderSettings?.status === "connected"
       ? selectedEmailProviderLabel
-    : null;
-  // The recorded run outlives the redirect, so the result is still there after
-  // a refresh — and it carries a per-account outcome, which is the part that
-  // says why an account that looks connected imported nothing.
-  const lastBackfill = isOpsSchemaMissing(backfillRunResult.error)
-    ? null
-    : asRow<BackfillRunRow>(backfillRunResult.data);
-  const backfillNotice = lastBackfill
-    ? { run: lastBackfill, justRan: backfill === "success" || backfill === "error" }
     : null;
 
   if (data.length === 0) {
@@ -430,10 +446,17 @@ export default async function AnalyticsPage({
         title="Analytics"
         description="Reach, engagement, and best posting times across your connected platforms."
       >
-        <ButtonLink href="/scheduler" variant="outline">
+        {/* Both leave this page, so both carry the seat with them. */}
+        <ButtonLink
+          href={seatScopedHref("/scheduler", seat.agentId, seat.clientId)}
+          variant="outline"
+        >
           Use timing in Scheduler
         </ButtonLink>
-        <ButtonLink href="/intelligence" variant="outline">
+        <ButtonLink
+          href={seatScopedHref("/intelligence", seat.agentId, seat.clientId)}
+          variant="outline"
+        >
           Open Market Intelligence
         </ButtonLink>
       </PageHeader>
@@ -782,6 +805,35 @@ function AnalyticsBackfillPanel({
   );
 }
 
+/** Which platforms have an importer at all. Kept in step with the action. */
+const BACKFILL_SUPPORTED = new Set(["instagram", "facebook", "youtube", "x"]);
+
+/**
+ * The specific reason this platform has, or does not have, analytics. A single
+ * "Awaiting analytics" covered a platform with no importer, one that had never
+ * been asked, and one whose last import the platform refused.
+ */
+function platformDetail(platform: AnalyticsPlatformStatus): string {
+  if (platform.disabled) return "API setup paused — no analytics yet.";
+  if (!platform.connected) return "Not connected.";
+  if (!platform.backfillSupported) {
+    return "Connected. No analytics importer for this platform yet.";
+  }
+
+  const last = platform.lastImport;
+  if (last?.status === "failed") {
+    return `Last import failed — ${last.error ?? "no reason given"}`;
+  }
+  if (last?.status === "no_token") {
+    return "Connected, but the stored token could not be read. Reconnect it.";
+  }
+  if (last?.status === "no_data") {
+    return "Connected. The last import found nothing new in that window.";
+  }
+  if (platform.hasData) return "Analytics imported.";
+  return "Connected. Run Pull past data to import history.";
+}
+
 function PlatformOverview({ platforms }: { platforms: AnalyticsPlatformStatus[] }) {
   return (
     <Card>
@@ -815,12 +867,8 @@ function PlatformOverview({ platforms }: { platforms: AnalyticsPlatformStatus[] 
                     <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
                       <p className="font-medium">{platform.label}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {platform.disabled
-                          ? "API setup paused"
-                          : platform.hasData
-                            ? "Analytics imported"
-                            : "Awaiting analytics"}
+                      <p className="text-xs text-muted-foreground">
+                        {platformDetail(platform)}
                       </p>
                     </div>
                   </div>
