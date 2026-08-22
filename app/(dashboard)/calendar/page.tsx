@@ -9,6 +9,7 @@ import { requireUser } from "@/lib/auth";
 import { instantToDayKey, instantToWallTime, workspaceTimeZone } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
+import { publishReadyPlatforms } from "@/lib/social/publishing-readiness";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -65,6 +66,7 @@ export default async function CalendarPage({
   const monthOffset = Math.max(0, Math.min(11, Number(offset ?? 0) || 0));
 
   const timeZone = await workspaceTimeZone();
+  const readyPlatforms = publishReadyPlatforms();
   const todayKey = instantToDayKey(new Date(), timeZone);
   const [todayYear, todayMonth, todayDay] = todayKey.split("-").map(Number);
 
@@ -304,6 +306,7 @@ export default async function CalendarPage({
                   agentName={agent?.name ?? "Writing Agent"}
                   clientName={clientName ?? "No client"}
                   timeZone={timeZone}
+                  readyPlatforms={readyPlatforms}
                 />
               );
             })}
@@ -344,7 +347,12 @@ export default async function CalendarPage({
                         </Link>
                         <div className="space-y-1">
                           {dayPosts.map((post) => (
-                            <CalendarPostDetails key={post.id} post={post} timeZone={timeZone} />
+                            <CalendarPostDetails
+                              key={post.id}
+                              post={post}
+                              timeZone={timeZone}
+                              readyPlatforms={readyPlatforms}
+                            />
                           ))}
                         </div>
                       </>
@@ -381,6 +389,7 @@ export default async function CalendarPage({
                     agentName={agent?.name ?? "Writing Agent"}
                     clientName={clientName ?? "No client"}
                     timeZone={timeZone}
+                    readyPlatforms={readyPlatforms}
                   />
                 );
               })
