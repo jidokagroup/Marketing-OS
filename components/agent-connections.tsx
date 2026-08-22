@@ -1,6 +1,7 @@
 import { Plug, Trash2 } from "lucide-react";
 
 import { disconnectSocialAction } from "@/app/(dashboard)/agents/[id]/social-actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import {
   PLATFORM_DEFINITIONS,
   type PlatformDefinition,
@@ -205,15 +206,15 @@ export function AgentConnections({
                     <form action={disconnectSocialAction}>
                       <input type="hidden" name="id" value={account.id} />
                       <input type="hidden" name="agent_id" value={agentId} />
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        type="submit"
+                      <ConfirmSubmitButton
+                        title={`Disconnect ${platform.label}?`}
+                        confirmLabel="Disconnect"
+                        message={`${platform.label} is unlinked from this agent. Every scheduled post for this account stops publishing until it is reconnected, and analytics for it stop importing.`}
                         className="text-muted-foreground hover:text-destructive"
                       >
                         <Trash2 className="mr-1 h-3.5 w-3.5" />
                         Disconnect
-                      </Button>
+                      </ConfirmSubmitButton>
                     </form>
                   ) : canConnectNow && !disabled ? (
                     <a

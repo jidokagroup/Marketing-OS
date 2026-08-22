@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { SeatSync } from "@/components/seat-context";
 import { CopyButton } from "@/components/copy-button";
 import { ScoreBadge } from "@/components/score-badge";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -185,6 +186,7 @@ export default async function GeneratedDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl">
+      <SeatSync agentId={content.agent_id} clientId={agent?.client_id ?? null} />
       <SavedToast variant={saved} />
       <GenerationStatusBanner
         status={content.status}
@@ -202,9 +204,16 @@ export default async function GeneratedDetailPage({
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
+          {/* Same precedence as the Generated Content list. The detail used to
+              lead with the topic while the list led with the title, so the two
+              named the same piece differently and neither matched the other in
+              an audit trail. */}
           <h1 className="text-2xl font-bold tracking-tight">
-            {content.topic || "Untitled piece"}
+            {content.title || content.topic || "Untitled piece"}
           </h1>
+          {content.title && content.topic && content.title !== content.topic && (
+            <p className="text-sm text-muted-foreground">{content.topic}</p>
+          )}
           <div className="flex flex-wrap items-center gap-1.5">
             {agent && (
               <Link href={`/agents/${agent.id}`}>
@@ -266,7 +275,9 @@ export default async function GeneratedDetailPage({
           <form action={deleteGeneratedContentAction}>
             <input type="hidden" name="id" value={content.id} />
             <ConfirmSubmitButton
-              message="Delete this generated piece?"
+              title="Delete this generated piece?"
+              confirmLabel="Delete piece"
+              message={`"${content.title || content.topic || "This piece"}" is deleted permanently, along with its scores and every version of the copy. Scheduled posts made from it keep their captions but lose the link back.`}
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-destructive"

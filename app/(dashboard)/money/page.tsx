@@ -1,6 +1,7 @@
 import { Wallet } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { campaignRevenue, campaignRoi, formatRoi } from "@/lib/campaign-money";
 import {
   asRows,
   formatDate,
@@ -27,11 +28,6 @@ import {
 } from "@/components/ui/table";
 
 export const metadata = { title: "Money · Jidoka Marketing Team OS" };
-
-function roiLabel(spend: number, revenue: number) {
-  if (spend <= 0) return revenue > 0 ? "—" : "0.0×";
-  return `${(revenue / spend).toFixed(1)}×`;
-}
 
 export default async function MoneyPage() {
   const { user, supabase } = await requireUser();
@@ -68,7 +64,15 @@ export default async function MoneyPage() {
   const totalBudget = campaigns.reduce((sum, c) => sum + Number(c.budget || 0), 0);
   const totalSpend = campaigns.reduce((sum, c) => sum + Number(c.actual_spend || 0), 0);
   const totalExpected = campaigns.reduce((sum, c) => sum + Number(c.expected_revenue || 0), 0);
-  const totalAttributed = campaigns.reduce((sum, c) => sum + Number(c.attributed_revenue || 0), 0);
+  // Per campaign, from the same helper the campaign page uses, so the two
+  // cannot report different revenue for the same record.
+  const revenueByCampaign = new Map(
+    campaigns.map((campaign) => [campaign.id, campaignRevenue(campaign, revenue)]),
+  );
+  const totalAttributed = campaigns.reduce(
+    (sum, c) => sum + (revenueByCampaign.get(c.id) ?? 0),
+    0,
+  );
   const realizedRevenue = revenue
     .filter((event) => !["refund"].includes(event.event_type))
     .reduce((sum, event) => sum + Number(event.amount || 0), 0);
@@ -121,7 +125,7 @@ export default async function MoneyPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Blended ROI</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{roiLabel(totalSpend, totalAttributed)}</p>
+            <p className="text-2xl font-bold">{formatRoi(totalSpend > 0 ? totalAttributed / totalSpend : null)}</p>
             <p className="text-xs text-muted-foreground">attributed revenue ÷ spend</p>
           </CardContent>
         </Card>
@@ -158,8 +162,17 @@ export default async function MoneyPage() {
                       <TableCell className="font-medium">{campaign.name}</TableCell>
                       <TableCell className="text-muted-foreground">{client?.name ?? "—"}</TableCell>
                       <TableCell>{formatMoney(campaign.actual_spend)}</TableCell>
-                      <TableCell>{formatMoney(campaign.attributed_revenue)}</TableCell>
-                      <TableCell>{roiLabel(campaign.actual_spend, campaign.attributed_revenue)}</TableCell>
+                      <TableCell>
+                        {formatMoney(revenueByCampaign.get(campaign.id) ?? 0)}
+                      </TableCell>
+                      <TableCell>
+                        {formatRoi(
+                          campaignRoi(
+                            campaign,
+                            revenueByCampaign.get(campaign.id) ?? 0,
+                          ),
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={campaign.health === "on_track" ? "default" : "outline"}>
                           {titleCase(campaign.health)}

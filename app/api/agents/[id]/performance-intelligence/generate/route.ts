@@ -6,11 +6,15 @@ import { loadDnaInput } from "@/lib/ai/generate";
 import { runPerformanceIntelligence, tierPosts, type ScoredPost } from "@/lib/ai/performance-intelligence";
 import { isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
 import { UNTRAINED_AGENT_ERROR, hasVoiceDna } from "@/lib/agent-readiness";
+import {
+  MINIMUM_MEASURED_POSTS,
+  measurementCutoff,
+  notEnoughMeasuredPosts,
+} from "@/lib/performance-intelligence";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-const LOOKBACK_DAYS = 90;
 
 export async function POST(
   _request: Request,
@@ -36,9 +40,7 @@ export async function POST(
     return NextResponse.json({ error: UNTRAINED_AGENT_ERROR }, { status: 400 });
   }
 
-  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const since = measurementCutoff();
 
   const analyticsResult = await supabase
     .from("marketing_os_platform_analytics")
@@ -50,12 +52,9 @@ export async function POST(
 
   const posts = (analyticsResult.data ?? []) as ScoredPost[];
 
-  if (posts.length < 4) {
+  if (posts.length < MINIMUM_MEASURED_POSTS) {
     return NextResponse.json(
-      {
-        error:
-          "Not enough published, measured content yet to find a pattern (need at least 4 posts with analytics in the last 90 days).",
-      },
+      { error: notEnoughMeasuredPosts(posts.length) },
       { status: 400 },
     );
   }
@@ -102,7 +101,11 @@ export async function POST(
 
     revalidatePath("/performance");
 
-    return NextResponse.json({ ok: true, result: inserted });
+    return NextResponse.json({
+      ok: true,
+      post_count: posts.length,
+      result: inserted,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Performance analysis failed";
     return NextResponse.json({ error: message }, { status: 500 });

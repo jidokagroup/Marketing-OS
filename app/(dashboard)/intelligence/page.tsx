@@ -11,6 +11,12 @@ import {
 
 import { requireUser } from "@/lib/auth";
 import {
+  STRANDED_SCAN_MESSAGE,
+  scanState,
+  type ScanState,
+} from "@/lib/intelligence-scan";
+import { formatInstant, workspaceTimeZone } from "@/lib/timezone";
+import {
   asRows,
   isOpsSchemaMissing,
   opsTable,
@@ -250,11 +256,29 @@ function sourceLabel(url: string) {
   }
 }
 
+type ScanHistoryRow = {
+  id: string;
+  status: string;
+  summary: string | null;
+  error_message: string | null;
+  requested_at: string;
+  scanned_at: string | null;
+};
+
+const SCAN_STATE_LABEL: Record<ScanState, string> = {
+  none: "No scan",
+  pending: "Running",
+  stranded: "Did not finish",
+  failed: "Failed",
+  complete: "Completed",
+};
+
 export default async function IntelligencePage() {
   const { user, supabase } = await requireUser();
 
   const [
     { data: latestReport },
+    { data: scanHistory },
     { data: accounts },
     { data: latestAgent },
     { data: clients },
@@ -267,6 +291,15 @@ export default async function IntelligencePage() {
       .order("scanned_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    // Recent runs, so a scan that is running now is visibly a different thing
+    // from the one that failed last week — which the page could not previously
+    // distinguish.
+    supabase
+      .from("marketing_os_social_intelligence_reports")
+      .select("id, status, summary, error_message, requested_at, scanned_at")
+      .eq("owner_id", user.id)
+      .order("scanned_at", { ascending: false })
+      .limit(6),
     supabase
       .from("marketing_os_social_accounts")
       .select("platform, status")
@@ -350,7 +383,21 @@ export default async function IntelligencePage() {
   const recommendationsSource = recommendations.length
     ? "Latest saved scan"
     : "Marketing baseline";
-  const reportSource = latestReport ? "Latest saved scan" : "Baseline guidance";
+  // The row records whether its content came from a real scan or from the
+  // baseline written at queue time; saying "Latest saved scan" over baseline
+  // guidance is the difference between intelligence and a placeholder.
+  const scanIsLive =
+    (latestReport?.trending_topics as { source?: string } | null)?.source ===
+      "website_competitor_scan" ||
+    latestReport?.status === "complete";
+  const reportSource = !latestReport
+    ? "Baseline guidance"
+    : scanIsLive
+      ? "Latest saved scan"
+      : "Baseline guidance (scan not finished)";
+  const scanStatus = scanState(latestReport);
+  const history = (scanHistory ?? []) as ScanHistoryRow[];
+  const timeZone = await workspaceTimeZone();
   const competitorAccounts = latestReport?.competitor_accounts ?? [];
   // The scan judges both scores itself against the competitors it actually
   // read. The old formula only counted how many items came back, so it landed
@@ -527,11 +574,16 @@ export default async function IntelligencePage() {
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="h-4 w-4" />
-            {latestReport?.status === "queued" || latestReport?.status === "running"
+            {/* A row left `queued` by a worker that never reported back is not
+                a scan in progress, and saying so left users waiting on work
+                that had already stopped. */}
+            {scanStatus === "pending"
               ? "Competitor scan in progress…"
-              : latestReport?.scanned_at
-                ? `Last scan ${new Date(latestReport.scanned_at).toLocaleString()}`
-                : "Live scan starts after platform APIs are connected"}
+              : scanStatus === "stranded"
+                ? "Last scan did not finish — save the watchlist again to retry"
+                : latestReport?.scanned_at
+                  ? `Last scan ${formatInstant(latestReport.scanned_at, timeZone)}`
+                  : "Live scan starts after platform APIs are connected"}
           </div>
         </CardContent>
       </Card>
@@ -567,8 +619,14 @@ export default async function IntelligencePage() {
           </form>
           <div className="mt-3">
             <ScanStatusBanner
-              status={latestReport?.status}
-              errorMessage={latestReport?.error_message}
+              status={
+                scanStatus === "stranded" ? "failed" : latestReport?.status
+              }
+              errorMessage={
+                scanStatus === "stranded"
+                  ? STRANDED_SCAN_MESSAGE
+                  : latestReport?.error_message
+              }
               startedAt={latestReport?.requested_at}
             />
           </div>
@@ -576,10 +634,36 @@ export default async function IntelligencePage() {
             <p className="mt-3 text-xs text-muted-foreground">
               Latest scan
               {latestReport.scanned_at
-                ? ` (${new Date(latestReport.scanned_at).toLocaleString()})`
+                ? ` (${formatInstant(latestReport.scanned_at, timeZone)})`
                 : ""}
               : {latestReport.summary}
             </p>
+          )}
+
+          {/* Without this, a failure from a previous run and the run happening
+              now were the same undated sentence. */}
+          {history.length > 1 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                Scan history ({history.length})
+              </summary>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {history.map((run) => {
+                  const state = scanState(run);
+                  return (
+                    <li key={run.id} className="flex flex-wrap gap-2">
+                      <span className="font-medium text-foreground">
+                        {SCAN_STATE_LABEL[state]}
+                      </span>
+                      <span>
+                        {formatInstant(run.scanned_at ?? run.requested_at, timeZone)}
+                      </span>
+                      {run.error_message && <span>— {run.error_message}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </details>
           )}
         </CardContent>
       </Card>

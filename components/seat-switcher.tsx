@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronsUpDown } from "lucide-react";
+
+import { SEAT_COOKIE, seatCookieValue } from "@/lib/seat-cookie";
+import { useRecordSeat } from "@/components/seat-context";
 
 export type SeatOption = {
   id: string;
@@ -23,10 +27,28 @@ function seatLabel(seat: SeatOption, ambiguous: boolean) {
   return ambiguous && seat.clientName ? `${base} — ${seat.name}` : base;
 }
 
-export function SeatSwitcher({ seats }: { seats: SeatOption[] }) {
+/**
+ * Remember the seat for every navigation that cannot carry it in the URL —
+ * a GET filter form, a server-action redirect, a detail page reached by id.
+ * The server reads this back in `lib/seat.ts`.
+ */
+function rememberSeat(agentId: string, clientId: string | null) {
+  const value = encodeURIComponent(seatCookieValue(agentId, clientId));
+  document.cookie = `${SEAT_COOKIE}=${value}; path=/; max-age=31536000; samesite=lax`;
+}
+
+export function SeatSwitcher({
+  seats,
+  remembered = null,
+}: {
+  seats: SeatOption[];
+  /** Seat id from the cookie, used when the URL names none. */
+  remembered?: string | null;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const recordSeat = useRecordSeat();
 
   const agentMatch = pathname.match(/^\/agents\/([^/]+)(.*)$/);
   const clientMatch = pathname.match(/^\/clients\/([^/]+)(.*)$/);
@@ -37,11 +59,33 @@ export function SeatSwitcher({ seats }: { seats: SeatOption[] }) {
     searchParams.get("client") ||
     (clientMatch?.[1] && clientMatch[1] !== "new" ? clientMatch[1] : null);
 
+  // The URL wins when it names a seat. When it does not — a filter submit, an
+  // action redirect, a detail page reached by id — the remembered seat keeps
+  // the header honest instead of silently sliding to whichever seat happens to
+  // sort first.
+  // A record on screen outranks the URL: `/generated/<id>?agent_id=<other>` is
+  // a link someone could construct, and the honest answer is whose record is
+  // actually being displayed. Below that the URL wins, then the remembered
+  // seat, so a page with no seat anywhere still names the one the user is in
+  // rather than sliding to whichever seat happens to sort first.
   const active =
+    (recordSeat?.agentId
+      ? seats.find((seat) => seat.id === recordSeat.agentId)
+      : null) ??
+    (recordSeat?.clientId
+      ? seats.find((seat) => seat.clientId === recordSeat.clientId)
+      : null) ??
     (agentId ? seats.find((seat) => seat.id === agentId) : null) ??
     (clientId ? seats.find((seat) => seat.clientId === clientId) : null) ??
+    (remembered ? seats.find((seat) => seat.id === remembered) : null) ??
     seats[0] ??
     null;
+
+  const activeId = active?.id ?? null;
+  const activeClientId = active?.clientId ?? null;
+  useEffect(() => {
+    if (activeId) rememberSeat(activeId, activeClientId);
+  }, [activeId, activeClientId]);
 
   // Only qualify a name when the same client genuinely has more than one seat,
   // which one-agent-per-client prevents going forward but older data may hold.
@@ -62,6 +106,7 @@ export function SeatSwitcher({ seats }: { seats: SeatOption[] }) {
   function onSelect(nextId: string) {
     const seat = seats.find((option) => option.id === nextId);
     if (!seat) return;
+    rememberSeat(seat.id, seat.clientId);
 
     const params = new URLSearchParams(searchParams.toString());
     let target = pathname;
@@ -77,6 +122,14 @@ export function SeatSwitcher({ seats }: { seats: SeatOption[] }) {
       target = `/clients/${seat.clientId}${clientMatch[2]}`;
       params.delete("agent_id");
       params.delete("client");
+    } else if (recordSeat) {
+      // The record on screen belongs to the seat being left behind, so staying
+      // on it would put the new seat's name above another client's data. Go up
+      // to the list this record came from, scoped to the seat just chosen.
+      target = pathname.replace(/\/[^/]+$/, "") || "/dashboard";
+      params.set("agent_id", seat.id);
+      if (seat.clientId) params.set("client", seat.clientId);
+      else params.delete("client");
     } else {
       params.set("agent_id", seat.id);
       if (seat.clientId) params.set("client", seat.clientId);

@@ -111,7 +111,13 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
    Jidoka's own time -- distinct from the paid analytics panel, which is the one
    thing genuinely blocked on access nobody holds yet. Only in-build modules are
    flagged in the rail; badging the live ones would be noise, and the header
-   states it either way. */
+   states it either way.
+
+   Performance Intelligence, the Paid Ads Generator, the Inbox Moderator and
+   the Guest Portal have all shipped and no longer carry the flag. Pipeline &
+   Money keeps it: campaigns now carry through to content, posts and revenue,
+   but revenue still cannot be attributed to the individual asset that earned
+   it, which is exactly what its line in the rail promises. */
 .soonpill{font-size:8.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
   padding:2px 4px;border-radius:4px;background:var(--star-soft);color:var(--star);flex:0 0 auto}
 .navitem.tight{gap:7px}
@@ -1174,11 +1180,11 @@ const MODULES=[
  {id:'scheduler',short:'Scheduler',label:'Smart Scheduler',icon:'scheduler',o:'c',g:'The loop',sub:'Convia Pro places every asset at its peak window'},
  {id:'intel',short:'Signals',label:'Market Intelligence',icon:'intel',o:'j',g:'The loop',sub:'Competitor execution, gaps, and what to own next'},
  {id:'analytics',short:'Results',label:'Analytics',icon:'analytics',o:'j',g:'The loop',sub:'Your performance against the competitor set'},
- {id:'perf',st:'build',short:'Learning',label:'Performance Intelligence',icon:'perf',o:'j',addon:1,g:'Add-ons',sub:'The upsell on Market Intelligence — deeper AI analysis of how to perform better'},
- {id:'paid',st:'build',short:'Paid',label:'Paid Ads Generator',icon:'paid',o:'j',addon:1,g:'Add-ons',sub:'Turns content that already worked into paid ad assets'},
+ {id:'perf',short:'Learning',label:'Performance Intelligence',icon:'perf',o:'j',addon:1,g:'Add-ons',sub:'The upsell on Market Intelligence — deeper AI analysis of how to perform better'},
+ {id:'paid',short:'Paid',label:'Paid Ads Generator',icon:'paid',o:'j',addon:1,g:'Add-ons',sub:'Turns content that already worked into paid ad assets'},
  {id:'inbox',short:'Inbox',label:'Combined Inbox',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'Every comment and DM from every platform in one queue'},
- {id:'moderator',st:'build',short:'Moderator',label:'Inbox Moderator',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'An agent that answers in your brand voice, and pings you when it should not'},
- {id:'guests',st:'build',short:'Guests',label:'Guest Portal',icon:'guests',o:'c',addon:1,g:'Add-ons',sub:'Turn guest relationships into network reach'},
+ {id:'moderator',short:'Moderator',label:'Inbox Moderator',icon:'inbox',o:'c',addon:1,g:'Add-ons',sub:'An agent that answers in your brand voice, and pings you when it should not'},
+ {id:'guests',short:'Guests',label:'Guest Portal',icon:'guests',o:'c',addon:1,g:'Add-ons',sub:'Turn guest relationships into network reach'},
  {id:'pipeline',st:'build',short:'Revenue',label:'Pipeline & Money',icon:'pipeline',o:'j',addon:1,g:'Add-ons',sub:'Revenue traced to the asset that earned it'},
  {id:'pricing',st:'none',short:'Pricing',label:'Pricing & packaging',icon:'paid',o:'j',g:'Add-ons',sub:'What the platform costs and how add-ons switch on'}];
 const M=Object.fromEntries(MODULES.map(m=>[m.id,m]));

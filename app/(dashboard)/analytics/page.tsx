@@ -2,6 +2,9 @@ import Link from "next/link";
 import { BarChart3, CheckCircle2, DollarSign, Eye, Heart, Sparkles, TrendingUp } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { activeSeat } from "@/lib/seat";
+import { seatScopedHref } from "@/lib/seat-cookie";
+import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import {
   getEmailProviderDefinition,
   normalizeEmailProvider,
@@ -38,9 +41,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { PLATFORM_DEFINITIONS, getPlatformDefinition } from "@/lib/social/platforms";
-import { backfillAnalyticsAction } from "./actions";
+import {
+  backfillAnalyticsAction,
+  importAnalyticsCsvAction,
+} from "./actions";
 
 export const metadata = { title: "Analytics · Jidoka Marketing Team OS" };
 
@@ -59,6 +66,10 @@ type AnalyticsPlatformStatus = {
   hasData: boolean;
   disabled: boolean;
   note: string;
+  /** Whether an importer exists for this platform at all. */
+  backfillSupported: boolean;
+  /** What the most recent import did for this platform, if it ran. */
+  lastImport: BackfillAccountDetail | null;
 };
 type AttributionData = {
   schemaReady: boolean;
@@ -109,29 +120,38 @@ export default async function AnalyticsPage({
   searchParams: Promise<{
     platform?: string;
     backfill?: string;
-    days?: string;
+    csv?: string;
+    reason?: string;
     rows?: string;
-    accounts?: string;
-    errors?: string;
+    skipped?: string;
+    agent_id?: string;
+    client?: string;
   }>;
 }) {
   const { user, supabase } = await requireUser();
   const {
     platform = "all",
     backfill,
-    days = "90",
-    rows: backfillRows = "0",
-    accounts: backfillAccounts = "0",
-    errors: backfillErrors = "0",
+    csv,
+    reason: csvReason,
+    rows: csvRows,
+    skipped: csvSkipped,
+    agent_id: agentParam,
+    client: clientParam,
   } = await searchParams;
+  // The Analytics import redirects back here, so the seat has to be carried
+  // in and out or the header lands on a different client.
+  const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
   const attribution = await getAttributionData(supabase, user.id);
 
   const [
     { data: rows },
     { data: latestAgent },
     { data: accounts },
+    { data: importAgents },
     { count: scheduledCount },
     emailProviderResult,
+    backfillRunResult,
   ] =
     await Promise.all([
       supabase
@@ -148,10 +168,23 @@ export default async function AnalyticsPage({
         .limit(1)
         .maybeSingle(),
       supabase.from("marketing_os_social_accounts").select("platform, status"),
+      supabase
+        .from("marketing_os_writing_agents")
+        .select("id, name")
+        .eq("owner_id", user.id)
+        .order("updated_at", { ascending: false }),
       supabase.from("marketing_os_scheduled_posts").select("id", { count: "exact", head: true }),
       opsTable(supabase, "marketing_os_email_provider_settings")
         .select("provider, provider_label, status")
         .eq("owner_id", user.id)
+        .maybeSingle(),
+      opsTable(supabase, "marketing_os_analytics_backfill_runs")
+        .select(
+          "platform, lookback_days, status, accounts_processed, rows_stored, errors, detail, error_message, finished_at",
+        )
+        .eq("owner_id", user.id)
+        .order("requested_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
     ]);
 
@@ -225,6 +258,24 @@ export default async function AnalyticsPage({
       };
     }),
   ];
+  // The recorded run outlives the redirect, so the result is still there after
+  // a refresh — and it carries a per-account outcome, which is the part that
+  // says why an account that looks connected imported nothing.
+  const lastBackfill = isOpsSchemaMissing(backfillRunResult.error)
+    ? null
+    : asRow<BackfillRunRow>(backfillRunResult.data);
+  const backfillNotice = lastBackfill
+    ? { run: lastBackfill, justRan: backfill === "success" || backfill === "error" }
+    : null;
+
+  // "Awaiting analytics" was the same message for a platform with no
+  // importer, one that had never been asked, and one whose last import was
+  // refused — three situations with three different answers.
+  const lastImportByPlatform = new Map(
+    (Array.isArray(lastBackfill?.detail) ? lastBackfill.detail : []).map(
+      (item) => [item.platform, item],
+    ),
+  );
   const platformStatuses: AnalyticsPlatformStatus[] = PLATFORM_DEFINITIONS.map((item) => ({
     key: item.key,
     label: item.label,
@@ -233,6 +284,8 @@ export default async function AnalyticsPage({
     hasData: analyticsPlatforms.has(item.key),
     disabled: Boolean(item.disabled),
     note: item.note,
+    backfillSupported: BACKFILL_SUPPORTED.has(item.key),
+    lastImport: lastImportByPlatform.get(item.key) ?? null,
   }));
   const connectHref = latestAgent?.id
     ? `/api/social/connect?agent_id=${latestAgent.id}&platform=instagram`
@@ -256,15 +309,6 @@ export default async function AnalyticsPage({
     : selectedEmailProvider !== "mailchimp" && emailProviderSettings?.status === "connected"
       ? selectedEmailProviderLabel
     : null;
-  const backfillNotice =
-    backfill === "success"
-      ? {
-          rows: Number(backfillRows).toLocaleString(),
-          accounts: Number(backfillAccounts).toLocaleString(),
-          errors: Number(backfillErrors).toLocaleString(),
-          days,
-        }
-      : null;
 
   if (data.length === 0) {
     const checklist = [
@@ -307,6 +351,15 @@ export default async function AnalyticsPage({
           platform={selectedPlatform}
           platforms={backfillPlatformOptions}
           disabled={backfillSupportedConnectedCount === 0}
+          seat={seat}
+        />
+        <AnalyticsCsvImportPanel
+          agents={importAgents ?? []}
+          seat={seat}
+          result={csv}
+          reason={csvReason}
+          rows={csvRows}
+          skipped={csvSkipped}
         />
         <PlatformOverview platforms={platformStatuses} />
         <AnalyticsPlatformFilter platform={selectedPlatform} options={platformOptions} />
@@ -419,10 +472,17 @@ export default async function AnalyticsPage({
         title="Analytics"
         description="Reach, engagement, and best posting times across your connected platforms."
       >
-        <ButtonLink href="/scheduler" variant="outline">
+        {/* Both leave this page, so both carry the seat with them. */}
+        <ButtonLink
+          href={seatScopedHref("/scheduler", seat.agentId, seat.clientId)}
+          variant="outline"
+        >
           Use timing in Scheduler
         </ButtonLink>
-        <ButtonLink href="/intelligence" variant="outline">
+        <ButtonLink
+          href={seatScopedHref("/intelligence", seat.agentId, seat.clientId)}
+          variant="outline"
+        >
           Open Market Intelligence
         </ButtonLink>
       </PageHeader>
@@ -433,6 +493,16 @@ export default async function AnalyticsPage({
         platform={selectedPlatform}
         platforms={backfillPlatformOptions}
         disabled={backfillSupportedConnectedCount === 0}
+        seat={seat}
+      />
+
+      <AnalyticsCsvImportPanel
+        agents={importAgents ?? []}
+        seat={seat}
+        result={csv}
+        reason={csvReason}
+        rows={csvRows}
+        skipped={csvSkipped}
       />
 
       <PlatformOverview platforms={platformStatuses} />
@@ -615,25 +685,84 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+type BackfillRunRow = {
+  platform: string;
+  lookback_days: number;
+  status: string;
+  accounts_processed: number;
+  rows_stored: number;
+  errors: number;
+  detail: BackfillAccountDetail[] | null;
+  error_message: string | null;
+  finished_at: string | null;
+};
+
+type BackfillAccountDetail = {
+  platform: string;
+  username: string | null;
+  rows: number;
+  status: string;
+  error?: string;
+};
+
+const BACKFILL_ACCOUNT_LABEL: Record<string, string> = {
+  imported: "imported",
+  no_data: "nothing new in this window",
+  no_token: "token unreadable",
+  failed: "failed",
+};
+
 function BackfillNotice({
-  rows,
-  accounts,
-  errors,
-  days,
+  run,
+  justRan,
 }: {
-  rows: string;
-  accounts: string;
-  errors: string;
-  days: string;
+  run: BackfillRunRow;
+  justRan: boolean;
 }) {
+  const failed = run.status === "failed" || run.errors > 0;
+  const detail = Array.isArray(run.detail) ? run.detail : [];
+
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-      <p className="font-medium">Analytics backfill complete</p>
-      <p className="mt-1">
-        Pulled the past {days} days across {accounts} connected account
-        {accounts === "1" ? "" : "s"} and stored {rows} analytics row
-        {rows === "1" ? "" : "s"}. Errors: {errors}.
+    <div
+      className={
+        failed
+          ? "rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          : "rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
+      }
+    >
+      <p className="font-medium">
+        {justRan ? "Analytics backfill finished" : "Last analytics backfill"}
+        {run.finished_at ? "" : " — still running"}
       </p>
+      <p className="mt-1">
+        Pulled the past {run.lookback_days} days across{" "}
+        {run.accounts_processed.toLocaleString()} connected account
+        {run.accounts_processed === 1 ? "" : "s"} and stored{" "}
+        {run.rows_stored.toLocaleString()} row
+        {run.rows_stored === 1 ? "" : "s"}.
+      </p>
+      {run.error_message && <p className="mt-1">{run.error_message}</p>}
+
+      {/* Per account, because "0 rows overall" is the least useful thing this
+          could tell someone with four platforms connected. */}
+      {detail.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {detail.map((item, index) => (
+            <li key={index}>
+              <span className="font-medium">
+                {PLATFORM_LABELS[item.platform as keyof typeof PLATFORM_LABELS] ??
+                  item.platform}
+                {item.username ? ` (${item.username})` : ""}
+              </span>
+              {": "}
+              {item.status === "imported"
+                ? `${item.rows.toLocaleString()} row${item.rows === 1 ? "" : "s"} imported`
+                : (BACKFILL_ACCOUNT_LABEL[item.status] ?? item.status)}
+              {item.error ? ` — ${item.error}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -642,10 +771,12 @@ function AnalyticsBackfillPanel({
   platform,
   platforms,
   disabled,
+  seat,
 }: {
   platform: string;
   platforms: BackfillPlatformOption[];
   disabled: boolean;
+  seat: { agentId: string | null; clientId: string | null };
 }) {
   const defaultPlatform = platforms.some((item) => item.key === platform && !item.disabled)
     ? platform
@@ -658,6 +789,15 @@ function AnalyticsBackfillPanel({
       </CardHeader>
       <CardContent>
         <form action={backfillAnalyticsAction} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          {/* Carried for the redirect only. The import stays owner-wide,
+              because this page shows every seat's analytics and scoping the
+              import but not the page would quietly disagree with itself. */}
+          {seat.agentId && (
+            <input type="hidden" name="return_agent_id" value={seat.agentId} />
+          )}
+          {seat.clientId && (
+            <input type="hidden" name="return_client" value={seat.clientId} />
+          )}
           <label className="grid gap-1 text-sm">
             <span className="font-medium">Lookback window</span>
             <select
@@ -700,6 +840,161 @@ function AnalyticsBackfillPanel({
   );
 }
 
+/**
+ * The way in for history no API will hand over.
+ *
+ * TikTok and LinkedIn have no importer here, a YouTube project can have the
+ * Data API switched off, and every platform's API stops returning posts past
+ * some horizon. Without this, those seats stay permanently "awaiting
+ * analytics", which blocks best-time guidance and Performance Intelligence
+ * behind an API grant nobody may ever get.
+ */
+function AnalyticsCsvImportPanel({
+  agents,
+  seat,
+  result,
+  reason,
+  rows,
+  skipped,
+}: {
+  agents: { id: string; name: string }[];
+  seat: { agentId: string | null; clientId: string | null };
+  result?: string;
+  reason?: string;
+  rows?: string;
+  skipped?: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Import analytics from a CSV</CardTitle>
+        <CardDescription>
+          Upload a platform export to fill in history the APIs cannot reach —
+          TikTok and LinkedIn, anything older than an API will return, or a
+          platform whose API is switched off.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {result === "success" && (
+          <p className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-900">
+            Imported {Number(rows ?? 0).toLocaleString()} row
+            {rows === "1" ? "" : "s"}.
+            {Number(skipped ?? 0) > 0
+              ? ` ${Number(skipped).toLocaleString()} row${skipped === "1" ? "" : "s"} skipped — the reasons are listed with the last import above.`
+              : ""}
+          </p>
+        )}
+        {result === "error" && (
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {reason ?? "The import could not be read."}
+          </p>
+        )}
+
+        {agents.length === 0 ? (
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            Add a client and its writing agent first — imported history is
+            stored against a seat.
+          </p>
+        ) : (
+          <form
+            action={importAnalyticsCsvAction}
+            className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
+          >
+            {seat.agentId && (
+              <input type="hidden" name="return_agent_id" value={seat.agentId} />
+            )}
+            {seat.clientId && (
+              <input type="hidden" name="return_client" value={seat.clientId} />
+            )}
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">Seat</span>
+              <select
+                name="agent_id"
+                defaultValue={seat.agentId ?? agents[0]?.id}
+                className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">Platform</span>
+              <select
+                name="platform"
+                defaultValue="tiktok"
+                className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                {CSV_IMPORT_PLATFORMS.map((key) => (
+                  <option key={key} value={key}>
+                    {PLATFORM_LABELS[key as keyof typeof PLATFORM_LABELS] ?? key}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium">CSV file</span>
+              <Input type="file" name="file" accept=".csv,text/csv" required />
+            </label>
+            <Button type="submit">Import CSV</Button>
+          </form>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Needs a date column and at least one metric. Column names are matched
+          loosely, so the file downloaded from Instagram, TikTok, YouTube
+          Studio, X or LinkedIn usually works unedited — dates as{" "}
+          <span className="font-mono">YYYY-MM-DD</span> or{" "}
+          <span className="font-mono">MM/DD/YYYY</span>. Importing the same
+          export twice updates those posts rather than duplicating them.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+const CSV_IMPORT_PLATFORMS = [
+  "tiktok",
+  "linkedin",
+  "instagram",
+  "facebook",
+  "youtube",
+  "x",
+];
+
+/** Which platforms have an importer at all. Kept in step with the action. */
+const BACKFILL_SUPPORTED = new Set(["instagram", "facebook", "youtube", "x"]);
+
+/**
+ * The specific reason this platform has, or does not have, analytics. A single
+ * "Awaiting analytics" covered a platform with no importer, one that had never
+ * been asked, and one whose last import the platform refused.
+ */
+function platformDetail(platform: AnalyticsPlatformStatus): string {
+  if (platform.disabled) return "API setup paused — no analytics yet.";
+  if (!platform.connected) return "Not connected.";
+  if (!platform.backfillSupported) {
+    return platform.hasData
+      ? "Connected. Analytics here came from a CSV import — there is no API importer for this platform."
+      : "Connected. No API importer for this platform — import a CSV export instead.";
+  }
+
+  const last = platform.lastImport;
+  if (last?.status === "failed") {
+    return `Last import failed — ${last.error ?? "no reason given"}`;
+  }
+  if (last?.status === "no_token") {
+    return "Connected, but the stored token could not be read. Reconnect it.";
+  }
+  if (last?.status === "no_data") {
+    return "Connected. The last import found nothing new in that window.";
+  }
+  if (platform.hasData) return "Analytics imported.";
+  return "Connected. Run Pull past data, or import a CSV export, to add history.";
+}
+
 function PlatformOverview({ platforms }: { platforms: AnalyticsPlatformStatus[] }) {
   return (
     <Card>
@@ -733,12 +1028,8 @@ function PlatformOverview({ platforms }: { platforms: AnalyticsPlatformStatus[] 
                     <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
                     <div className="min-w-0">
                       <p className="font-medium">{platform.label}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {platform.disabled
-                          ? "API setup paused"
-                          : platform.hasData
-                            ? "Analytics imported"
-                            : "Awaiting analytics"}
+                      <p className="text-xs text-muted-foreground">
+                        {platformDetail(platform)}
                       </p>
                     </div>
                   </div>

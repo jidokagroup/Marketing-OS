@@ -272,8 +272,11 @@ export default async function PipelinePage() {
                                   href={`/pipeline/${lead.id}`}
                                   className="inline-block text-xs font-medium text-primary hover:underline"
                                 >
+                                  {/* This opens the lead; it does not send
+                                      anything. "Start sequence" read as though
+                                      it did, so nobody dared click it. */}
                                   {leadAttempts.length === 0
-                                    ? "Start sequence →"
+                                    ? "Open — no touches yet →"
                                     : `${leadAttempts.length} touch${leadAttempts.length === 1 ? "" : "es"} →`}
                                 </Link>
                               </div>

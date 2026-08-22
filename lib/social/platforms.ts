@@ -147,6 +147,37 @@ export function isAutoPublishableContent(platform: string, contentType: string) 
   return false;
 }
 
+/**
+ * Everything standing between a post and a successful publish.
+ *
+ * The publisher hard-requires media and a connected account, so marking a post
+ * "Scheduled" without them only defers a guaranteed failure to the moment it
+ * comes due — which is exactly when nobody is watching. Callers use this to
+ * keep such a post a draft and say what is missing.
+ */
+export function publishBlockers(post: {
+  platform: string;
+  content_type: string;
+  caption?: string | null;
+  media_path?: string | null;
+  social_account_id?: string | null;
+}): string[] {
+  const label = getPlatformDefinition(post.platform)?.label ?? post.platform;
+
+  if (!isAutoPublishableContent(post.platform, post.content_type)) {
+    // Nothing the user can attach changes this one, so it is the whole answer.
+    return [
+      `${label} ${post.content_type} auto-publishing is not live yet. Publish this one manually.`,
+    ];
+  }
+
+  const blockers: string[] = [];
+  if (!post.social_account_id) blockers.push(`No connected ${label} account.`);
+  if (!post.media_path) blockers.push("No media attached.");
+  if (!(post.caption ?? "").trim()) blockers.push("No caption written.");
+  return blockers;
+}
+
 export function connectionLabel(platform: string, connected: boolean) {
   const label = getPlatformDefinition(platform)?.label ?? platform;
   return `${label}: ${connected ? "connected" : "not connected"}`;

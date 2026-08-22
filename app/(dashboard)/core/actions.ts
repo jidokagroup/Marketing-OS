@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { CORE_AGENT_BY_KEY, type CoreAgentKey } from "@/lib/core-agents";
-import { opsTable } from "@/lib/marketing-os/operations";
+import { isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
 
 function textValue(formData: FormData, key: string) {
   const value = String(formData.get(key) ?? "").trim();
@@ -23,7 +24,7 @@ export async function saveCoreAgentTrainingAction(formData: FormData) {
   const agent = agentKey ? CORE_AGENT_BY_KEY.get(agentKey) : null;
   if (!agent) return;
 
-  await opsTable(supabase, "marketing_os_core_agent_training")
+  const { error } = await opsTable(supabase, "marketing_os_core_agent_training")
     .upsert(
       {
         owner_id: user.id,
@@ -47,8 +48,21 @@ export async function saveCoreAgentTrainingAction(formData: FormData) {
     .select("id")
     .maybeSingle();
 
+  // Saving used to end in silence whatever happened, which is how an agent
+  // could look saved and stay empty.
+  if (error) {
+    const reason = isOpsSchemaMissing(error)
+      ? "The Core training table is missing — apply migration 0017."
+      : error.message ?? "Unknown error";
+    console.error("[core] training save failed", error);
+    redirect(
+      `${agent.href}?saved=error&reason=${encodeURIComponent(reason)}`,
+    );
+  }
+
   revalidatePath("/dashboard");
   revalidatePath(agent.href);
   revalidatePath("/core/orchestrator");
   revalidatePath("/settings");
+  redirect(`${agent.href}?saved=1`);
 }

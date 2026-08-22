@@ -3,11 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth";
+import { wallTimeToInstant, workspaceTimeZone } from "@/lib/timezone";
 import { matchGeneratedByTitle } from "@/lib/scheduler";
-import {
-  getPlatformDefinition,
-  isAutoPublishableContent,
-} from "@/lib/social/platforms";
+import { publishBlockers } from "@/lib/social/platforms";
 
 export async function scheduleAction(formData: FormData) {
   const { supabase } = await requireUser();
@@ -15,24 +13,28 @@ export async function scheduleAction(formData: FormData) {
   const when = String(formData.get("scheduled_time") ?? "");
   if (!id || !when) return;
 
+  // A datetime-local field carries a wall time with no zone. Parsing it here
+  // with `new Date` would read it in the host's zone — UTC on Netlify — and
+  // schedule the post hours away from the time the user picked.
+  const scheduledAt = wallTimeToInstant(when, await workspaceTimeZone());
+  if (!scheduledAt) return;
+
   const { data: post } = await supabase
     .from("marketing_os_scheduled_posts")
-    .select("social_account_id, platform, content_type")
+    .select("social_account_id, platform, content_type, caption, media_path")
     .eq("id", id)
     .maybeSingle();
-  const autoPublishable = post
-    ? isAutoPublishableContent(post.platform, post.content_type)
-    : false;
+
+  // A post the publisher would reject stays a draft with the reason on it,
+  // rather than sitting in the queue as "Scheduled" until it fails unattended.
+  const blockers = post ? publishBlockers(post) : ["Post not found."];
 
   await supabase
     .from("marketing_os_scheduled_posts")
     .update({
-      scheduled_time: new Date(when).toISOString(),
-      status: post?.social_account_id && autoPublishable ? "scheduled" : "draft",
-      error:
-        post?.social_account_id && !autoPublishable
-          ? `${getPlatformDefinition(post.platform)?.label ?? post.platform} ${post.content_type} auto-publishing is not live yet.`
-          : null,
+      scheduled_time: scheduledAt.toISOString(),
+      status: blockers.length === 0 ? "scheduled" : "draft",
+      error: blockers.length === 0 ? null : blockers.join(" "),
     })
     .eq("id", id);
   revalidatePath("/scheduler");

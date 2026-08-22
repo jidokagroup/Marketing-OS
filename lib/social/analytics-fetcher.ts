@@ -7,6 +7,19 @@ type AnalyticsResult = {
   accounts_processed: number;
   rows_stored: number;
   errors: number;
+  /**
+   * What happened per account, so "nothing imported" can be told apart from
+   * "nothing was tried" and from "the platform refused".
+   */
+  accounts: AnalyticsAccountResult[];
+};
+
+export type AnalyticsAccountResult = {
+  platform: string;
+  username: string | null;
+  rows: number;
+  status: "imported" | "no_data" | "no_token" | "failed";
+  error?: string;
 };
 
 export type AnalyticsFetchOptions = {
@@ -186,7 +199,11 @@ async function fetchInstagram(
   window: FetchWindow,
 ) {
   const igBusinessId = account.external_account_id;
-  if (!igBusinessId) return 0;
+  // Silently returning zero here is what left an account "connected" and
+  // "awaiting analytics" forever with nothing saying why.
+  if (!igBusinessId) {
+    throw new Error("No Instagram business account id on this connection. Reconnect Instagram.");
+  }
 
   let followers = 0;
   let username = account.username;
@@ -280,7 +297,9 @@ async function fetchFacebook(
   window: FetchWindow,
 ) {
   const pageId = account.page_id ?? account.external_account_id;
-  if (!pageId) return 0;
+  if (!pageId) {
+    throw new Error("No Facebook Page selected for this connection. Reconnect Facebook and pick a Page.");
+  }
 
   let followers = 0;
   let name = account.username;
@@ -375,7 +394,9 @@ async function fetchYouTube(
 ) {
   const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) return 0;
+  if (!clientId || !clientSecret) {
+    throw new Error("Google OAuth credentials are not configured for this deployment, so YouTube analytics cannot be imported.");
+  }
 
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -388,16 +409,30 @@ async function fetchYouTube(
     }),
   });
   const tokenJson = await tokenRes.json();
-  if (!tokenRes.ok || !tokenJson.access_token) return 0;
+  if (!tokenRes.ok || !tokenJson.access_token) {
+    throw new Error(
+      tokenJson?.error_description ??
+        "YouTube refused the refresh token. Reconnect YouTube.",
+    );
+  }
 
   const channelRes = await fetch(
     "https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet,contentDetails&mine=true",
     { headers: { Authorization: `Bearer ${tokenJson.access_token}` } },
   );
-  if (!channelRes.ok) return 0;
+  if (!channelRes.ok) {
+    // A disabled YouTube Data API answers here, and this is the message that
+    // tells the user which switch to flip.
+    const detail = await channelRes.text();
+    throw new Error(
+      `YouTube rejected the channel lookup (${channelRes.status}). ${detail.slice(0, 200)}`,
+    );
+  }
   const channelJson = await channelRes.json();
   const channel = channelJson.items?.[0];
-  if (!channel) return 0;
+  if (!channel) {
+    throw new Error("This Google account has no YouTube channel to read.");
+  }
 
   const followers = Number(channel.statistics?.subscriberCount ?? 0);
   const name = channel.snippet?.title ?? account.username ?? null;
@@ -472,15 +507,22 @@ async function fetchX(
   window: FetchWindow,
 ) {
   const accessToken = tokenPayload.split("||")[0];
-  if (!accessToken) return 0;
+  if (!accessToken) {
+    throw new Error("No X access token on this connection. Reconnect X.");
+  }
 
   const meRes = await fetch(
     "https://api.twitter.com/2/users/me?user.fields=public_metrics,username,name,profile_image_url",
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!meRes.ok) return 0;
+  if (!meRes.ok) {
+    const detail = await meRes.text();
+    throw new Error(`X rejected the account lookup (${meRes.status}). ${detail.slice(0, 200)}`);
+  }
   const me = (await meRes.json()).data;
-  if (!me) return 0;
+  if (!me) {
+    throw new Error("X returned no account for this connection. Reconnect X.");
+  }
 
   const followers = me.public_metrics?.followers_count ?? 0;
   const name = me.name ?? me.username ?? account.username ?? null;
@@ -562,34 +604,52 @@ export async function runJidokaAnalyticsFetch(
   let accounts_processed = 0;
   let rows_stored = 0;
   let errors = 0;
+  const perAccount: AnalyticsAccountResult[] = [];
 
   for (const account of (accounts ?? []) as SocialAccountRow[]) {
     accounts_processed += 1;
     const token = account.page_token_encrypted ? tokenValue(account.page_token_encrypted) : "";
-    if (!token) continue;
+    if (!token) {
+      perAccount.push({
+        platform: account.platform,
+        username: account.username ?? null,
+        rows: 0,
+        status: "no_token",
+        error: "The stored token could not be read. Reconnect this account.",
+      });
+      continue;
+    }
     try {
+      let rows = 0;
       if (account.platform === "instagram") {
-        rows_stored += await fetchInstagram(account, token, window);
+        rows = await fetchInstagram(account, token, window);
+      } else if (account.platform === "facebook") {
+        rows = await fetchFacebook(account, token, window);
+      } else if (account.platform === "youtube") {
+        rows = await fetchYouTube(account, token, window);
+      } else if (account.platform === "x") {
+        rows = await fetchX(account, token, window);
       }
-      if (account.platform === "facebook") {
-        rows_stored += await fetchFacebook(account, token, window);
-      }
-      if (account.platform === "youtube") {
-        rows_stored += await fetchYouTube(account, token, window);
-      }
-      if (account.platform === "x") {
-        rows_stored += await fetchX(account, token, window);
-      }
+      rows_stored += rows;
+      perAccount.push({
+        platform: account.platform,
+        username: account.username ?? null,
+        rows,
+        status: rows > 0 ? "imported" : "no_data",
+      });
     } catch (err) {
       errors += 1;
-      console.error(
-        "[analytics]",
-        account.platform,
-        account.id,
-        err instanceof Error ? err.message : err,
-      );
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[analytics]", account.platform, account.id, message);
+      perAccount.push({
+        platform: account.platform,
+        username: account.username ?? null,
+        rows: 0,
+        status: "failed",
+        error: message,
+      });
     }
   }
 
-  return { accounts_processed, rows_stored, errors };
+  return { accounts_processed, rows_stored, errors, accounts: perAccount };
 }

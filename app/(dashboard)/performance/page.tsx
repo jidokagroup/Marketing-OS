@@ -3,6 +3,11 @@ import { LineChart } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 import { asRows, isOpsSchemaMissing, opsTable } from "@/lib/marketing-os/operations";
 import { trainedAgentIds } from "@/lib/agent-readiness";
+import {
+  LOOKBACK_DAYS,
+  MINIMUM_MEASURED_POSTS,
+  measurementCutoff,
+} from "@/lib/performance-intelligence";
 import type { PerformanceIntelligenceReportData } from "@/lib/schemas/performance-intelligence";
 import { EmptyState } from "@/components/empty-state";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
@@ -106,6 +111,22 @@ export default async function PerformancePage() {
 
   const trained = await trainedAgentIds(supabase, agentList.map((a) => a.id));
 
+  // The analysis needs a minimum of measured history, and the page used to
+  // offer the button anyway — so the only way to learn there was not enough
+  // data was to run it and read a toast that then disappeared. Count first.
+  const since = measurementCutoff();
+  const { data: measuredRows } = agentList.length
+    ? await supabase
+        .from("marketing_os_platform_analytics")
+        .select("agent_id")
+        .in("agent_id", agentList.map((a) => a.id))
+        .gte("date", since)
+    : { data: null };
+  const measuredByAgent = new Map<string, number>();
+  for (const row of measuredRows ?? []) {
+    measuredByAgent.set(row.agent_id, (measuredByAgent.get(row.agent_id) ?? 0) + 1);
+  }
+
   const reportsResult =
     agentList.length > 0
       ? await opsTable(supabase, "marketing_os_performance_intelligence_reports")
@@ -141,6 +162,7 @@ export default async function PerformancePage() {
         <div className="space-y-8">
           {agentList.map((agent) => {
             const report = latestByAgent.get(agent.id);
+            const measured = measuredByAgent.get(agent.id) ?? 0;
             return (
               <section key={agent.id} className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -149,7 +171,11 @@ export default async function PerformancePage() {
                     {report && <Badge variant="secondary">{report.post_count} posts analyzed</Badge>}
                   </div>
                   {trained.has(agent.id) && (
-                    <PerformanceIntelligenceGenerateButton agentId={agent.id} />
+                    <PerformanceIntelligenceGenerateButton
+                      agentId={agent.id}
+                      measuredPosts={measured}
+                      requiredPosts={MINIMUM_MEASURED_POSTS}
+                    />
                   )}
                 </div>
                 {!trained.has(agent.id) ? (
@@ -158,7 +184,11 @@ export default async function PerformancePage() {
                   <ReportCard report={report} />
                 ) : (
                   <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                    No analysis yet for {agent.name}. Needs at least 4 measured posts in the last 90 days.
+                    No analysis yet for {agent.name}. This needs at least{" "}
+                    {MINIMUM_MEASURED_POSTS} measured posts in the last{" "}
+                    {LOOKBACK_DAYS} days, and there {measured === 1 ? "is" : "are"}{" "}
+                    {measured}. Publish through the Scheduler, then pull analytics
+                    to close the gap.
                   </p>
                 )}
               </section>

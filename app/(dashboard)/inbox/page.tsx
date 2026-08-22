@@ -11,7 +11,10 @@ import {
   type CampaignRow,
   type ClientOption,
 } from "@/lib/marketing-os/operations";
+import { activeSeat } from "@/lib/seat";
 import { EmptyState } from "@/components/empty-state";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { SeatFields } from "@/components/seat-fields";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -83,9 +86,20 @@ function messageOfType(
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ platform?: string; review?: string }>;
+  searchParams: Promise<{
+    platform?: string;
+    review?: string;
+    agent_id?: string;
+    client?: string;
+  }>;
 }) {
-  const { platform = "all", review = "all" } = await searchParams;
+  const {
+    platform = "all",
+    review = "all",
+    agent_id: agentParam,
+    client: clientParam,
+  } = await searchParams;
+  const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
   const { user, supabase } = await requireUser();
   const threadsResult = await opsTable(supabase, "marketing_os_inbox_threads")
     .select("id, campaign_id, client_id, agent_id, platform, channel, participant_username, status, review_reason, last_message_at, created_at, updated_at, scheduled_post_id")
@@ -199,6 +213,7 @@ export default async function InboxPage({
       )}
 
       <form className="grid gap-2 rounded-lg border p-3 md:grid-cols-[220px_220px_auto]">
+        <SeatFields seat={seat} />
         <select
           name="platform"
           defaultValue={platform}
@@ -359,18 +374,38 @@ export default async function InboxPage({
                       rows={2}
                       aria-label="Internal note"
                     />
+                    {/* Both of these reach outside the app — one answers a
+                        real person under the client's name, the other closes
+                        the thread so nobody looks at it again. */}
                     <div className="flex flex-wrap gap-2">
-                      <Button type="submit" name="status" value="posted">
+                      <ConfirmSubmitButton
+                        name="status"
+                        value="posted"
+                        variant="default"
+                        size="default"
+                        destructive={false}
+                        title={isFlowReview ? "Approve this flow?" : "Send this reply?"}
+                        confirmLabel={isFlowReview ? "Approve flow" : "Send reply"}
+                        message={
+                          isFlowReview
+                            ? `Approve the Comment-to-DM flow for ${client?.name ?? "this client"} on ${thread.platform}. Once the post is live, replies and DMs go out automatically to anyone who comments.`
+                            : `Send this reply to ${thread.participant_username ?? "this person"} on ${thread.platform} as ${client?.name ?? "this client"}. It is posted publicly and cannot be unsent from here.`
+                        }
+                      >
                         {isFlowReview ? "Approve flow" : "Send reply"}
-                      </Button>
-                      <Button
-                        type="submit"
+                      </ConfirmSubmitButton>
+                      <ConfirmSubmitButton
                         name="status"
                         value="resolved"
                         variant="outline"
+                        size="default"
+                        destructive={false}
+                        title="Mark this resolved?"
+                        confirmLabel="Mark resolved"
+                        message={`This thread with ${thread.participant_username ?? "this person"} leaves the review queue. Nothing is sent, and nobody is asked to look at it again.`}
                       >
                         Mark resolved
-                      </Button>
+                      </ConfirmSubmitButton>
                     </div>
                   </form>
                 </CardContent>

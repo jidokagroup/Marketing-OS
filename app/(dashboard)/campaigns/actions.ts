@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
+import { wallTimeToInstant, workspaceTimeZone } from "@/lib/timezone";
 import { opsTable, type WorkflowStage } from "@/lib/marketing-os/operations";
 
 function textValue(formData: FormData, key: string) {
@@ -219,6 +220,7 @@ export async function createCampaignLeadAction(formData: FormData) {
 export async function createRevenueEventAction(formData: FormData) {
   const { user, supabase } = await requireUser();
   const campaignId = textValue(formData, "campaign_id");
+  const timeZone = await workspaceTimeZone();
 
   await opsTable(supabase, "marketing_os_revenue_events").insert({
     owner_id: user.id,
@@ -229,7 +231,13 @@ export async function createRevenueEventAction(formData: FormData) {
     amount: numberValue(formData, "amount"),
     event_type: textValue(formData, "event_type") ?? "deal_created",
     attribution_model: textValue(formData, "attribution_model") ?? "manual",
-    occurred_at: textValue(formData, "occurred_at") ?? new Date().toISOString(),
+    // The form sends a wall time with no zone; without this it would be
+    // stored as if the user had typed it in UTC.
+    occurred_at:
+      wallTimeToInstant(
+        textValue(formData, "occurred_at") ?? "",
+        timeZone,
+      )?.toISOString() ?? new Date().toISOString(),
     notes: textValue(formData, "notes"),
   });
 

@@ -8,8 +8,8 @@ import { ensureCommentDmInboxDraft } from "@/lib/inbox";
 import { matchGeneratedByTitle } from "@/lib/scheduler";
 import {
   getPlatformDefinition,
-  isAutoPublishableContent,
   isAllowedContentType,
+  publishBlockers,
   isSchedulerPlatform,
   SCHEDULER_PLATFORMS,
   type SchedulerPlatform,
@@ -33,6 +33,7 @@ interface CreateBody {
   comment_auto_reply?: string;
   dm_sequence?: string;
   source_import?: string;
+  campaign_id?: string;
 }
 
 const DEFAULT_POSTING_WINDOWS: Record<
@@ -295,7 +296,7 @@ export async function POST(request: Request) {
 
   const { data: existingPosts } = await supabase
     .from("marketing_os_scheduled_posts")
-    .select("id, platform, media_path")
+    .select("id, platform, media_path, caption")
     .eq("agent_id", agentId)
     .eq("title", title)
     .in("platform", platforms)
@@ -323,7 +324,17 @@ export async function POST(request: Request) {
   for (const post of existingPosts ?? []) {
     if (!attachedPlatforms.has(post.platform)) continue;
     const socialAccountId = accountByPlatform.get(post.platform) ?? null;
-    const autoPublishable = isAutoPublishableContent(post.platform, contentType);
+    const caption = cleanText(body.caption) ?? post.caption;
+    // The publisher rejects a post with no media or no connected account, so
+    // only a post that would actually go out is marked scheduled.
+    const blockers = publishBlockers({
+      platform: post.platform,
+      content_type: contentType,
+      caption,
+      media_path: body.media_path || null,
+      social_account_id: socialAccountId,
+    });
+    const ready = Boolean(scheduledTime) && blockers.length === 0;
     await supabase
       .from("marketing_os_scheduled_posts")
       .update({
@@ -331,11 +342,8 @@ export async function POST(request: Request) {
         media_file_name: cleanText(body.media_file_name),
         content_type: contentType,
         scheduled_time: scheduledTime,
-        status: scheduledTime && socialAccountId && autoPublishable ? "scheduled" : "draft",
-        error:
-          scheduledTime && socialAccountId && !autoPublishable
-            ? `${getPlatformDefinition(post.platform)?.label ?? post.platform} ${contentType} auto-publishing is not live yet. This item is saved as a draft.`
-            : null,
+        status: ready ? "scheduled" : "draft",
+        error: ready || !scheduledTime ? null : blockers.join(" "),
         ...(cleanText(body.caption) ? { caption: cleanText(body.caption) } : {}),
       })
       .eq("id", post.id);
@@ -345,7 +353,14 @@ export async function POST(request: Request) {
   const rows = newPlatforms.map((platform) => {
     const recommendation = DEFAULT_POSTING_WINDOWS[platform];
     const socialAccountId = accountByPlatform.get(platform) ?? null;
-    const autoPublishable = isAutoPublishableContent(platform, contentType);
+    const blockers = publishBlockers({
+      platform,
+      content_type: contentType,
+      caption: selectedCaption,
+      media_path: body.media_path || null,
+      social_account_id: socialAccountId,
+    });
+    const ready = Boolean(scheduledTime) && blockers.length === 0;
     return {
       agent_id: agentId,
       owner_id: user.id,
@@ -356,8 +371,12 @@ export async function POST(request: Request) {
       media_path: body.media_path || null,
       media_file_name: cleanText(body.media_file_name),
       scheduled_time: scheduledTime,
-      status: scheduledTime && socialAccountId && autoPublishable ? "scheduled" : "draft",
+      status: ready ? "scheduled" : "draft",
+      error: ready || !scheduledTime ? null : blockers.join(" "),
       generated_content_id: match?.generated_content_id ?? null,
+      // Inherited from the matched content so a campaign keeps its thread
+      // from brief through to the post that went out.
+      campaign_id: cleanText(body.campaign_id) ?? match?.campaign_id ?? null,
       caption: selectedCaption,
       script: match?.script ?? null,
       best_posting_window: body.use_best_time
@@ -365,17 +384,18 @@ export async function POST(request: Request) {
         : recommendation.window,
       ideal_days: recommendation.days,
       confidence_score: recommendation.confidence,
-      schedule_reason: body.use_best_time
-        ? autoPublishable || !scheduledTime || !socialAccountId
+      // Why this landed where it did: the timing rationale, plus what is
+      // holding it back from being publishable if anything is.
+      schedule_reason: [
+        body.use_best_time
           ? recommendation.reason
-          : `${recommendation.reason} Auto-publishing for ${getPlatformDefinition(platform)?.label ?? platform} ${contentType} is not live yet, so this stays as a draft with timing attached.`
-        : autoPublishable || !scheduledTime || !socialAccountId
-          ? "Manual time selected. Best-time guidance remains visible for comparison."
-          : `Manual time selected. Auto-publishing for ${getPlatformDefinition(platform)?.label ?? platform} ${contentType} is not live yet, so this stays as a draft with timing attached.`,
-      error:
-        scheduledTime && socialAccountId && !autoPublishable
-          ? `${getPlatformDefinition(platform)?.label ?? platform} ${contentType} auto-publishing is not live yet.`
-          : null,
+          : "Manual time selected. Best-time guidance remains visible for comparison.",
+        ready || !scheduledTime
+          ? ""
+          : `Saved as a draft with timing attached: ${blockers.join(" ")}`,
+      ]
+        .filter(Boolean)
+        .join(" "),
       comment_dm_enabled:
         platform === "instagram" ? Boolean(body.comment_dm_enabled) : false,
       comment_auto_reply:

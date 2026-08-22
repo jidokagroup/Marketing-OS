@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import { formatInstant, instantToWallTime, workspaceTimeZone } from "@/lib/timezone";
 import {
   getEmailProviderDefinition,
   normalizeEmailProvider,
@@ -26,10 +28,13 @@ import {
   connectionLabel,
   isAutoPublishableContent,
 } from "@/lib/social/platforms";
+import { publishReadyPlatforms } from "@/lib/social/publishing-readiness";
+import { postLifecycle } from "@/lib/scheduler-lifecycle";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { SchedulerUploader } from "@/components/scheduler-uploader";
-import { PostStatusBadge } from "@/components/post-status-badge";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { PostLifecycleBadge } from "@/components/post-lifecycle-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +86,8 @@ export default async function SchedulerPage({
     content_id: contentId = "",
     content_field: contentField = "",
   } = await searchParams;
+  const timeZone = await workspaceTimeZone();
+  const readyPlatforms = publishReadyPlatforms();
 
   const [{ data: allAgents }, { data: clients }] = await Promise.all([
     supabase
@@ -351,10 +358,9 @@ export default async function SchedulerPage({
             {postList.map((p) => {
               const agent = p.writing_agents as unknown as { name: string } | null;
               const isEmailCampaign = p.platform === "mailchimp";
-              const autoPublishable = isAutoPublishableContent(
-                p.platform,
-                p.content_type,
-              );
+              // One derivation for what this post's state actually is, shared
+              // with the Calendar so the two never describe it differently.
+              const lifecycle = postLifecycle(p, readyPlatforms);
               return (
                 <Card key={p.id}>
                   <CardContent className="space-y-3 py-4">
@@ -373,7 +379,7 @@ export default async function SchedulerPage({
                         <Badge variant="outline">
                           {isEmailCampaign ? "Email campaign" : p.content_type}
                         </Badge>
-                        <PostStatusBadge status={p.status} />
+                        <PostLifecycleBadge view={lifecycle} />
                       </div>
                     </div>
 
@@ -395,7 +401,7 @@ export default async function SchedulerPage({
                       )}
                       {p.scheduled_time && (
                         <span className="text-muted-foreground">
-                          {new Date(p.scheduled_time).toLocaleString()}
+                          {formatInstant(p.scheduled_time, timeZone)}
                         </span>
                       )}
                     </div>
@@ -424,49 +430,41 @@ export default async function SchedulerPage({
                             {confidenceLabel(Number(p.confidence_score))}
                           </Badge>
                         )}
-                        {p.social_account_id ? (
-                          <Badge>
-                            {autoPublishable ? "Auto-posting live" : "Connected"}
-                          </Badge>
-                        ) : (
+                        {/* Connected and able to publish are different
+                            claims. A YouTube account can be connected while
+                            the API this deployment needs is switched off, and
+                            calling that "auto-posting live" is how a post got
+                            queued that could never go out. */}
+                        {!p.social_account_id ? (
                           <Badge variant="destructive">Disconnected</Badge>
-                        )}
-                        {!autoPublishable && (
-                          <Badge variant="outline">Manual draft</Badge>
+                        ) : lifecycle.canAutoPublish ? (
+                          <Badge>Auto-posting live</Badge>
+                        ) : (
+                          <Badge variant="outline">Connected · manual only</Badge>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      {!p.caption && (
-                        <Badge variant="destructive">
-                          <AlertCircle className="h-3 w-3" />
-                          {isEmailCampaign ? "needs email copy" : "needs caption"}
-                        </Badge>
+                    {/* The badge names the state; this says what to do about
+                        it. Four separate badges used to leave the reader to
+                        work out which one was actually stopping the publish. */}
+                    <div
+                      className={cn(
+                        "flex items-start gap-2 rounded-md border px-3 py-2 text-sm",
+                        lifecycle.tone === "destructive"
+                          ? "border-destructive/30 bg-destructive/5 text-destructive"
+                          : "border-muted bg-muted/30 text-muted-foreground",
                       )}
-                      {!isEmailCampaign && !p.media_path && (
-                        <Badge variant="outline">
-                          <AlertCircle className="h-3 w-3" />
-                          needs media
-                        </Badge>
+                    >
+                      {lifecycle.tone === "destructive" && (
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                       )}
-                      {!p.social_account_id && (
-                        <Badge variant="destructive">
-                          <AlertCircle className="h-3 w-3" />
-                          account disconnected
-                        </Badge>
-                      )}
-                      {p.social_account_id && !autoPublishable && (
-                        <Badge variant="outline">
-                          <AlertCircle className="h-3 w-3" />
-                          auto-posting not live
-                        </Badge>
-                      )}
+                      <span>{lifecycle.detail}</span>
                     </div>
 
-                    {p.error && (
+                    {p.error && lifecycle.detail !== p.error && (
                       <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                        {p.error}
+                        Last attempt: {p.error}
                       </div>
                     )}
 
@@ -551,9 +549,15 @@ export default async function SchedulerPage({
                       {p.status === "scheduled" ? (
                         <form action={unscheduleAction}>
                           <input type="hidden" name="id" value={p.id} />
-                          <Button variant="outline" size="sm" type="submit">
+                          <ConfirmSubmitButton
+                            variant="outline"
+                            destructive={false}
+                            title="Unschedule this post?"
+                            confirmLabel="Unschedule"
+                            message={`"${p.title || "This post"}" goes back to a draft and will not publish until you schedule it again. The caption, media and time stay on it.`}
+                          >
                             Unschedule
-                          </Button>
+                          </ConfirmSubmitButton>
                         </form>
                       ) : (
                         <form action={scheduleAction} className="flex items-center gap-2">
@@ -562,13 +566,35 @@ export default async function SchedulerPage({
                             name="scheduled_time"
                             type="datetime-local"
                             required
+                            defaultValue={instantToWallTime(
+                              p.scheduled_time,
+                              timeZone,
+                            )}
                             className="h-8 w-auto"
                           />
-                          <Button variant="outline" size="sm" type="submit">
-                            {p.social_account_id && autoPublishable
-                              ? "Schedule"
-                              : "Save draft time"}
-                          </Button>
+                          {/* Scheduling hands the post to the publisher, so
+                              it is confirmed like the outward-facing action it
+                              is. When it cannot publish, the button says what
+                              it will really do instead of implying otherwise. */}
+                          {lifecycle.canAutoPublish ? (
+                            <ConfirmSubmitButton
+                              variant="outline"
+                              destructive={false}
+                              title="Schedule this post?"
+                              confirmLabel="Schedule"
+                              message={`"${p.title || "This post"}" will publish to ${
+                                PLATFORM_LABELS[
+                                  p.platform as keyof typeof PLATFORM_LABELS
+                                ] ?? p.platform
+                              }${agent?.name ? ` as ${agent.name}` : ""} automatically at the time you set. Nobody reviews it again first.`}
+                            >
+                              Schedule
+                            </ConfirmSubmitButton>
+                          ) : (
+                            <Button variant="outline" size="sm" type="submit">
+                              Save draft time
+                            </Button>
+                          )}
                         </form>
                       )}
 
@@ -590,14 +616,15 @@ export default async function SchedulerPage({
 
                       <form action={deletePostAction} className="ml-auto">
                         <input type="hidden" name="id" value={p.id} />
-                        <Button
-                          variant="ghost"
+                        <ConfirmSubmitButton
+                          title="Delete this post?"
+                          confirmLabel="Delete post"
+                          message={`"${p.title || "This post"}" is removed from the queue permanently, along with its caption, media and Comment-to-DM flow.`}
                           size="icon-sm"
-                          type="submit"
                           className="text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </ConfirmSubmitButton>
                       </form>
                     </div>
                   </CardContent>

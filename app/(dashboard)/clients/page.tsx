@@ -202,7 +202,9 @@ export default async function ClientsPage() {
                 <form action={deleteClientAction} className="pt-1">
                   <input type="hidden" name="id" value={c.id} />
                   <ConfirmSubmitButton
-                    message={`Remove ${c.name}? This cannot be undone.`}
+                    title={`Remove ${c.name}?`}
+                    confirmLabel="Remove client"
+                    message={`${c.name} and everything scoped to this seat — its writing agent, brand brain, campaigns, content and scheduled posts — are removed permanently.`}
                     size="sm"
                     className="text-muted-foreground hover:text-destructive"
                   >

@@ -6,6 +6,7 @@ export interface TitleMatch {
   generated_content_id: string;
   caption: string | null;
   script: string | null;
+  campaign_id: string | null;
 }
 
 /**
@@ -23,7 +24,7 @@ export async function matchGeneratedByTitle(
 
   const { data } = await supabase
     .from("marketing_os_generated_content")
-    .select("id, title, primary_script, short_version, organic_version")
+    .select("id, title, primary_script, short_version, organic_version, campaign_id")
     .eq("agent_id", agentId)
     .ilike("title", clean)
     .order("created_at", { ascending: false })
@@ -35,5 +36,8 @@ export async function matchGeneratedByTitle(
     generated_content_id: data.id,
     caption: data.organic_version ?? data.short_version ?? data.primary_script,
     script: data.primary_script,
+    // Carried onto the scheduled post so the campaign can still account for a
+    // piece once it has moved into the publishing queue.
+    campaign_id: data.campaign_id ?? null,
   };
 }

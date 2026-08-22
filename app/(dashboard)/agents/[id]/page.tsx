@@ -160,7 +160,9 @@ export default async function AgentDetailPage({
         <form action={deleteAgentAction}>
           <input type="hidden" name="id" value={agent.id} />
           <ConfirmSubmitButton
-            message={`Delete ${agent.name}? This cannot be undone.`}
+            title={`Delete ${agent.name}?`}
+            confirmLabel="Delete agent"
+            message={`${agent.name}'s Voice DNA, uploaded sources, generated content and connected accounts are deleted permanently. The client keeps its record but loses its writing agent.`}
             size="sm"
             className="text-muted-foreground hover:text-destructive"
           >

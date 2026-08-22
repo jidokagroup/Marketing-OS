@@ -11,23 +11,25 @@ import {
   useState,
   useTransition,
 } from "react";
-import { AlertCircle, Link2, Trash2 } from "lucide-react";
+import { Link2, Trash2 } from "lucide-react";
 
 import {
   deletePostAction,
   scheduleAction,
   updateCaptionAction,
 } from "@/app/(dashboard)/scheduler/actions";
-import { PostStatusBadge } from "@/components/post-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  isAutoPublishableContent,
   PLATFORM_LABELS,
 } from "@/lib/social/platforms";
 import { cn } from "@/lib/utils";
+import { formatInstant, instantToWallTime } from "@/lib/time-format";
+import { postLifecycle } from "@/lib/scheduler-lifecycle";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { PostLifecycleBadge } from "@/components/post-lifecycle-badge";
 
 export type CalendarPost = {
   id: string;
@@ -101,7 +103,15 @@ function approvalLabel(post: CalendarPost) {
   return "needs approval";
 }
 
-export function CalendarPostDetails({ post }: { post: CalendarPost }) {
+export function CalendarPostDetails({
+  post,
+  timeZone,
+  readyPlatforms,
+}: {
+  post: CalendarPost;
+  timeZone: string;
+  readyPlatforms: string[];
+}) {
   const { deletedIds, markDeleted } = useDeletedPosts();
   if (deletedIds.has(post.id)) return null;
 
@@ -119,6 +129,8 @@ export function CalendarPostDetails({ post }: { post: CalendarPost }) {
       <CalendarPostBody
         post={post}
         compact
+        timeZone={timeZone}
+        readyPlatforms={readyPlatforms}
         onDeleted={() => markDeleted(post.id)}
       />
     </details>
@@ -129,16 +141,20 @@ export function CalendarPostCard({
   post,
   agentName,
   clientName,
+  timeZone,
+  readyPlatforms,
 }: {
   post: CalendarPost;
   agentName: string;
   clientName: string;
+  timeZone: string;
+  readyPlatforms: string[];
 }) {
   const { deletedIds, markDeleted } = useDeletedPosts();
   if (deletedIds.has(post.id)) return null;
 
   const isEmailCampaign = post.platform === "mailchimp";
-  const autoPublishable = isAutoPublishableContent(post.platform, post.content_type);
+  const lifecycle = postLifecycle(post, readyPlatforms);
   return (
     <div className="rounded-lg border p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -147,7 +163,7 @@ export function CalendarPostCard({
           <p className="mt-1 text-sm text-muted-foreground">
             {clientName} · {agentName} ·{" "}
             {post.scheduled_time
-              ? new Date(post.scheduled_time).toLocaleString()
+              ? formatInstant(post.scheduled_time, timeZone)
               : "Draft with no time"}
           </p>
         </div>
@@ -159,16 +175,24 @@ export function CalendarPostCard({
           <Badge variant="outline">
             {isEmailCampaign ? "Email campaign" : post.content_type}
           </Badge>
-          <PostStatusBadge status={post.status} />
-          <Badge variant={post.social_account_id ? "default" : "destructive"}>
-            {post.social_account_id ? "connected" : "not connected"}
-          </Badge>
-          {post.social_account_id && !autoPublishable && (
-            <Badge variant="outline">manual draft</Badge>
+          <PostLifecycleBadge view={lifecycle} />
+          {/* Connected is not the same as able to publish — see
+              lib/social/publishing-readiness. */}
+          {!post.social_account_id ? (
+            <Badge variant="destructive">not connected</Badge>
+          ) : lifecycle.canAutoPublish ? (
+            <Badge>auto-posting live</Badge>
+          ) : (
+            <Badge variant="outline">connected · manual only</Badge>
           )}
         </div>
       </div>
-      <CalendarPostBody post={post} onDeleted={() => markDeleted(post.id)} />
+      <CalendarPostBody
+        post={post}
+        timeZone={timeZone}
+        readyPlatforms={readyPlatforms}
+        onDeleted={() => markDeleted(post.id)}
+      />
     </div>
   );
 }
@@ -176,47 +200,41 @@ export function CalendarPostCard({
 function CalendarPostBody({
   post,
   compact = false,
+  timeZone,
+  readyPlatforms,
   onDeleted,
 }: {
   post: CalendarPost;
   compact?: boolean;
+  timeZone: string;
+  readyPlatforms: string[];
   onDeleted: () => void;
 }) {
+  // The same derivation the Scheduler uses, so a post cannot read as ready
+  // here and blocked there.
+  const lifecycle = postLifecycle(post, readyPlatforms);
   const isEmailCampaign = post.platform === "mailchimp";
-  const autoPublishable = isAutoPublishableContent(post.platform, post.content_type);
   return (
     <div className={cn("space-y-2", compact ? "mt-2" : "mt-3")}>
       <div className="flex flex-wrap gap-1.5">
+        <PostLifecycleBadge view={lifecycle} />
         <Badge variant="outline">{approvalLabel(post)}</Badge>
-        {!post.caption && (
-          <Badge variant="destructive">
-            <AlertCircle className="h-3 w-3" />
-            {isEmailCampaign ? "needs email copy" : "needs caption"}
-          </Badge>
-        )}
-        {!isEmailCampaign && !post.media_path && (
-          <Badge variant="outline">
-            <AlertCircle className="h-3 w-3" />
-            needs media
-          </Badge>
-        )}
-        {!post.social_account_id && (
-          <Badge variant="destructive">
-            <AlertCircle className="h-3 w-3" />
-            account disconnected
-          </Badge>
-        )}
-        {post.social_account_id && !autoPublishable && (
-          <Badge variant="outline">
-            <AlertCircle className="h-3 w-3" />
-            auto-posting not live
-          </Badge>
-        )}
       </div>
 
-      {post.error && (
+      <p
+        className={cn(
+          "text-xs",
+          lifecycle.tone === "destructive"
+            ? "text-destructive"
+            : "text-muted-foreground",
+        )}
+      >
+        {lifecycle.detail}
+      </p>
+
+      {post.error && lifecycle.detail !== post.error && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          {post.error}
+          Last attempt: {post.error}
         </div>
       )}
 
@@ -252,15 +270,33 @@ function CalendarPostBody({
               name="scheduled_time"
               type="datetime-local"
               required
+              defaultValue={instantToWallTime(post.scheduled_time, timeZone)}
               className="h-8 w-auto"
             />
-            <Button variant="outline" size={compact ? "xs" : "sm"} type="submit">
-              {post.social_account_id && autoPublishable
-                ? post.scheduled_time
-                  ? "Reschedule"
-                  : "Schedule"
-                : "Save draft time"}
-            </Button>
+            {/* Scheduling hands the post to the publisher, so it confirms
+                like the outward-facing action it is. */}
+            {/* Scheduling hands the post to the publisher on a timer, which
+                is the definition of an action worth asking about. Saving a
+                draft time is not, so only one of them asks. */}
+            {lifecycle.canAutoPublish ? (
+              <ConfirmSubmitButton
+                variant="outline"
+                size={compact ? "xs" : "sm"}
+                destructive={false}
+                title={post.scheduled_time ? "Reschedule this post?" : "Schedule this post?"}
+                confirmLabel={post.scheduled_time ? "Reschedule" : "Schedule"}
+                message={`"${post.title || "This post"}" will publish to ${
+                  PLATFORM_LABELS[post.platform as keyof typeof PLATFORM_LABELS] ??
+                  post.platform
+                } automatically at the time you set. Nobody reviews it again first.`}
+              >
+                {post.scheduled_time ? "Reschedule" : "Schedule"}
+              </ConfirmSubmitButton>
+            ) : (
+              <Button variant="outline" size={compact ? "xs" : "sm"} type="submit">
+                Save draft time
+              </Button>
+            )}
           </form>
         )}
         <CalendarDeletePostForm
@@ -304,16 +340,17 @@ function CalendarDeletePostForm({
     <div className="ml-auto">
       <form action={deletePost}>
         <input type="hidden" name="id" value={postId} />
-        <Button
-          variant="ghost"
+        <ConfirmSubmitButton
           size={compact ? "xs" : "sm"}
-          type="submit"
           disabled={pending}
+          title="Delete this post?"
+          confirmLabel="Delete post"
+          message="This removes the post from the queue permanently. Any caption, media and Comment-to-DM flow saved on it goes with it."
           className="text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" />
           {pending ? "Deleting" : "Delete"}
-        </Button>
+        </ConfirmSubmitButton>
       </form>
       {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
     </div>

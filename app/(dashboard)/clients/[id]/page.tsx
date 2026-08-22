@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Bot, Inbox, Share2, Sparkles } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { formatInstant, workspaceTimeZone } from "@/lib/timezone";
 import { asRows, opsTable } from "@/lib/marketing-os/operations";
 import { reviewInboxThreadAction } from "./inbox-actions";
 import { createShareLinkAction, revokeShareLinkAction } from "./share-actions";
@@ -52,6 +53,7 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const { supabase } = await requireUser();
+  const timeZone = await workspaceTimeZone();
 
   const { data: client } = await supabase
     .from("marketing_os_clients")
@@ -238,7 +240,11 @@ export default async function ClientDetailPage({
         <StatCard icon={Inbox} label="Inbox Review" value={commentDmItems.length} />
       </div>
 
-      <ClientInboxSection clientId={client.id} items={commentDmItems} />
+      <ClientInboxSection
+        clientId={client.id}
+        items={commentDmItems}
+        timeZone={timeZone}
+      />
 
       <section id="brand-brain" className="space-y-3">
         <div className="flex flex-col gap-1">
@@ -342,9 +348,11 @@ type ClientInboxItem = {
 function ClientInboxSection({
   clientId,
   items,
+  timeZone,
 }: {
   clientId: string;
   items: ClientInboxItem[];
+  timeZone: string;
 }) {
   const finishedStatuses = new Set(["approved", "rejected", "posted", "resolved", "archived"]);
   const needsReview = items.filter(
@@ -406,6 +414,7 @@ function ClientInboxSection({
                   clientId={clientId}
                   items={needsReview}
                   empty="Nothing needs review right now."
+                  timeZone={timeZone}
                   reviewable
                 />
               </TabsContent>
@@ -414,6 +423,7 @@ function ClientInboxSection({
                   clientId={clientId}
                   items={approved}
                   empty="Approved flows appear here once the post is scheduled."
+                  timeZone={timeZone}
                 />
               </TabsContent>
               <TabsContent value="posted" className="pt-4">
@@ -421,6 +431,7 @@ function ClientInboxSection({
                   clientId={clientId}
                   items={posted}
                   empty="Posted Comment-to-DM flows appear here."
+                  timeZone={timeZone}
                 />
               </TabsContent>
               <TabsContent value="rejected" className="pt-4">
@@ -428,6 +439,7 @@ function ClientInboxSection({
                   clientId={clientId}
                   items={rejected}
                   empty="Rejected flows appear here when a reviewer blocks automation."
+                  timeZone={timeZone}
                 />
               </TabsContent>
             </Tabs>
@@ -442,11 +454,13 @@ function InboxItemList({
   clientId,
   items,
   empty,
+  timeZone,
   reviewable = false,
 }: {
   clientId: string;
   items: ClientInboxItem[];
   empty: string;
+  timeZone: string;
   reviewable?: boolean;
 }) {
   if (items.length === 0) {
@@ -462,7 +476,7 @@ function InboxItemList({
               <p className="font-medium">{item.title || "Untitled Instagram post"}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {item.scheduled_time
-                  ? new Date(item.scheduled_time).toLocaleString()
+                  ? formatInstant(item.scheduled_time, timeZone)
                   : "No scheduled time yet"}
               </p>
             </div>
