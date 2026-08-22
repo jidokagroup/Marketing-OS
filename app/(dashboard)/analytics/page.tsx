@@ -3,6 +3,8 @@ import { BarChart3, CheckCircle2, DollarSign, Eye, Heart, Sparkles, TrendingUp }
 
 import { requireUser } from "@/lib/auth";
 import { activeSeat } from "@/lib/seat";
+import { workspaceTimeZone } from "@/lib/timezone";
+import { summariseTiming } from "@/lib/analytics-timing";
 import { seatScopedHref } from "@/lib/seat-cookie";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import {
@@ -78,6 +80,15 @@ type AttributionData = {
   revenue: RevenueEventRow[];
 };
 
+/**
+ * Names the zone the times on this page are in. Before the browser has
+ * reported its zone the app falls back to UTC, and an hour shown without
+ * saying so is the thing that made "best posting time" untrustworthy.
+ */
+function timeZoneLabel(timeZone: string) {
+  return timeZone === "UTC" ? "UTC" : timeZone.replace(/_/g, " ");
+}
+
 function platformLabel(platform: string) {
   return getPlatformDefinition(platform)?.label ?? platform;
 }
@@ -142,6 +153,7 @@ export default async function AnalyticsPage({
   // The Analytics import redirects back here, so the seat has to be carried
   // in and out or the header lands on a different client.
   const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
+  const timeZone = await workspaceTimeZone();
   const attribution = await getAttributionData(supabase, user.id);
 
   const [
@@ -157,7 +169,7 @@ export default async function AnalyticsPage({
       supabase
         .from("marketing_os_platform_analytics")
         .select(
-          "date, hour, platform, title, views, reach, likes, comments, shares, saves, engagement_score, performance_score",
+          "date, hour, posted_time, platform, title, views, reach, likes, comments, shares, saves, engagement_score, performance_score",
         )
         .order("date", { ascending: true })
         .limit(2000),
@@ -394,8 +406,6 @@ export default async function AnalyticsPage({
     shares = 0,
     saves = 0,
     perfSum = 0;
-  const dateMap = new Map<string, { reach: number; engagement: number }>();
-  const hourAgg = new Map<number, { sum: number; n: number }>();
 
   for (const r of data) {
     reach += r.reach ?? 0;
@@ -405,29 +415,13 @@ export default async function AnalyticsPage({
     shares += r.shares ?? 0;
     saves += r.saves ?? 0;
     perfSum += r.performance_score ?? 0;
-
-    const eng = (r.likes ?? 0) + (r.comments ?? 0) + (r.shares ?? 0) + (r.saves ?? 0);
-    if (r.date) {
-      const cur = dateMap.get(r.date) ?? { reach: 0, engagement: 0 };
-      cur.reach += r.reach ?? 0;
-      cur.engagement += eng;
-      dateMap.set(r.date, cur);
-    }
-    if (r.hour != null) {
-      const h = hourAgg.get(r.hour) ?? { sum: 0, n: 0 };
-      h.sum += r.engagement_score ?? eng;
-      h.n += 1;
-      hourAgg.set(r.hour, h);
-    }
   }
 
-  const overTime: TimePoint[] = [...dateMap.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, v]) => ({
-      date: date.slice(5),
-      reach: v.reach,
-      engagement: v.engagement,
-    }));
+  // Anything that depends on when a post went out is derived from the stored
+  // instant in the viewer's zone, not from the `date` and `hour` columns —
+  // those were written from whichever machine ran the import.
+  const timing = summariseTiming(data, timeZone);
+  const overTime: TimePoint[] = timing.overTime;
 
   const engagement: EngagementSlice[] = [
     { name: "Likes", value: likes },
@@ -436,15 +430,8 @@ export default async function AnalyticsPage({
     { name: "Saves", value: saves },
   ];
 
-  const byHour: HourPoint[] = [...hourAgg.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([hour, v]) => ({
-      hour: `${hour}:00`,
-      engagement: Math.round(v.sum / v.n),
-    }));
-  const bestHour = byHour
-    .slice()
-    .sort((a, b) => b.engagement - a.engagement)[0];
+  const byHour: HourPoint[] = timing.byHour;
+  const bestHour = timing.bestHour;
   const titleAgg = new Map<string, number>();
   for (const row of data) {
     const key = row.title || "Untitled post";
@@ -538,7 +525,9 @@ export default async function AnalyticsPage({
           <CardContent className="space-y-2">
             <p className="text-2xl font-bold">{bestHour?.hour ?? "Not enough data"}</p>
             <p className="text-sm text-muted-foreground">
-              Based on the highest average engagement score in connected analytics.
+              {bestHour
+                ? `Highest average engagement, from ${bestHour.posts} post${bestHour.posts === 1 ? "" : "s"} in that hour, in ${timeZoneLabel(timeZone)}.`
+                : "Import or publish measured posts and this fills in."}
             </p>
           </CardContent>
         </Card>
