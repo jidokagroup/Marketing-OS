@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 
 import { requireUser } from "@/lib/auth";
+import { activeSeat } from "@/lib/seat";
+import { seatScopedHref } from "@/lib/seat-cookie";
 import {
   EMAIL_PROVIDER_DEFINITIONS,
   emailProviderStatusLabel,
@@ -53,10 +55,10 @@ import { saveTeamCapacityAction } from "@/app/(dashboard)/team/actions";
 import { isBillingConfigured } from "@/lib/stripe";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { UntrainedAgentNotice } from "@/components/untrained-agent-notice";
-import { setModeratorSettingAction } from "./moderator-actions";
 import { trainedAgentIds } from "@/lib/agent-readiness";
 import { PageHeader } from "@/components/page-header";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { ModeratorSettingsForm } from "@/components/moderator-settings-form";
 import { PlaybookUploadForm } from "@/components/playbook-upload-form";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -173,9 +175,18 @@ export default async function SettingsPage({
     moderator?: string;
     capacity?: string;
     reason?: string;
+    agent_id?: string;
+    client?: string;
   }>;
 }) {
-  const { tab, moderator, capacity, reason } = await searchParams;
+  const { tab, moderator, capacity, reason, agent_id: agentParam, client: clientParam } =
+    await searchParams;
+  // Settings is reached from every module, and its own actions redirect back
+  // into it, so the seat has to survive the round trip or the header lands on
+  // a different client than the user left.
+  const seat = await activeSeat({ agent_id: agentParam, client: clientParam });
+  const settingsHref = (settingsTab: string) =>
+    seatScopedHref(`/settings?tab=${settingsTab}`, seat.agentId, seat.clientId);
   const activeTab = (SETTINGS_TABS as readonly string[]).includes(tab ?? "")
     ? (tab as string)
     : "connections";
@@ -693,7 +704,7 @@ export default async function SettingsPage({
               action={saveTeamCapacityAction}
               className="grid gap-3 rounded-lg border p-4 lg:grid-cols-6"
             >
-              <input type="hidden" name="return_to" value="/settings?tab=team" />
+              <input type="hidden" name="return_to" value={settingsHref("team")} />
               <Input name="member_name" placeholder="Name" required />
               <Input name="email" type="email" placeholder="Email" />
               <Input name="role" placeholder="Role" defaultValue="strategist" />
@@ -730,7 +741,7 @@ export default async function SettingsPage({
                     <input
                       type="hidden"
                       name="return_to"
-                      value="/settings?tab=team"
+                      value={settingsHref("team")}
                     />
                     <input
                       type="hidden"
@@ -827,68 +838,115 @@ export default async function SettingsPage({
               </p>
             ) : (
               <div className="space-y-3">
-                {playbooks.map((playbook) => (
-                  <form
-                    key={playbook.id}
-                    action={updatePlaybookAction}
-                    className="grid gap-3 rounded-lg border p-4 lg:grid-cols-[1fr_180px_160px_140px_auto]"
-                  >
-                    <input type="hidden" name="id" value={playbook.id} />
-                    <Input name="title" defaultValue={playbook.title} required />
-                    <select
-                      name="category"
-                      defaultValue={playbook.category}
-                      className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
-                    >
-                      {playbookCategoryOptions().map((item) => (
-                        <option key={item} value={item}>
-                          {titleCase(item)}
-                        </option>
-                      ))}
-                    </select>
-                    <Input
-                      name="owner_name"
-                      defaultValue={playbook.owner_name ?? ""}
-                      placeholder="Owner"
-                    />
-                    <select
-                      name="status"
-                      defaultValue={playbook.status}
-                      className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
-                    >
-                      {["draft", "active", "archived"].map((status) => (
-                        <option key={status} value={status}>
-                          {titleCase(status)}
-                        </option>
-                      ))}
-                    </select>
-                    <Button type="submit" variant="outline">
-                      Save
-                    </Button>
-                    <Textarea
-                      name="summary"
-                      defaultValue={playbook.summary ?? ""}
-                      className="lg:col-span-2"
-                    />
-                    <Textarea
-                      name="steps"
-                      defaultValue={readSteps(playbook.steps)}
-                      className="lg:col-span-3"
-                    />
-                    <div className="space-y-2">
-                      <Label>Review date</Label>
-                      <Input
-                        name="last_reviewed_at"
-                        type="date"
-                        defaultValue={
-                          playbook.last_reviewed_at
-                            ? playbook.last_reviewed_at.slice(0, 10)
-                            : ""
-                        }
-                      />
+                {/* A saved playbook is something people read, so it renders as
+                    a record. It used to render as the edit form itself, which
+                    left a saved playbook looking identical to an empty one. */}
+                {playbooks.map((playbook) => {
+                  const steps = readSteps(playbook.steps)
+                    .split("\n")
+                    .filter((step) => step.trim());
+                  return (
+                    <div key={playbook.id} className="rounded-lg border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">{playbook.title}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {titleCase(playbook.category)}
+                            {playbook.owner_name ? ` \u00b7 ${playbook.owner_name}` : ""}
+                            {` \u00b7 ${steps.length} step${steps.length === 1 ? "" : "s"}`}
+                            {playbook.last_reviewed_at
+                              ? ` \u00b7 reviewed ${playbook.last_reviewed_at.slice(0, 10)}`
+                              : " \u00b7 never reviewed"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            playbook.status === "active" ? "default" : "outline"
+                          }
+                        >
+                          {titleCase(playbook.status)}
+                        </Badge>
+                      </div>
+
+                      {playbook.summary && (
+                        <p className="mt-3 text-sm">{playbook.summary}</p>
+                      )}
+
+                      {steps.length > 0 && (
+                        <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+                          {steps.map((step, index) => (
+                            <li key={index}>{step}</li>
+                          ))}
+                        </ol>
+                      )}
+
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+                          Edit playbook
+                        </summary>
+                        <form
+                          action={updatePlaybookAction}
+                          className="mt-3 grid gap-3 lg:grid-cols-[1fr_180px_160px_140px_auto]"
+                        >
+                          <input type="hidden" name="id" value={playbook.id} />
+                          <Input name="title" defaultValue={playbook.title} required />
+                          <select
+                            name="category"
+                            defaultValue={playbook.category}
+                            className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                          >
+                            {playbookCategoryOptions().map((item) => (
+                              <option key={item} value={item}>
+                                {titleCase(item)}
+                              </option>
+                            ))}
+                          </select>
+                          <Input
+                            name="owner_name"
+                            defaultValue={playbook.owner_name ?? ""}
+                            placeholder="Owner"
+                          />
+                          <select
+                            name="status"
+                            defaultValue={playbook.status}
+                            className="flex h-9 rounded-lg border border-input bg-transparent px-3 py-1 text-sm"
+                          >
+                            {["draft", "active", "archived"].map((status) => (
+                              <option key={status} value={status}>
+                                {titleCase(status)}
+                              </option>
+                            ))}
+                          </select>
+                          <Button type="submit" variant="outline">
+                            Save
+                          </Button>
+                          <Textarea
+                            name="summary"
+                            defaultValue={playbook.summary ?? ""}
+                            className="lg:col-span-2"
+                          />
+                          <Textarea
+                            name="steps"
+                            defaultValue={readSteps(playbook.steps)}
+                            className="lg:col-span-3"
+                          />
+                          <div className="space-y-2">
+                            <Label>Review date</Label>
+                            <Input
+                              name="last_reviewed_at"
+                              type="date"
+                              defaultValue={
+                                playbook.last_reviewed_at
+                                  ? playbook.last_reviewed_at.slice(0, 10)
+                                  : ""
+                              }
+                            />
+                          </div>
+                        </form>
+                      </details>
                     </div>
-                  </form>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -945,37 +1003,14 @@ export default async function SettingsPage({
                     );
                   }
                   return (
-                    <form
+                    <ModeratorSettingsForm
                       key={agent.id}
-                      action={setModeratorSettingAction}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"
-                    >
-                      <input type="hidden" name="agent_id" value={agent.id} />
-                      <span className="text-sm font-medium">{agent.seatName}</span>
-                      <div className="flex flex-wrap items-center gap-4">
-                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            name="enabled"
-                            defaultChecked={setting?.enabled ?? false}
-                            className="h-4 w-4"
-                          />
-                          On
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            name="auto_approve_low_risk"
-                            defaultChecked={setting?.auto_approve_low_risk ?? false}
-                            className="h-4 w-4"
-                          />
-                          Auto-approve low-risk drafts
-                        </label>
-                        <Button type="submit" size="sm" variant="outline">
-                          Save
-                        </Button>
-                      </div>
-                    </form>
+                      agentId={agent.id}
+                      seatName={agent.seatName}
+                      enabled={setting?.enabled ?? false}
+                      autoApprove={setting?.auto_approve_low_risk ?? false}
+                      returnTo={settingsHref("automations")}
+                    />
                   );
                 })
               )}
