@@ -574,12 +574,23 @@ export interface Database {
           // Added by migration 0016 so a post keeps its link to the campaign
           // the content was made for.
           campaign_id: string | null;
+          // Added by migration 0035 so a publish can be claimed once, counted,
+          // and retried without republishing what already went out.
+          attempts: number;
+          last_attempted_at: string | null;
+          error_code: string | null;
+          /** The provider's own words. Never rendered in the customer UI. */
+          internal_error: string | null;
         };
         Insert: {
           id?: string;
           agent_id: string;
           owner_id: string;
           campaign_id?: string | null;
+          attempts?: number;
+          last_attempted_at?: string | null;
+          error_code?: string | null;
+          internal_error?: string | null;
           generated_content_id?: string | null;
           social_account_id?: string | null;
           platform?: string;
