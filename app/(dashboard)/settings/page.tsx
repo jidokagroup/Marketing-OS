@@ -420,7 +420,17 @@ export default async function SettingsPage({
         <CardContent className="space-y-5">
           {emailProviderSchemaMissing && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-              Run the latest Supabase migration before saving provider choices.
+              {/* "the latest migration" was not enough to act on — the table
+                  this needs comes from a specific pair of migrations. */}
+              This needs the email provider table. Apply{" "}
+              <span className="font-mono">
+                supabase/migrations/0018_marketing_os_email_provider_settings.sql
+              </span>{" "}
+              and{" "}
+              <span className="font-mono">
+                supabase/migrations/0024_marketing_os_email_provider_instantly.sql
+              </span>{" "}
+              in Supabase, then reload this page.
             </div>
           )}
           <form

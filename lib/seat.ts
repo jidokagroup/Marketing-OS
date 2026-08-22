@@ -47,17 +47,3 @@ export async function activeSeat(params: {
   if (fromUrl.agentId || fromUrl.clientId) return fromUrl;
   return seatFromCookie();
 }
-
-/** Append the active seat to a URL that would otherwise drop it. */
-export function withSeat(href: string, seat: SeatContext): string {
-  if (!seat.agentId && !seat.clientId) return href;
-
-  const [path, hash = ""] = href.split("#", 2);
-  const [base, query = ""] = path.split("?", 2);
-  const params = new URLSearchParams(query);
-  if (seat.agentId && !params.has("agent_id")) params.set("agent_id", seat.agentId);
-  if (seat.clientId && !params.has("client")) params.set("client", seat.clientId);
-
-  const search = params.toString();
-  return `${base}${search ? `?${search}` : ""}${hash ? `#${hash}` : ""}`;
-}
