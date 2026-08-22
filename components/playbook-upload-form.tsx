@@ -60,7 +60,9 @@ export function PlaybookUploadForm() {
       toast.success(
         json.memory_saved
           ? `Scanned ${json.playbook?.title ?? "playbook"} and saved it to Core memory.`
-          : `Scanned ${json.playbook?.title ?? "playbook"}. Core memory needs migration 0017.`,
+          // The playbook itself saved; only the memory link did not. Naming a
+          // migration here told the reader nothing they could act on.
+          : `Scanned ${json.playbook?.title ?? "playbook"}. Core memory isn't switched on for this workspace, so it wasn't added there.`,
       );
       form.reset();
       startTransition(() => router.refresh());

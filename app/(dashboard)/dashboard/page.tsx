@@ -573,7 +573,7 @@ export default async function DashboardPage({
 
       {!data.opsSchemaReady && <OpsSchemaNotice />}
       {!data.coreSchemaReady && (
-        <OpsSchemaNotice title="Core agent training needs migration 0017" />
+        <OpsSchemaNotice feature="Core agent training" />
       )}
 
       {/* What to do next, before what there is. A count is not an

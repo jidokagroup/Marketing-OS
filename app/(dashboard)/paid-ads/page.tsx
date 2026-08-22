@@ -104,7 +104,7 @@ export default async function PaidAdsPage() {
         description="Turns each client's best-performing organic posts from the last 30 days into ad copy for Meta, Google, TikTok, and LinkedIn. Reading spend and ROAS is a separate, not-yet-built surface — this only writes copy."
       />
 
-      {schemaMissing && <OpsSchemaNotice title="Paid Ads Generator needs migration 0031" />}
+      {schemaMissing && <OpsSchemaNotice feature="The Paid Ads Generator" />}
 
       {agentList.length === 0 ? (
         <EmptyState

@@ -88,7 +88,7 @@ export default async function MoneyPage() {
         description="Budget, spend, and the revenue actually attributed back to the content and campaigns that produced it."
       />
 
-      {schemaMissing && <OpsSchemaNotice title="Money needs migration 0016" />}
+      {schemaMissing && <OpsSchemaNotice feature="Revenue and attribution" />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

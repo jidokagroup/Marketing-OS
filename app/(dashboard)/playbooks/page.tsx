@@ -73,8 +73,7 @@ export default async function PlaybooksPage() {
 
       {schemaMissing && (
         <OpsSchemaNotice
-          title="Playbook upload memory needs the latest migration"
-          migrationPath="supabase/migrations/0019_marketing_os_playbook_upload_memory.sql"
+          feature="Playbook uploads"
         />
       )}
 

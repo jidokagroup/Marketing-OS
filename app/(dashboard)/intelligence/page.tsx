@@ -539,7 +539,7 @@ export default async function IntelligencePage() {
       </PageHeader>
 
       {!opsReady && (
-        <OpsSchemaNotice title="Intelligence actions need migration 0016" />
+        <OpsSchemaNotice feature="Saving intelligence to ideas and campaigns" />
       )}
 
       <Card>

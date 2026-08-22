@@ -602,7 +602,7 @@ function CampaignAttributionPanel({
   attribution: AttributionData;
 }) {
   if (!attribution.schemaReady) {
-    return <OpsSchemaNotice title="Campaign attribution needs migration 0016" />;
+    return <OpsSchemaNotice feature="Campaign attribution" />;
   }
 
   const manualRevenue = attribution.revenue.reduce(

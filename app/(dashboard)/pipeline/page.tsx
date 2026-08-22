@@ -18,6 +18,7 @@ import { createPipelineLeadAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ErrorNotice } from "@/components/error-notice";
 import { OpsSchemaNotice } from "@/components/ops-schema-notice";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -105,11 +106,14 @@ export default async function PipelinePage() {
   const campaignById = new Map(campaigns.map((item) => [item.id, item]));
   const clientById = new Map(clients.map((item) => [item.id, item]));
 
+  // A lead with a null or unrecognised status still belongs somewhere: dropping
+  // it would make the board disagree with the counts above it, and a lead that
+  // vanishes is worse than one in the wrong column.
   const byStage = new Map<string, typeof leads>();
   for (const stage of STAGE_ORDER) byStage.set(stage, []);
   for (const lead of leads) {
-    const bucket = byStage.get(lead.status) ?? byStage.get("new")!;
-    bucket.push(lead);
+    const bucket = byStage.get(lead.status) ?? byStage.get("new");
+    bucket?.push(lead);
   }
 
   const openValue = leads
@@ -128,7 +132,13 @@ export default async function PipelinePage() {
         description="Every lead traced from the content, campaign, or acquisition automation that brought it in, through to won or lost."
       />
 
-      {schemaMissing && <OpsSchemaNotice title="Pipeline needs migration 0016" />}
+      {schemaMissing && <OpsSchemaNotice feature="Pipeline" />}
+
+      {/* A failed query is not an empty pipeline. Showing "no leads yet" for a
+          query that errored reports a fact that was never established. */}
+      {!schemaMissing && leadsResult.error && (
+        <ErrorNotice error={leadsResult.error} action="load your leads" />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
@@ -206,7 +216,7 @@ export default async function PipelinePage() {
         <EmptyState
           icon={TrendingUp}
           title="No leads yet"
-          description="Leads created by acquisition automations, comment-to-DM flows, or manual entry will show up here, staged from new through won or lost."
+          description="Add a lead with the form above, or let one arrive on its own — comment-to-DM flows and acquisition automations both create leads here, staged from new through won or lost."
         />
       ) : (
         <div className="grid gap-3 lg:grid-cols-4 xl:grid-cols-7">

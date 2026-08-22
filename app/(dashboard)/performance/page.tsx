@@ -150,7 +150,7 @@ export default async function PerformancePage() {
         description="The Market Intelligence upsell: a deeper AI read on this creator's own history, not the competitive market. It tiers published, measured content by performance_score and explains what actually separates what worked from what didn't."
       />
 
-      {schemaMissing && <OpsSchemaNotice title="Performance Intelligence needs migration 0031" />}
+      {schemaMissing && <OpsSchemaNotice feature="Performance Intelligence" />}
 
       {agentList.length === 0 ? (
         <EmptyState

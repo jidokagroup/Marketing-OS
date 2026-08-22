@@ -187,7 +187,7 @@ export default async function InboxPage({
         description="All comments and messages from connected platforms, with high-risk items held for human review."
       />
 
-      {schemaMissing && <OpsSchemaNotice title="Campaign inbox links need migration 0016" />}
+      {schemaMissing && <OpsSchemaNotice feature="Campaign inbox links" />}
 
       {/* Configuration lives in Settings → Automations. What belongs here is
           the state it is in and the one action that operates on this page. */}
